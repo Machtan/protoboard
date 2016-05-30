@@ -7,6 +7,7 @@ extern crate sdl2_ttf;
 extern crate glorious;
 
 mod common;
+mod scene;
 mod unit;
 mod grid;
 mod cursor;
@@ -28,42 +29,10 @@ use glorious::{Game, Behavior, Sprite, ExitSignal};
 use glorious::{BoxedInputMapper, FrameLimiter};
 
 use common::{GameObject, State, Message};
+use scene::Scene;
 use grid::Grid;
 use cursor::Cursor;
 use debug::DebugHelper;
-
-struct Scene {
-    objects: Vec<GameObject>,
-}
-
-impl Scene {
-    pub fn new() -> Self {
-        Scene { objects: Vec::new() }
-    }
-}
-
-impl Behavior for Scene {
-    type State = State;
-    type Message = Message;
-    fn handle(&mut self, state: &mut Self::State, messages: &[Self::Message], 
-            new_messages: &mut Vec<Self::Message>) {
-        use common::Message::*;
-        for message in messages.iter() {
-            match message {
-                _ => {}
-            }
-        }
-        for object in &mut self.objects {
-            object.handle(state, messages, new_messages);
-        }
-    }
-    
-    fn render(&self, state: &Self::State, renderer: &mut Renderer) {
-        for object in &self.objects {
-            object.render(state, renderer);
-        }
-    }
-}
 
 pub fn main() {
     // SDL2 SETUP
@@ -109,11 +78,11 @@ pub fn main() {
         grid.add_unit(unit.clone(), i, 0);
         grid.add_unit(unit.clone(), i, N_ROWS-1);
     }
-    scene.objects.push(Box::new(grid));
+    scene.add(Box::new(grid));
     
     let cursor = Cursor::new(0, 0, N_COLS, N_ROWS, CELL_SIZE);
-    scene.objects.push(Box::new(cursor));
-    scene.objects.push(Box::new(DebugHelper));
+    scene.add(Box::new(cursor));
+    scene.add(Box::new(DebugHelper));
     
     // INPUT SETUP
     let mut mapper = BoxedInputMapper::new();
