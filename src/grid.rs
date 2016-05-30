@@ -121,8 +121,8 @@ impl Behavior for Grid {
                 }
                 LeftClickAt(x, y) => {
                     let (w, h) = self.cell_size;
-                    let col = (x - (x % w)) / w;
-                    let row = (y - (y % h)) / h;
+                    let col = (x as u32 - (x as u32 % w)) / w;
+                    let row = (y as u32 - (y as u32 % h)) / h;
                     self.on_confirm(col, row);
                 }
                 CursorCancel(col, row) => {
