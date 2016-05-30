@@ -2,7 +2,7 @@
 name = "protoboard"
 version = "0.1.0"
 dependencies = [
- "glorious 0.2.0 (git+https://github.com/Machtan/glorious)",
+ "glorious 0.2.0 (git+https://github.com/Machtan/glorious?branch=one_message)",
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_ttf 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -21,7 +21,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "glorious"
 version = "0.2.0"
-source = "git+https://github.com/Machtan/glorious#953660bf6679fd2e7970217d4cff4afaa55b7311"
+source = "git+https://github.com/Machtan/glorious?branch=one_message#dd1bc108fef84bf42906369e74fc22b34bb6d1ed"
 dependencies = [
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
