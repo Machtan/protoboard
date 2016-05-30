@@ -9,6 +9,7 @@ pub enum Message {
     MoveCursorDown,
     MoveCursorLeft,
     MoveCursorRight,
+    MoveCursorTo(u32, u32),
     Confirm,
     CursorConfirm(u32, u32),
     Cancel,

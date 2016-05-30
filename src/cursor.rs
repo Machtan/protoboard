@@ -66,6 +66,10 @@ impl Behavior for Cursor {
                         self.col += 1;
                     }
                 }
+                MoveCursorTo(col, row) => {
+                    self.col = col;
+                    self.row = row;
+                }
                 Confirm => {
                     let new_message = CursorConfirm(self.col, self.row);
                     new_messages.push(new_message);
