@@ -1,6 +1,9 @@
+
+use std::fmt::{self, Debug};
 use glorious::{Behavior, ResourceManager};
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug)]
 pub enum Message {
     MoveCursorUp,
     MoveCursorDown,
@@ -14,6 +17,9 @@ pub enum Message {
     FinishTurn,
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
+    PushModal(GameObject),
+    PopModal,
+    BreakModal,
 }
 
 #[derive(Debug)]
@@ -33,4 +39,8 @@ impl State {
     }
 }
 
-pub type GameObject = Box<Behavior<State = State, Message = Message>>;
+pub trait DebugBehavior: Behavior + Debug {}
+
+impl<T> DebugBehavior for T where T: Behavior + Debug {}
+
+pub type GameObject = Box<DebugBehavior<State=State, Message=Message>>;

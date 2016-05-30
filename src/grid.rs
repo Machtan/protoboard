@@ -6,6 +6,7 @@ use sdl2::render::Renderer;
 use common::{State, Message};
 use unit::Unit;
 
+#[derive(Debug)]
 pub struct GridField {
     unit: Option<Unit>,
     terrain: Option<()>,
@@ -21,6 +22,7 @@ impl GridField {
     }
 }
 
+#[derive(Debug)]
 pub struct Grid {
     cols: u32,
     rows: u32,
