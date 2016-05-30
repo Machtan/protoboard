@@ -3,7 +3,6 @@ use sdl2::render::Renderer;
 
 use common::{State, Message};
 
-
 #[derive(Debug)]
 pub struct Cursor {
     col: u32,

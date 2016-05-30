@@ -16,7 +16,7 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
-        Scene { 
+        Scene {
             objects: Vec::new(),
             state: SceneState::Normal,
         }
@@ -27,12 +27,20 @@ impl Scene {
     }
 }
 
+impl Default for Scene {
+    fn default() -> Scene {
+        Scene::new()
+    }
+}
+
 impl Behavior for Scene {
     type State = State;
     type Message = Message;
 
-    fn handle(&mut self, state: &mut Self::State, messages: &[Self::Message], 
-            new_messages: &mut Vec<Self::Message>) {
+    fn handle(&mut self,
+              state: &mut State,
+              messages: &[Message],
+              new_messages: &mut Vec<Message>) {
         use self::SceneState::*;
         match self.state {
             Normal => {
@@ -40,13 +48,13 @@ impl Behavior for Scene {
                     object.handle(state, messages, new_messages);
                 }
             }
-            Modal(ref modal_stack) => {
+            Modal(ref _modal_stack) => {
                 for message in messages {
                     match *message {
                         _ => {}
                     }
                 }
-                //modal.handle(state, messages, new_messages);
+                // modal.handle(state, messages, new_messages);
             }
         }
     }
@@ -55,8 +63,8 @@ impl Behavior for Scene {
         for object in &self.objects {
             object.render(state, renderer);
         }
-        if let SceneState::Modal(ref modal_stack) = self.state {
-            //modal.render(state, renderer);
+        if let SceneState::Modal(ref _modal_stack) = self.state {
+            // modal.render(state, renderer);
         }
     }
 }

@@ -1,7 +1,5 @@
-
 use std::fmt::{self, Debug};
 use glorious::{Behavior, ResourceManager};
-
 
 #[derive(Debug)]
 pub enum Message {
@@ -30,6 +28,7 @@ pub struct State {
 }
 
 impl State {
+    #[inline]
     pub fn new() -> State {
         State {
             resources: ResourceManager::new(),
@@ -39,8 +38,15 @@ impl State {
     }
 }
 
+impl Default for State {
+    #[inline]
+    fn default() -> State {
+        State::new()
+    }
+}
+
 pub trait DebugBehavior: Behavior + Debug {}
 
 impl<T> DebugBehavior for T where T: Behavior + Debug {}
 
-pub type GameObject = Box<DebugBehavior<State=State, Message=Message>>;
+pub type GameObject = Box<DebugBehavior<State = State, Message = Message>>;
