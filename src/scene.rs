@@ -39,20 +39,20 @@ impl Behavior for Scene {
 
     fn handle(&mut self,
               state: &mut State,
-              messages: &[Message],
-              new_messages: &mut Vec<Message>) {
+              message: Message,
+              queue: &mut Vec<Message>) {
         use self::SceneState::*;
         match self.state {
             Normal => {
                 for object in &mut self.objects {
-                    object.handle(state, messages, new_messages);
+                    if let Some(m) = message.try_clone() {
+                        object.handle(state, m, queue);
+                    }
                 }
             }
             Modal(ref _modal_stack) => {
-                for message in messages {
-                    match *message {
-                        _ => {}
-                    }
+                match message {
+                    _ => {}
                 }
                 // modal.handle(state, messages, new_messages);
             }

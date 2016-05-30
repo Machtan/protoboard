@@ -104,7 +104,7 @@ impl Behavior for Grid {
     type Message = Message;
 
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut State, _new_messages: &mut Vec<Message>) {
+    fn initialize(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
         // Do nothing by default
     }
 
@@ -116,29 +116,27 @@ impl Behavior for Grid {
     /// Handles new messages since the last frame.
     fn handle(&mut self,
               _state: &mut State,
-              messages: &[Message],
-              new_messages: &mut Vec<Message>) {
+              message: Message,
+              queue: &mut Vec<Message>) {
         use common::Message::*;
-        for message in messages {
-            match *message {
-                CursorConfirm(col, row) => {
-                    self.on_confirm(col, row);
-                }
-                LeftClickAt(x, y) => {
-                    assert!(x >= 0 && y >= 0);
-                    let (w, h) = self.cell_size;
-                    let col = (x as u32 - (x as u32 % w)) / w;
-                    let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
-                    new_messages.push(MoveCursorTo(col, row));
-                    self.on_confirm(col, row);
-                }
-                CursorCancel(..) => {
-                    if self.selected_unit.is_some() {
-                        self.selected_unit = None;
-                    }
-                }
-                _ => {}
+        match message {
+            CursorConfirm(col, row) => {
+                self.on_confirm(col, row);
             }
+            LeftClickAt(x, y) => {
+                assert!(x >= 0 && y >= 0);
+                let (w, h) = self.cell_size;
+                let col = (x as u32 - (x as u32 % w)) / w;
+                let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
+                queue.push(MoveCursorTo(col, row));
+                self.on_confirm(col, row);
+            }
+            CursorCancel(..) => {
+                if self.selected_unit.is_some() {
+                    self.selected_unit = None;
+                }
+            }
+            _ => {}
         }
     }
 

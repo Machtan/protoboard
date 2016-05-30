@@ -20,6 +20,29 @@ pub enum Message {
     BreakModal,
 }
 
+impl Message {
+    pub fn try_clone(&self) -> Option<Message> {
+        use self::Message::*;
+        Some(match *self {
+            MoveCursorUp => MoveCursorUp,
+            MoveCursorDown => MoveCursorDown,
+            MoveCursorLeft => MoveCursorLeft,
+            MoveCursorRight => MoveCursorRight,
+            MoveCursorTo(x, y) => MoveCursorTo(x, y),
+            Confirm => Confirm,
+            CursorConfirm(x, y) => CursorConfirm(x, y),
+            Cancel => Cancel,
+            CursorCancel(x, y) => CursorCancel(x, y),
+            FinishTurn => FinishTurn,
+            LeftClickAt(x, y) => LeftClickAt(x, y),
+            RightClickAt(x, y) => RightClickAt(x, y),
+            PushModal(..) => return None,
+            PopModal => PopModal,
+            BreakModal => BreakModal,
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct State {
     pub resources: ResourceManager,
@@ -45,8 +68,8 @@ impl Default for State {
     }
 }
 
-pub trait DebugBehavior: Behavior + Debug {}
+pub trait BehaviorDebug: Behavior + Debug {}
 
-impl<T> DebugBehavior for T where T: Behavior + Debug {}
+impl<T> BehaviorDebug for T where T: Behavior + Debug {}
 
-pub type GameObject = Box<DebugBehavior<State = State, Message = Message>>;
+pub type GameObject = Box<BehaviorDebug<State = State, Message = Message>>;

@@ -41,46 +41,43 @@ impl Behavior for Cursor {
     /// Handles new messages since the last frame.
     fn handle(&mut self,
               _state: &mut State,
-              messages: &[Message],
-              new_messages: &mut Vec<Message>) {
+              message: Message,
+              queue: &mut Vec<Message>) {
         use common::Message::*;
-        // Do nothing by default
-        for message in messages {
-            match *message {
-                MoveCursorUp => {
-                    if self.row < (self.grid_rows - 1) {
-                        self.row += 1;
-                    }
+        match message {
+            MoveCursorUp => {
+                if self.row < (self.grid_rows - 1) {
+                    self.row += 1;
                 }
-                MoveCursorDown => {
-                    if self.row > 0 {
-                        self.row -= 1;
-                    }
-                }
-                MoveCursorLeft => {
-                    if self.col > 0 {
-                        self.col -= 1;
-                    }
-                }
-                MoveCursorRight => {
-                    if self.col < (self.grid_cols - 1) {
-                        self.col += 1;
-                    }
-                }
-                MoveCursorTo(col, row) => {
-                    self.col = col;
-                    self.row = row;
-                }
-                Confirm => {
-                    let new_message = CursorConfirm(self.col, self.row);
-                    new_messages.push(new_message);
-                }
-                Cancel => {
-                    let new_message = CursorCancel(self.col, self.row);
-                    new_messages.push(new_message);
-                }
-                _ => {}
             }
+            MoveCursorDown => {
+                if self.row > 0 {
+                    self.row -= 1;
+                }
+            }
+            MoveCursorLeft => {
+                if self.col > 0 {
+                    self.col -= 1;
+                }
+            }
+            MoveCursorRight => {
+                if self.col < (self.grid_cols - 1) {
+                    self.col += 1;
+                }
+            }
+            MoveCursorTo(col, row) => {
+                self.col = col;
+                self.row = row;
+            }
+            Confirm => {
+                let new_message = CursorConfirm(self.col, self.row);
+                queue.push(new_message);
+            }
+            Cancel => {
+                let new_message = CursorCancel(self.col, self.row);
+                queue.push(new_message);
+            }
+            _ => {}
         }
     }
 

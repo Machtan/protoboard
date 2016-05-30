@@ -23,11 +23,9 @@ impl Behavior for DebugHelper {
     /// Handles new messages since the last frame.
     fn handle(&mut self,
               _state: &mut State,
-              messages: &[Message],
-              _new_messages: &mut Vec<Message>) {
-        for message in messages {
-            println!("[Debug] Message: {:?}", message);
-        }
+              message: Message,
+              _queue: &mut Vec<Message>) {
+        println!("[Debug] Message: {:?}", message);
     }
 
     /// Renders the object.
