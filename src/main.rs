@@ -92,8 +92,9 @@ pub fn main() {
     state.resources.load_texture("assets/raccoon.png", &mut renderer);
     state.resources.create_sprite("marker", "assets/marker.png", None);
     state.resources.create_sprite("raccoon", "assets/raccoon.png", None);
-    state.resources.load_font("coolvetica", "assets/coolvetica rg.ttf", 16, &font_context);
-    state.resources.create_label("hello_world", "coolvetica", "Hello, World!", 
+    state.resources.load_font("firasans", "assets/fonts/FiraSans-Regular.ttf",
+        16, &font_context);
+    state.resources.create_label("hello_world", "firasans", "Hello, World!", 
         (0, 0, 0, 0), &mut renderer);
     
     let mut scene = Scene::new();
