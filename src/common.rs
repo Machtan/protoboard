@@ -1,7 +1,4 @@
-extern crate glorious;
-
 use glorious::{Behavior, ResourceManager};
-
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -27,7 +24,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new() -> State {
         State {
             resources: ResourceManager::new(),
             player_turn: 1,
@@ -36,4 +33,4 @@ impl State {
     }
 }
 
-pub type GameObject = Box<Behavior<State=State, Message=Message>>;
+pub type GameObject = Box<Behavior<State = State, Message = Message>>;

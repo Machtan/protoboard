@@ -1,7 +1,7 @@
 use glorious::Behavior;
-use common::{State, Message};
-use sdl2::rect::Rect;
 use sdl2::render::Renderer;
+
+use common::{State, Message};
 
 pub struct Cursor {
     col: u32,
@@ -12,7 +12,7 @@ pub struct Cursor {
 }
 
 impl Cursor {
-    pub fn new(col: u32, row: u32, grid_rows: u32, grid_cols: u32, size: (u32, u32)) -> Self {
+    pub fn new(col: u32, row: u32, grid_rows: u32, grid_cols: u32, size: (u32, u32)) -> Cursor {
         Cursor {
             col: col,
             row: row,
@@ -26,22 +26,22 @@ impl Cursor {
 impl Behavior for Cursor {
     type State = State;
     type Message = Message;
-    
+
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut Self::State, _new_messages: &mut Vec<Self::Message>) {
+    fn initialize(&mut self, _state: &mut State, _new_messages: &mut Vec<Message>) {
         // Do nothing by default
     }
 
     /// Updates the object each frame.
-    fn update(&mut self, _state: &mut Self::State, _queue: &mut Vec<Self::Message>) {
+    fn update(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
         // Do nothing by default
     }
 
     /// Handles new messages since the last frame.
     fn handle(&mut self,
-              state: &mut Self::State,
-              messages: &[Self::Message],
-              new_messages: &mut Vec<Self::Message>) {
+              _state: &mut State,
+              messages: &[Message],
+              new_messages: &mut Vec<Message>) {
         use common::Message::*;
         // Do nothing by default
         for message in messages {
@@ -84,7 +84,7 @@ impl Behavior for Cursor {
     }
 
     /// Renders the object.
-    fn render(&self, state: &Self::State, renderer: &mut Renderer) {
+    fn render(&self, state: &State, renderer: &mut Renderer) {
         let x = (self.col * self.size.0) as i32;
         let grid_height = self.grid_rows * self.size.1;
         let y = (grid_height - self.size.1 - (self.row * self.size.1)) as i32;

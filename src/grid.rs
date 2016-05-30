@@ -1,8 +1,9 @@
 use glorious::Behavior;
-use sdl2::render::Renderer;
-use sdl2::rect::Rect;
 use sdl2::pixels::Color;
-use common::{GameObject, State, Message};
+use sdl2::rect::Rect;
+use sdl2::render::Renderer;
+
+use common::{State, Message};
 use unit::Unit;
 
 pub struct GridField {
@@ -11,7 +12,8 @@ pub struct GridField {
 }
 
 impl GridField {
-    pub fn new(unit: Option<Unit>) -> Self {
+    #[inline]
+    pub fn new(unit: Option<Unit>) -> GridField {
         GridField {
             unit: unit,
             terrain: None,
@@ -28,11 +30,11 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(cols: u32, rows: u32, cell_size: (u32, u32)) -> Self {
+    pub fn new(cols: u32, rows: u32, cell_size: (u32, u32)) -> Grid {
         let mut contents = Vec::new();
-        for x in 0..cols {
+        for _ in 0..cols {
             let mut col = Vec::new();
-            for y in 0..rows {
+            for _ in 0..rows {
                 col.push(GridField::new(None));
             }
             contents.push(col);
@@ -45,11 +47,11 @@ impl Grid {
             selected_unit: None,
         }
     }
-    
+
     pub fn field(&mut self, col: u32, row: u32) -> &mut GridField {
         &mut self.contents[col as usize][row as usize]
     }
-    
+
     pub fn unit(&mut self, col: u32, row: u32) -> Option<&mut Unit> {
         if let Some(ref mut unit) = self.contents[col as usize][row as usize].unit {
             Some(unit)
@@ -57,10 +59,10 @@ impl Grid {
             None
         }
     }
-    
+
     pub fn add_unit(&mut self, unit: Unit, col: u32, row: u32) -> Result<(), String> {
         if col > (self.cols - 1) {
-            return Err(format!("Column {} > {}", col, self.cols-1));
+            return Err(format!("Column {} > {}", col, self.cols - 1));
         }
         if row > (self.rows - 1) {
             return Err(format!("Row {} > {}", row, self.rows - 1));
@@ -68,21 +70,24 @@ impl Grid {
         self.contents[col as usize][row as usize].unit = Some(unit);
         Ok(())
     }
-    
+
     fn move_unit_to(&mut self, col: u32, row: u32) {
-        let (ucol, urow) = self.selected_unit.unwrap();
+        let (ucol, urow) = self.selected_unit.expect("no unit was selected");
         let occupied = self.unit(col, row).is_some();
         if col == ucol && row == urow {
             self.selected_unit = None;
         }
-        if ! occupied {
-            self.field(col, row).unit = Some(self.unit(ucol, urow).unwrap().clone());
+        if !occupied {
+            let selected = self.unit(ucol, urow)
+                .expect("selected_unit points to vacant tile")
+                .clone();
+            self.field(col, row).unit = Some(selected);
             self.selected_unit = None;
             self.field(ucol, urow).unit = None;
             println!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
         }
     }
-    
+
     fn on_confirm(&mut self, col: u32, row: u32) {
         if self.selected_unit.is_some() {
             self.move_unit_to(col, row);
@@ -95,39 +100,37 @@ impl Grid {
 impl Behavior for Grid {
     type State = State;
     type Message = Message;
-    
+
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut Self::State, _new_messages: &mut Vec<Self::Message>) {
+    fn initialize(&mut self, _state: &mut State, _new_messages: &mut Vec<Message>) {
         // Do nothing by default
     }
 
     /// Updates the object each frame.
-    fn update(&mut self, _state: &mut Self::State, _queue: &mut Vec<Self::Message>) {
+    fn update(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
         // Do nothing by default
     }
 
     /// Handles new messages since the last frame.
     fn handle(&mut self,
-              state: &mut Self::State,
-              messages: &[Self::Message],
-              new_messages: &mut Vec<Self::Message>) {
+              _state: &mut State,
+              messages: &[Message],
+              new_messages: &mut Vec<Message>) {
         use common::Message::*;
-        // Do nothing by default
         for message in messages {
             match *message {
                 CursorConfirm(col, row) => {
-                    //println!("Confirm @ ({}, {})", col, row);
                     self.on_confirm(col, row);
                 }
                 LeftClickAt(x, y) => {
+                    assert!(x >= 0 && y >= 0);
                     let (w, h) = self.cell_size;
                     let col = (x as u32 - (x as u32 % w)) / w;
                     let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
                     new_messages.push(MoveCursorTo(col, row));
                     self.on_confirm(col, row);
                 }
-                CursorCancel(col, row) => {
-                    //println!("Cancel @ ({}, {})", col, row);
+                CursorCancel(..) => {
                     if self.selected_unit.is_some() {
                         self.selected_unit = None;
                     }
@@ -138,13 +141,13 @@ impl Behavior for Grid {
     }
 
     /// Renders the object.
-    fn render(&self, state: &Self::State, renderer: &mut Renderer) {
+    fn render(&self, state: &State, renderer: &mut Renderer) {
         let grid_height = self.rows * self.cell_size.1;
         for col in 0..self.cols {
             for row in 0..self.rows {
                 let x = col * self.cell_size.0;
                 let y = grid_height - self.cell_size.1 - (row * self.cell_size.1);
-                //sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
+                // sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
                 if (col + row) % 2 == 0 {
                     renderer.set_draw_color(Color::RGB(210, 210, 210));
                 } else {
@@ -155,11 +158,14 @@ impl Behavior for Grid {
                         renderer.set_draw_color(Color::RGB(0, 255, 0));
                     }
                 }
-                renderer.fill_rect(Rect::new(x as i32, y as i32, 
-                    self.cell_size.0, self.cell_size.1));
-                let ref field = self.contents[col as usize][row as usize];
+
+                let rect = Rect::new(x as i32, y as i32, self.cell_size.0, self.cell_size.1);
+                // TODO: When can `fill_rect` fail?
+                renderer.fill_rect(rect).unwrap();
+
+                let field = &self.contents[col as usize][row as usize];
                 if let Some(()) = field.terrain {
-                    
+
                 }
                 if let Some(ref obj) = field.unit {
                     let sprite = state.resources.sprite(obj.texture).unwrap();
@@ -167,7 +173,7 @@ impl Behavior for Grid {
                 }
             }
         }
-        
+
         let label = state.resources.label("hello_world").unwrap();
         label.render(renderer, 200, 200, None);
     }
