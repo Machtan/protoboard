@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use glorious::{Behavior, ResourceManager};
 
 #[derive(Debug)]
@@ -18,6 +18,7 @@ pub enum Message {
     PushModal(GameObject),
     PopModal,
     BreakModal,
+    MenuSelect(&'static str),
 }
 
 impl Message {
@@ -39,6 +40,7 @@ impl Message {
             PushModal(..) => return None,
             PopModal => PopModal,
             BreakModal => BreakModal,
+            MenuSelect(name) => MenuSelect(name),
         })
     }
 }

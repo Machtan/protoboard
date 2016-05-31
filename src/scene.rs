@@ -42,20 +42,46 @@ impl Behavior for Scene {
               message: Message,
               queue: &mut Vec<Message>) {
         use self::SceneState::*;
+        use common::Message::*;
+        
+        let mut break_modal = false;
         match self.state {
             Normal => {
+                if let PushModal(modal_obj) = message {
+                    self.state = Modal(vec![modal_obj]);
+                    return;
+                }
                 for object in &mut self.objects {
                     if let Some(m) = message.try_clone() {
                         object.handle(state, m, queue);
                     }
                 }
             }
-            Modal(ref _modal_stack) => {
+            Modal(ref mut modal_stack) => {
                 match message {
-                    _ => {}
+                    PushModal(modal_obj) => {
+                        modal_stack.push(modal_obj);
+                    }
+                    PopModal => {
+                        if modal_stack.len() == 1 {
+                            break_modal = true;
+                        } else {
+                            modal_stack.pop();
+                        }
+                    }
+                    BreakModal => {
+                        break_modal = true;
+                    }
+                    other_message => {
+                        let last = modal_stack.len() - 1;
+                        let ref mut modal = modal_stack[last];
+                        modal.handle(state, other_message, queue);
+                    }
                 }
-                // modal.handle(state, messages, new_messages);
             }
+        }
+        if break_modal {
+            self.state = Normal;
         }
     }
 

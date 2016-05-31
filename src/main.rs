@@ -23,6 +23,7 @@ mod unit;
 mod grid;
 mod cursor;
 mod debug;
+mod menus;
 
 pub fn main() {
     use sdl2::event::Event::*;

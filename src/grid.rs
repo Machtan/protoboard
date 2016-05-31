@@ -104,7 +104,8 @@ impl Behavior for Grid {
     type Message = Message;
 
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
+    fn initialize(&mut self, _state: &mut State, _queue: &mut Vec<Message>,
+            _renderer: &mut Renderer) {
         // Do nothing by default
     }
 
