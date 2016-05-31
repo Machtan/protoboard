@@ -1,5 +1,3 @@
-use std::mem;
-
 use glorious::Behavior;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -36,7 +34,7 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(cols: u32, rows: u32, cell_size: (u32, u32)) -> Grid {
-        let mut contents = vec![GridField::new(None); cols as usize * rows as usize];
+        let contents = vec![GridField::new(None); cols as usize * rows as usize];
         Grid {
             cols: cols,
             rows: rows,
@@ -73,7 +71,7 @@ impl Grid {
         field.unit = Some(unit);
     }
 
-    fn move_unit_to(&mut self, col: u32, row: u32, state: &State, queue: &mut Vec<Message>) {
+    fn move_unit_to(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
         use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
         if col == ucol && row == urow {
@@ -82,7 +80,8 @@ impl Grid {
             let i = self.index(ucol, urow);
             let j = self.index(col, row);
 
-            assert!(self.contents[i].unit.is_some(), "selected unit points to vacant tile");
+            assert!(self.contents[i].unit.is_some(),
+                    "selected unit points to vacant tile");
             self.contents.swap(i, j);
             self.selected_unit = None;
 
@@ -93,25 +92,25 @@ impl Grid {
                                       (50, 50),
                                       "firasans",
                                       state,
-                                      |option, queue| {
+                                      |option, state, _queue| {
                 match option {
                     "Attack" => {
                         info!("Attack!");
-                        queue.push(Message::PopModal);
+                        state.pop_modal();
                     }
                     "Wait" => {
                         info!("Wait!");
-                        queue.push(Message::PopModal);
+                        state.pop_modal();
                     }
                     _ => unreachable!(),
                 }
             })
                 .expect("could not create menu");
-            queue.push(Message::PushModal(Box::new(menu)));
+            state.push_modal(Box::new(menu));
         }
     }
 
-    fn on_confirm(&mut self, col: u32, row: u32, state: &State, queue: &mut Vec<Message>) {
+    fn on_confirm(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
         if self.selected_unit.is_some() {
             self.move_unit_to(col, row, state, queue);
         } else if self.unit(col, row).is_some() {

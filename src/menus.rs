@@ -10,7 +10,7 @@ use common::{State, Message};
 const PAD: u32 = 10;
 
 pub struct ModalMenu<F>
-    where F: FnMut(&str, &mut Vec<Message>)
+    where F: FnMut(&str, &mut State, &mut Vec<Message>)
 {
     pos: (i32, i32),
     width: u32,
@@ -20,7 +20,7 @@ pub struct ModalMenu<F>
 }
 
 impl<F> ModalMenu<F>
-    where F: FnMut(&str, &mut Vec<Message>)
+    where F: FnMut(&str, &mut State, &mut Vec<Message>)
 {
     pub fn new(options: &[&str],
                selected: usize,
@@ -35,7 +35,7 @@ impl<F> ModalMenu<F>
                 "the selected option is out of bounds ({} of {})",
                 selected,
                 options.len());
-        
+
         let mut labels = Vec::new();
         let mut max_width = 0;
         let loaded_font = state.resources.font(font).expect("Modal font not found");
@@ -58,21 +58,21 @@ impl<F> ModalMenu<F>
 }
 
 impl<F> Behavior for ModalMenu<F>
-    where F: FnMut(&str, &mut Vec<Message>)
+    where F: FnMut(&str, &mut State, &mut Vec<Message>)
 {
     type State = State;
     type Message = Message;
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
+    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             Confirm => {
                 let option = &self.options[self.selected];
-                (self.handler)(&option.text(), queue);
+                (self.handler)(option.text(), state, queue);
             }
             Cancel => {
-                queue.push(PopModal);
+                state.pop_modal();
             }
             _ => {}
         }
@@ -106,7 +106,7 @@ impl<F> Behavior for ModalMenu<F>
 }
 
 impl<F> Debug for ModalMenu<F>
-    where F: FnMut(&str, &mut Vec<Message>)
+    where F: FnMut(&str, &mut State, &mut Vec<Message>)
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("ModalMenu { .. }")
