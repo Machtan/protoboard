@@ -1,14 +1,17 @@
+use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+use sdl2::render::Texture;
+
+#[derive(Clone)]
 pub struct Unit {
-    pub texture: &'static str,
+    pub texture: Rc<Texture>,
     pub spent: bool,
     pub attack: AttackType,
 }
 
 impl Unit {
     #[inline]
-    pub fn new(texture: &'static str, attack_type: AttackType) -> Unit {
+    pub fn new(texture: Rc<Texture>, attack_type: AttackType) -> Unit {
         Unit {
             texture: texture,
             spent: false,

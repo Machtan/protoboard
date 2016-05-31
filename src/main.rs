@@ -1,5 +1,7 @@
 #![feature(question_mark)]
 
+use std::rc::Rc;
+
 extern crate env_logger;
 #[macro_use]
 extern crate log;
@@ -10,16 +12,16 @@ extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
 
-use glorious::{BoxedInputMapper, Game, ExitSignal};
+use glorious::{BoxedInputMapper, Game, ExitSignal, Renderer, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_PNG, INIT_JPG};
 
-use common::State;
+use common::{FIRA_SANS_PATH, MARKER_PATH, RACCOON_PATH, State};
 use grid::Grid;
 use cursor::Cursor;
 use scene::Scene;
-use unit::{Unit, AttackType};
+use unit::AttackType;
 
 mod common;
 mod scene;
@@ -59,27 +61,23 @@ pub fn main() {
         .build()
         .unwrap();
 
-    let mut renderer = window.renderer().build().unwrap();
+    let renderer = Renderer::new(window.renderer().build().unwrap());
+    let resources = ResourceManager::new(renderer.clone(), Rc::new(font_context));
 
     // Set up game state.
 
-    let mut state = State::new();
-    // TODO: Consider when these functions can err.
-    state.resources.load_texture("assets/marker.png", &mut renderer).unwrap();
-    state.resources.load_texture("assets/raccoon.png", &mut renderer).unwrap();
-    state.resources.create_sprite("marker", "assets/marker.png", None).unwrap();
-    state.resources.create_sprite("raccoon", "assets/raccoon.png", None).unwrap();
-    state.resources
-        .load_font("firasans",
-                   "assets/fonts/FiraSans-Regular.ttf",
-                   16,
-                   &font_context)
-        .unwrap();
+    let state = State::new(resources);
+
+    // Cause a few assets to be preloaded.
+
+    state.resources.texture(MARKER_PATH);
+    let raccoon_texture = state.resources.texture(RACCOON_PATH);
+    state.resources.font(FIRA_SANS_PATH, 16);
 
     let mut scene = Scene::new();
 
     let mut grid = Grid::new(N_COLS, N_ROWS, CELL_SIZE);
-    let unit = unit::Unit::new("raccoon", AttackType::Melee);
+    let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
     for i in 0..N_COLS {
         grid.add_unit(unit.clone(), i, 0);
         grid.add_unit(unit.clone(), i, N_ROWS - 1);

@@ -1,13 +1,14 @@
-use glorious::Behavior;
+use std::fmt::{self, Debug};
+
+use glorious::{Behavior, Renderer, Sprite};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Renderer;
 
-use common::{State, Message};
+use common::{FIRA_SANS_PATH, State, Message};
 use unit::Unit;
 use menus::ModalMenu;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct GridField {
     unit: Option<Unit>,
     terrain: Option<()>,
@@ -23,7 +24,6 @@ impl GridField {
     }
 }
 
-#[derive(Debug)]
 pub struct Grid {
     cols: u32,
     rows: u32,
@@ -96,10 +96,10 @@ impl Grid {
 
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
 
-            let menu = ModalMenu::new(&["Attack", "Wait"],
+            let menu = ModalMenu::new(["Attack", "Wait"].iter().map(|&s| s.to_owned()),
                                       0,
                                       (50, 50),
-                                      "firasans",
+                                      state.resources.font(FIRA_SANS_PATH, 16),
                                       state,
                                       move |option, state, queue| {
                 match option {
@@ -137,12 +137,11 @@ impl Grid {
     }
 }
 
-impl Behavior for Grid {
-    type State = State;
+impl<'a> Behavior<State<'a>> for Grid {
     type Message = Message;
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
+    fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             CursorConfirm(col, row) => {
@@ -168,19 +167,19 @@ impl Behavior for Grid {
             }
             MoveUnit((src_col, src_row), (dst_col, dst_row)) => {
                 assert!(self.unit(dst_col, dst_row).is_none(),
-                    "Transport units not supported!");
+                        "Transport units not supported!");
                 let unit = self.unit(src_col, src_row).expect("Bad move src").clone();
                 self.field_mut(dst_col, dst_row).unit = Some(unit);
                 self.field_mut(src_col, src_row).unit = None;
             }
             SelectUnit(col, row) => {
                 assert!(self.unit(col, row).is_some(),
-                    "The field for the selected unit is empty!");
+                        "The field for the selected unit is empty!");
                 self.selected_unit = Some((col, row));
             }
             Deselect => {
                 assert!(self.selected_unit.is_some(),
-                    "Received deselect with no unit selected");
+                        "Received deselect with no unit selected");
                 self.selected_unit = None;
             }
             _ => {}
@@ -188,7 +187,7 @@ impl Behavior for Grid {
     }
 
     /// Renders the object.
-    fn render(&mut self, state: &State, renderer: &mut Renderer) {
+    fn render(&mut self, _state: &State<'a>, renderer: &mut Renderer) {
         let grid_height = self.rows * self.cell_size.1;
         for col in 0..self.cols {
             for row in 0..self.rows {
@@ -218,10 +217,16 @@ impl Behavior for Grid {
                         renderer.set_draw_color(Color::RGB(100, 150, 100));
                         renderer.fill_rect(rect).unwrap();
                     }
-                    let sprite = state.resources.sprite(obj.texture).unwrap();
+                    let sprite = Sprite::new(obj.texture.clone(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
                 }
             }
         }
+    }
+}
+
+impl Debug for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Grid {{ .. }}")
     }
 }

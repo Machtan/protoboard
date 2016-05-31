@@ -1,5 +1,10 @@
 use std::fmt::Debug;
+
 use glorious::{Behavior, ResourceManager};
+
+pub const FIRA_SANS_PATH: &'static str = "assets/fonts/FiraSans-Regular.ttf";
+pub const MARKER_PATH: &'static str = "assets/marker.png";
+pub const RACCOON_PATH: &'static str = "assets/raccoon.png";
 
 #[derive(Clone, Debug)]
 pub enum Message {
@@ -23,25 +28,25 @@ pub enum Message {
 }
 
 #[derive(Debug)]
-pub struct State {
-    pub resources: ResourceManager,
+pub struct State<'a> {
+    pub resources: ResourceManager<'a>,
     player_turn: u32,
     player_count: u32,
-    modal_stack: Vec<Option<GameObject>>,
+    modal_stack: Vec<Option<GameObject<'a>>>,
 }
 
-impl State {
+impl<'a> State<'a> {
     #[inline]
-    pub fn new() -> State {
+    pub fn new(resources: ResourceManager<'a>) -> State<'a> {
         State {
-            resources: ResourceManager::new(),
+            resources: resources,
             player_turn: 1,
             player_count: 1,
             modal_stack: Vec::new(),
         }
     }
 
-    pub fn push_modal(&mut self, behavior: GameObject) {
+    pub fn push_modal(&mut self, behavior: GameObject<'a>) {
         self.modal_stack.push(Some(behavior));
     }
 
@@ -51,7 +56,7 @@ impl State {
         }
     }
 
-    pub fn apply_modal_stack(&mut self, dst: &mut Vec<GameObject>) {
+    pub fn apply_modal_stack(&mut self, dst: &mut Vec<GameObject<'a>>) {
         for modal in self.modal_stack.drain(..) {
             match modal {
                 Some(modal) => {
@@ -72,15 +77,8 @@ impl State {
     }
 }
 
-impl Default for State {
-    #[inline]
-    fn default() -> State {
-        State::new()
-    }
-}
+pub trait BehaviorDebug<S>: Behavior<S> + Debug {}
 
-pub trait BehaviorDebug: Behavior + Debug {}
+impl<T, S> BehaviorDebug<S> for T where T: Behavior<S> + Debug {}
 
-impl<T> BehaviorDebug for T where T: Behavior + Debug {}
-
-pub type GameObject = Box<BehaviorDebug<State = State, Message = Message>>;
+pub type GameObject<'a> = Box<BehaviorDebug<State<'a>, Message = Message>>;

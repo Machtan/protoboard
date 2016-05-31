@@ -1,7 +1,6 @@
-use glorious::Behavior;
-use sdl2::render::Renderer;
+use glorious::{Behavior, Renderer, Sprite};
 
-use common::{State, Message};
+use common::{MARKER_PATH, State, Message};
 
 #[derive(Debug)]
 pub struct Cursor {
@@ -24,12 +23,11 @@ impl Cursor {
     }
 }
 
-impl Behavior for Cursor {
-    type State = State;
+impl<'a> Behavior<State<'a>> for Cursor {
     type Message = Message;
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
+    fn handle(&mut self, _state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             MoveCursorUp => {
@@ -69,11 +67,11 @@ impl Behavior for Cursor {
     }
 
     /// Renders the object.
-    fn render(&mut self, state: &State, renderer: &mut Renderer) {
+    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         let x = (self.col * self.size.0) as i32;
         let grid_height = self.grid_rows * self.size.1;
         let y = (grid_height - self.size.1 - (self.row * self.size.1)) as i32;
-        let sprite = state.resources.sprite("marker").unwrap();
+        let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
         sprite.render(renderer, x, y, Some(self.size));
     }
 }

@@ -1,9 +1,11 @@
+use std::cmp;
 use std::fmt::{self, Debug};
+use std::rc::Rc;
 
-use glorious::{Behavior, Label};
+use glorious::{Behavior, Label, Renderer};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Renderer;
+use sdl2_ttf::Font;
 
 use common::{State, Message};
 
@@ -22,31 +24,33 @@ pub struct ModalMenu<F>
 impl<F> ModalMenu<F>
     where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
-    pub fn new(options: &[&str],
-               selected: usize,
-               pos: (i32, i32),
-               font: &str,
-               state: &State,
-               handler: F)
-               -> Result<ModalMenu<F>, String> {
-        assert!(!options.is_empty(),
-                "a modal menu must have at least one option");
-        assert!(selected < options.len(),
+    pub fn new<I>(options: I,
+                  selected: usize,
+                  pos: (i32, i32),
+                  font: Rc<Font>,
+                  state: &State,
+                  handler: F)
+                  -> Result<ModalMenu<F>, String>
+        where I: IntoIterator<Item = String>
+    {
+        let mut max_width = 0;
+        let labels = options.into_iter()
+            .map(|option| {
+                let label = Label::new(font.clone(),
+                                       option,
+                                       (0, 0, 0, 0),
+                                       state.resources.renderer());
+                let (w, _) = label.size();
+                max_width = cmp::max(max_width, w);
+                label
+            })
+            .collect::<Vec<_>>();
+
+        assert!(selected < labels.len(),
                 "the selected option is out of bounds ({} of {})",
                 selected,
-                options.len());
+                labels.len());
 
-        let mut labels = Vec::new();
-        let mut max_width = 0;
-        let loaded_font = state.resources.font(font).expect("Modal font not found");
-        for option in options {
-            let label = Label::new(font, loaded_font, option, (0, 0, 0, 0));
-            let (w, _) = label.size();
-            if w > max_width {
-                max_width = w;
-            }
-            labels.push(label);
-        }
         Ok(ModalMenu {
             pos: pos,
             width: 2 * PAD + max_width,
@@ -57,10 +61,9 @@ impl<F> ModalMenu<F>
     }
 }
 
-impl<F> Behavior for ModalMenu<F>
+impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
     where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
-    type State = State;
     type Message = Message;
 
     /// Handles new messages since the last frame.
@@ -85,13 +88,9 @@ impl<F> Behavior for ModalMenu<F>
     }
 
     /// Renders the object.
-    fn render(&mut self, state: &State, renderer: &mut Renderer) {
+    fn render(&mut self, _state: &State, renderer: &mut Renderer) {
         let (sx, sy) = self.pos;
-        let line_spacing = {
-            let font_name = self.options[0].font();
-            let font = state.resources.font(font_name).unwrap();
-            font.recommended_line_spacing()
-        };
+        let line_spacing = self.options[0].font().recommended_line_spacing();
         let height = PAD * 2 + line_spacing as u32 * self.options.len() as u32;
 
         renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
@@ -104,7 +103,7 @@ impl<F> Behavior for ModalMenu<F>
                 let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, line_spacing as u32);
                 renderer.fill_rect(rect).unwrap();
             }
-            label.render(renderer, x, y, &state.resources);
+            label.render(renderer, x, y);
             y += line_spacing;
         }
     }

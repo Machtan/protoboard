@@ -1,14 +1,14 @@
+use glorious::{Behavior, Renderer};
+
 use common::{Message, State, GameObject};
-use sdl2::render::Renderer;
-use glorious::Behavior;
 
 #[derive(Debug)]
-pub struct Scene {
-    objects: Vec<GameObject>,
-    modal_stack: Vec<GameObject>,
+pub struct Scene<'a> {
+    objects: Vec<GameObject<'a>>,
+    modal_stack: Vec<GameObject<'a>>,
 }
 
-impl Scene {
+impl<'a> Scene<'a> {
     pub fn new() -> Self {
         Scene {
             objects: Vec::new(),
@@ -16,30 +16,23 @@ impl Scene {
         }
     }
 
-    pub fn add(&mut self, object: GameObject) {
+    pub fn add(&mut self, object: GameObject<'a>) {
         self.objects.push(object);
     }
 }
 
-impl Default for Scene {
-    fn default() -> Scene {
-        Scene::new()
-    }
-}
-
-impl Behavior for Scene {
-    type State = State;
+impl<'a> Behavior<State<'a>> for Scene<'a> {
     type Message = Message;
 
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+    fn initialize(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         for object in &mut self.objects {
             object.initialize(state, queue);
         }
     }
 
     /// Updates the object each frame.
-    fn update(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+    fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         state.apply_modal_stack(&mut self.modal_stack);
 
         for object in &mut self.objects {
@@ -50,9 +43,7 @@ impl Behavior for Scene {
         };
     }
 
-    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
-        use common::Message::*;
-
+    fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         trace!("Message: {:?}", message);
 
         match self.modal_stack.last_mut() {
@@ -67,7 +58,7 @@ impl Behavior for Scene {
         }
     }
 
-    fn render(&mut self, state: &Self::State, renderer: &mut Renderer) {
+    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         for object in &mut self.objects {
             object.render(state, renderer);
         }
