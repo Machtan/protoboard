@@ -29,8 +29,10 @@ impl Behavior for Cursor {
     type Message = Message;
 
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut State, _new_messages: &mut Vec<Message>,
-            _renderer: &mut Renderer) {
+    fn initialize(&mut self,
+                  _state: &mut State,
+                  _new_messages: &mut Vec<Message>,
+                  _renderer: &mut Renderer) {
         // Do nothing by default
     }
 
@@ -40,10 +42,7 @@ impl Behavior for Cursor {
     }
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self,
-              _state: &mut State,
-              message: Message,
-              queue: &mut Vec<Message>) {
+    fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             MoveCursorUp => {

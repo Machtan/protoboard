@@ -11,8 +11,10 @@ impl Behavior for DebugHelper {
     type Message = Message;
 
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, _state: &mut State, _new_messages: &mut Vec<Message>,
-            _renderer: &mut Renderer) {
+    fn initialize(&mut self,
+                  _state: &mut State,
+                  _new_messages: &mut Vec<Message>,
+                  _renderer: &mut Renderer) {
         // Do nothing.
     }
 
@@ -22,10 +24,7 @@ impl Behavior for DebugHelper {
     }
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self,
-              _state: &mut State,
-              message: Message,
-              _queue: &mut Vec<Message>) {
+    fn handle(&mut self, _state: &mut State, message: Message, _queue: &mut Vec<Message>) {
         println!("[Debug] Message: {:?}", message);
     }
 

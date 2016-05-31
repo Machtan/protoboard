@@ -36,10 +36,12 @@ impl Default for Scene {
 impl Behavior for Scene {
     type State = State;
     type Message = Message;
-    
+
     /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, state: &mut State, queue: &mut Vec<Message>,
-            renderer: &mut Renderer) {
+    fn initialize(&mut self,
+                  state: &mut State,
+                  queue: &mut Vec<Message>,
+                  renderer: &mut Renderer) {
         for object in &mut self.objects {
             object.initialize(state, queue, renderer);
         }
@@ -52,13 +54,10 @@ impl Behavior for Scene {
         }
     }
 
-    fn handle(&mut self,
-              state: &mut State,
-              message: Message,
-              queue: &mut Vec<Message>) {
+    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use self::SceneState::*;
         use common::Message::*;
-        
+
         let mut break_modal = false;
         match self.state {
             Normal => {
