@@ -81,7 +81,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
                 self.selected = (self.selected + 1) % self.options.len();
             }
             MoveCursorUp => {
-                self.selected = self.selected.wrapping_sub(1) % self.options.len();
+                self.selected = (self.selected + self.options.len() - 1) % self.options.len();
             }
             _ => {}
         }
