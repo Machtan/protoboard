@@ -81,7 +81,7 @@ impl Grid {
         attackable
     }
 
-    fn move_unit_to(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
+    fn do_action_at(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
         use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
         if col == ucol && row == urow {
@@ -93,7 +93,6 @@ impl Grid {
             assert!(self.contents[i].unit.is_some(),
                     "selected unit points to vacant tile");
             self.contents.swap(i, j);
-            self.selected_unit = None;
 
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
 
@@ -102,14 +101,23 @@ impl Grid {
                                       (50, 50),
                                       "firasans",
                                       state,
-                                      |option, state, _queue| {
+                                      move |option, state, queue| {
                 match option {
-                    "Attack" => {
+                    Some("Attack") => {
                         info!("Attack!");
                         state.pop_modal();
                     }
-                    "Wait" => {
+                    Some("Wait") => {
                         info!("Wait!");
+                        queue.push(UnitSpent(col, row));
+                        queue.push(Deselect);
+                        queue.push(MoveCursorTo(col, row));
+                        state.pop_modal();
+                    }
+                    None => {
+                        info!("Cancel!");
+                        queue.push(MoveUnit((col, row), (ucol, urow)));
+                        queue.push(SelectUnit(ucol, urow));
                         state.pop_modal();
                     }
                     _ => unreachable!(),
@@ -122,7 +130,7 @@ impl Grid {
 
     fn on_confirm(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
         if self.selected_unit.is_some() {
-            self.move_unit_to(col, row, state, queue);
+            self.do_action_at(col, row, state, queue);
         } else if self.unit(col, row).is_some() {
             self.selected_unit = Some((col, row));
         }
@@ -152,6 +160,27 @@ impl Behavior for Grid {
                 if self.selected_unit.is_some() {
                     self.selected_unit = None;
                 }
+            }
+            UnitSpent(col, row) => {
+                self.unit_mut(col, row).expect("No unit at the spent cell!")
+                    .spent = true;
+            }
+            MoveUnit((src_col, src_row), (dst_col, dst_row)) => {
+                assert!(self.unit(dst_col, dst_row).is_none(),
+                    "Transport units not supported!");
+                let unit = self.unit(src_col, src_row).expect("Bad move src").clone();
+                self.field_mut(dst_col, dst_row).unit = Some(unit);
+                self.field_mut(src_col, src_row).unit = None;
+            }
+            SelectUnit(col, row) => {
+                assert!(self.unit(col, row).is_some(),
+                    "The field for the selected unit is empty!");
+                self.selected_unit = Some((col, row));
+            }
+            Deselect => {
+                assert!(self.selected_unit.is_some(),
+                    "Received deselect with no unit selected");
+                self.selected_unit = None;
             }
             _ => {}
         }
@@ -184,6 +213,10 @@ impl Behavior for Grid {
                 if let Some(()) = field.terrain {
                 }
                 if let Some(ref obj) = field.unit {
+                    if obj.spent {
+                        renderer.set_draw_color(Color::RGB(100, 150, 100));
+                        renderer.fill_rect(rect).unwrap();
+                    }
                     let sprite = state.resources.sprite(obj.texture).unwrap();
                     sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
                 }

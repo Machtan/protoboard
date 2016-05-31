@@ -10,7 +10,7 @@ use common::{State, Message};
 const PAD: u32 = 10;
 
 pub struct ModalMenu<F>
-    where F: FnMut(&str, &mut State, &mut Vec<Message>)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     pos: (i32, i32),
     width: u32,
@@ -20,7 +20,7 @@ pub struct ModalMenu<F>
 }
 
 impl<F> ModalMenu<F>
-    where F: FnMut(&str, &mut State, &mut Vec<Message>)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     pub fn new(options: &[&str],
                selected: usize,
@@ -58,7 +58,7 @@ impl<F> ModalMenu<F>
 }
 
 impl<F> Behavior for ModalMenu<F>
-    where F: FnMut(&str, &mut State, &mut Vec<Message>)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     type State = State;
     type Message = Message;
@@ -69,10 +69,16 @@ impl<F> Behavior for ModalMenu<F>
         match message {
             Confirm => {
                 let option = &self.options[self.selected];
-                (self.handler)(option.text(), state, queue);
+                (self.handler)(Some(option.text()), state, queue);
             }
             Cancel => {
-                state.pop_modal();
+                (self.handler)(None, state, queue);
+            }
+            MoveCursorDown => {
+                self.selected = (self.selected + 1) % self.options.len();
+            }
+            MoveCursorUp => {
+                self.selected = (self.selected - 1) % self.options.len();
             }
             _ => {}
         }
@@ -95,8 +101,8 @@ impl<F> Behavior for ModalMenu<F>
         for (i, label) in self.options.iter_mut().enumerate() {
             if i == self.selected {
                 renderer.set_draw_color(Color::RGB(255, 150, 0));
-                let (w, h) = label.size();
-                let rect = Rect::new(x, y, w, h);
+                let rect = Rect::new(x - PAD as i32/ 2, y, 
+                    self.width - PAD, line_spacing as u32);
                 renderer.fill_rect(rect).unwrap();
             }
             label.render(renderer, x, y, &state.resources);
@@ -106,7 +112,7 @@ impl<F> Behavior for ModalMenu<F>
 }
 
 impl<F> Debug for ModalMenu<F>
-    where F: FnMut(&str, &mut State, &mut Vec<Message>)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("ModalMenu { .. }")

@@ -16,6 +16,10 @@ pub enum Message {
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
     MenuSelect(&'static str),
+    UnitSpent(u32, u32),
+    MoveUnit((u32, u32), (u32, u32)),
+    SelectUnit(u32, u32),
+    Deselect,
 }
 
 #[derive(Debug)]
