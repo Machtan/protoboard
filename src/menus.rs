@@ -90,10 +90,7 @@ impl<F> Behavior for ModalMenu<F>
     }
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self,
-              state: &mut State,
-              message: Message,
-              queue: &mut Vec<Message>) {
+    fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             Confirm => {

@@ -92,20 +92,24 @@ impl Grid {
 
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
 
-            let menu = ModalMenu::new(&["Attack", "Wait"], 0,
-                (50, 50), "firasans", |option, queue| {
-                     match option {
-                         "Attack" => {
-                             info!("Attack!");
-                             queue.push(Message::PopModal);
-                         }
-                         "Wait" => {
-                             info!("Wait!");
-                             queue.push(Message::PopModal);
-                         }
-                         _ => unreachable!(),
-                     }
-            }).expect("could not create menu");
+            let menu = ModalMenu::new(&["Attack", "Wait"],
+                                      0,
+                                      (50, 50),
+                                      "firasans",
+                                      |option, queue| {
+                match option {
+                    "Attack" => {
+                        info!("Attack!");
+                        queue.push(Message::PopModal);
+                    }
+                    "Wait" => {
+                        info!("Wait!");
+                        queue.push(Message::PopModal);
+                    }
+                    _ => unreachable!(),
+                }
+            })
+                .expect("could not create menu");
             queue.push(PushModal(Box::new(menu)));
         }
     }
