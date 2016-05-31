@@ -102,8 +102,8 @@ pub fn main() {
     mapper.add(map_scan_pressed!(Scancode::A, MoveCursorLeft));
     mapper.add(map_scan_pressed!(Scancode::D, MoveCursorRight));
 
-    mapper.add(map_scan_pressed!(Scancode::X, Confirm));
-    mapper.add(map_scan_pressed!(Scancode::Z, Cancel));
+    mapper.add(map_scan_pressed!(Scancode::Z, Confirm));
+    mapper.add(map_scan_pressed!(Scancode::X, Cancel));
     mapper.add(map_event!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Left, .. },
          LeftClickAt(x, y)
