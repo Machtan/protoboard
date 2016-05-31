@@ -105,6 +105,8 @@ impl Grid {
                 match option {
                     Some("Attack") => {
                         info!("Attack!");
+                        // TODO: Just to prevent a crash after failing to attack.
+                        queue.push(Deselect);
                         state.pop_modal();
                     }
                     Some("Wait") => {
