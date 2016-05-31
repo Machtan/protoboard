@@ -101,8 +101,7 @@ impl<F> Behavior for ModalMenu<F>
         for (i, label) in self.options.iter_mut().enumerate() {
             if i == self.selected {
                 renderer.set_draw_color(Color::RGB(255, 150, 0));
-                let rect = Rect::new(x - PAD as i32/ 2, y, 
-                    self.width - PAD, line_spacing as u32);
+                let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, line_spacing as u32);
                 renderer.fill_rect(rect).unwrap();
             }
             label.render(renderer, x, y, &state.resources);

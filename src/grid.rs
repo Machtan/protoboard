@@ -70,7 +70,7 @@ impl Grid {
         assert!(field.unit.is_none());
         field.unit = Some(unit);
     }
-    
+
     fn find_attackable(&self, unit: &Unit, col: u32, row: u32) -> Vec<(u32, u32)> {
         let mut attackable = Vec::new();
         for (tc, tr) in unit.attack.cells_in_range(col, row, (self.cols, self.rows)) {
@@ -162,7 +162,8 @@ impl Behavior for Grid {
                 }
             }
             UnitSpent(col, row) => {
-                self.unit_mut(col, row).expect("No unit at the spent cell!")
+                self.unit_mut(col, row)
+                    .expect("No unit at the spent cell!")
                     .spent = true;
             }
             MoveUnit((src_col, src_row), (dst_col, dst_row)) => {
