@@ -1,5 +1,9 @@
 #![feature(question_mark)]
 
+extern crate env_logger;
+#[macro_use]
+extern crate log;
+
 #[macro_use]
 extern crate glorious;
 extern crate sdl2;
@@ -14,7 +18,6 @@ use sdl2_image::{INIT_PNG, INIT_JPG};
 use common::State;
 use grid::Grid;
 use cursor::Cursor;
-use debug::DebugHelper;
 use scene::Scene;
 
 mod common;
@@ -22,10 +25,14 @@ mod scene;
 mod unit;
 mod grid;
 mod cursor;
-mod debug;
 mod menus;
 
 pub fn main() {
+    env_logger::LogBuilder::new()
+        .filter(Some("protoboard"), log::LogLevelFilter::Trace)
+        .init()
+        .unwrap();
+
     use sdl2::event::Event::*;
     use common::Message::*;
 
@@ -88,7 +95,6 @@ pub fn main() {
 
     let cursor = Cursor::new(0, 0, N_COLS, N_ROWS, CELL_SIZE);
     scene.add(Box::new(cursor));
-    scene.add(Box::new(DebugHelper));
 
     // Set up input handling.
 
@@ -124,7 +130,7 @@ pub fn main() {
         match signal {
             ExitSignal::ApplicationQuit => true,
             ExitSignal::EscapePressed => {
-                println!("Escape exit signal sent!");
+                info!("Escape exit signal sent!");
                 false
             }
         }

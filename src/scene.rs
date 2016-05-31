@@ -63,11 +63,13 @@ impl Behavior for Scene {
         use self::SceneState::*;
         use common::Message::*;
 
+        trace!("Message: {:?}", message);
+
         let mut break_modal = false;
         match self.state {
             Normal => {
                 if let PushModal(modal_obj) = message {
-                    println!("[Scene] Modal ENTER");
+                    info!("Modal ENTER");
                     self.state = Modal(vec![modal_obj]);
                     return;
                 }
@@ -101,7 +103,7 @@ impl Behavior for Scene {
             }
         }
         if break_modal {
-            println!("[Scene] Modal EXIT");
+            info!("Modal EXIT");
             self.state = Normal;
         }
     }
