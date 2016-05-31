@@ -5,6 +5,7 @@ use sdl2::render::Renderer;
 
 use common::{State, Message};
 use unit::Unit;
+use menus::ModalMenu;
 
 #[derive(Debug)]
 pub struct GridField {
@@ -73,7 +74,8 @@ impl Grid {
         Ok(())
     }
 
-    fn move_unit_to(&mut self, col: u32, row: u32) {
+    fn move_unit_to(&mut self, col: u32, row: u32, queue: &mut Vec<Message>) {
+        use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
         let occupied = self.unit(col, row).is_some();
         if col == ucol && row == urow {
@@ -89,12 +91,28 @@ impl Grid {
             self.field(ucol, urow).unit = None;
 
             println!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
+            
+            let menu = ModalMenu::new(&["Attack", "Wait"], 0,
+                (50, 50), "firasans", |option, queue| {
+                     match option {
+                         "Attack" => {
+                             println!("Attack!");
+                             queue.push(Message::PopModal);
+                         }
+                         "Wait" => {
+                             println!("Attack!");
+                             queue.push(Message::PopModal);
+                         }
+                         _ => unreachable!(),
+                     }
+            }).expect("could not create menu");
+            queue.push(PushModal(Box::new(menu)));
         }
     }
 
-    fn on_confirm(&mut self, col: u32, row: u32) {
+    fn on_confirm(&mut self, col: u32, row: u32, queue: &mut Vec<Message>) {
         if self.selected_unit.is_some() {
-            self.move_unit_to(col, row);
+            self.move_unit_to(col, row, queue);
         } else if self.unit(col, row).is_some() {
             self.selected_unit = Some((col, row));
         }
@@ -123,7 +141,7 @@ impl Behavior for Grid {
         use common::Message::*;
         match message {
             CursorConfirm(col, row) => {
-                self.on_confirm(col, row);
+                self.on_confirm(col, row, queue);
             }
             LeftClickAt(x, y) => {
                 assert!(x >= 0 && y >= 0);
@@ -131,7 +149,7 @@ impl Behavior for Grid {
                 let col = (x as u32 - (x as u32 % w)) / w;
                 let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
                 queue.push(MoveCursorTo(col, row));
-                self.on_confirm(col, row);
+                self.on_confirm(col, row, queue);
             }
             CursorCancel(..) => {
                 if self.selected_unit.is_some() {

@@ -5,27 +5,25 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Renderer;
 
-use common::{Message, State};
+use common::{State, Message};
 
 const PAD: u32 = 10;
 
-// TODO: WIP.
-
 #[derive(Clone)]
 pub struct ModalMenu<F>
-    where F: FnMut(&mut State, Message, &mut Vec<Message>)
+    where F: FnMut(&str, &mut Vec<Message>)
 {
     pos: (i32, i32),
     width: u32,
     font: String,
     options: Vec<String>,
     label_ids: Vec<String>,
-    selected: Option<usize>,
     handler: F,
+    selected: usize,
 }
 
 impl<F> ModalMenu<F>
-    where F: FnMut(&mut State, Message, &mut Vec<Message>)
+    where F: FnMut(&str, &mut Vec<Message>)
 {
     pub fn new(options: &[&str],
                selected: usize,
@@ -53,16 +51,16 @@ impl<F> ModalMenu<F>
             pos: pos,
             width: 0,
             font: font,
+            selected: selected,
             options: options.iter().map(|&s| s.to_owned()).collect(),
             label_ids: label_ids,
-            selected: Some(selected),
             handler: handler,
         })
     }
 }
 
 impl<F> Behavior for ModalMenu<F>
-    where F: FnMut(&mut State, Message, &mut Vec<Message>)
+    where F: FnMut(&str, &mut Vec<Message>)
 {
     type State = State;
     type Message = Message;
@@ -92,23 +90,36 @@ impl<F> Behavior for ModalMenu<F>
     }
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
-        (self.handler)(state, message, queue);
+    fn handle(&mut self,
+              state: &mut State,
+              message: Message,
+              queue: &mut Vec<Message>) {
+        use common::Message::*;
+        match message {
+            Confirm => {
+                let option = &self.options[self.selected];
+                (self.handler)(option, queue);
+            }
+            _ => {}
+        }
     }
 
     /// Renders the object.
     fn render(&self, state: &State, renderer: &mut Renderer) {
+        let (sx, sy) = self.pos;
         let font = state.resources.font(&self.font).unwrap();
         let height = PAD * 2 + font.recommended_line_spacing() as u32 * self.options.len() as u32;
 
         renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
-        renderer.fill_rect(Rect::new(self.pos.0, self.pos.1, self.width, height)).unwrap();
-
-        let mut y = self.pos.1 + PAD as i32;
-        let x = self.pos.0 + PAD as i32;
-
-        for id in &self.label_ids {
+        renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
+        let mut y = sy + PAD as i32;
+        let x = sx + PAD as i32;
+        for (i, id) in self.label_ids.iter().enumerate() {
             let label = state.resources.label(id).unwrap();
+            if i == self.selected {
+                renderer.set_draw_color(Color::RGB(255, 150, 0));
+                renderer.fill_rect(label.rect).unwrap();
+            }
             label.render(renderer, x, y, None);
             y += font.recommended_line_spacing();
         }
@@ -116,7 +127,7 @@ impl<F> Behavior for ModalMenu<F>
 }
 
 impl<F> Debug for ModalMenu<F>
-    where F: FnMut(&mut State, Message, &mut Vec<Message>)
+    where F: FnMut(&str, &mut Vec<Message>)
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("ModalMenu { .. }")

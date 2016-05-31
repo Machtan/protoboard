@@ -52,6 +52,11 @@ impl Behavior for Scene {
         for object in &mut self.objects {
             object.update(state, queue);
         }
+        if let SceneState::Modal(ref mut modal_stack) = self.state {
+            let last = modal_stack.len() - 1;
+            let ref mut modal = modal_stack[last];
+            modal.update(state, queue);
+        }
     }
 
     fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
@@ -62,6 +67,7 @@ impl Behavior for Scene {
         match self.state {
             Normal => {
                 if let PushModal(modal_obj) = message {
+                    println!("[Scene] Modal ENTER");
                     self.state = Modal(vec![modal_obj]);
                     return;
                 }
@@ -95,6 +101,7 @@ impl Behavior for Scene {
             }
         }
         if break_modal {
+            println!("[Scene] Modal EXIT");
             self.state = Normal;
         }
     }
@@ -103,8 +110,10 @@ impl Behavior for Scene {
         for object in &self.objects {
             object.render(state, renderer);
         }
-        if let SceneState::Modal(ref _modal_stack) = self.state {
-            // modal.render(state, renderer);
+        if let SceneState::Modal(ref modal_stack) = self.state {
+            let last = modal_stack.len() - 1;
+            let ref modal = modal_stack[last];
+            modal.render(state, renderer);
         }
     }
 }

@@ -90,16 +90,6 @@ pub fn main() {
     scene.add(Box::new(cursor));
     scene.add(Box::new(DebugHelper));
 
-    let menu = menus::ModalMenu::new(&["Attack", "Wait"],
-                                     0,
-                                     (50, 50),
-                                     "firasans",
-                                     |_state, _message, _queue| {
-                                         println!("Menu!");
-                                     })
-        .expect("could not create menu");
-    scene.add(Box::new(menu));
-
     // Set up input handling.
 
     let mut mapper = BoxedInputMapper::new();
