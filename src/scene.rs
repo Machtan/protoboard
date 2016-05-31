@@ -36,6 +36,21 @@ impl Default for Scene {
 impl Behavior for Scene {
     type State = State;
     type Message = Message;
+    
+    /// Initializes the object when it is added to the game.
+    fn initialize(&mut self, state: &mut State, queue: &mut Vec<Message>,
+            renderer: &mut Renderer) {
+        for object in &mut self.objects {
+            object.initialize(state, queue, renderer);
+        }
+    }
+
+    /// Updates the object each frame.
+    fn update(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        for object in &mut self.objects {
+            object.update(state, queue);
+        }
+    }
 
     fn handle(&mut self,
               state: &mut State,

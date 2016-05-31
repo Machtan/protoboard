@@ -89,6 +89,12 @@ pub fn main() {
     let cursor = Cursor::new(0, 0, N_COLS, N_ROWS, CELL_SIZE);
     scene.add(Box::new(cursor));
     scene.add(Box::new(DebugHelper));
+    
+    let menu = menus::ModalMenu::new(&["Attack", "Wait"], 0, 50, 50, "firasans",
+        Box::new(|state, message, queue| {
+            println!("Menu!");
+    })).expect("Could not create menu");
+    scene.add(Box::new(menu));
 
     // Set up input handling.
 
