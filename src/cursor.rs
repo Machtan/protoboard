@@ -28,19 +28,6 @@ impl Behavior for Cursor {
     type State = State;
     type Message = Message;
 
-    /// Initializes the object when it is added to the game.
-    fn initialize(&mut self,
-                  _state: &mut State,
-                  _new_messages: &mut Vec<Message>,
-                  _renderer: &mut Renderer) {
-        // Do nothing by default
-    }
-
-    /// Updates the object each frame.
-    fn update(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
-        // Do nothing by default
-    }
-
     /// Handles new messages since the last frame.
     fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
@@ -82,7 +69,7 @@ impl Behavior for Cursor {
     }
 
     /// Renders the object.
-    fn render(&self, state: &State, renderer: &mut Renderer) {
+    fn render(&mut self, state: &State, renderer: &mut Renderer) {
         let x = (self.col * self.size.0) as i32;
         let grid_height = self.grid_rows * self.size.1;
         let y = (grid_height - self.size.1 - (self.row * self.size.1)) as i32;

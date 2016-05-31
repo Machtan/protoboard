@@ -74,13 +74,6 @@ pub fn main() {
                    16,
                    &font_context)
         .unwrap();
-    state.resources
-        .create_label("hello_world",
-                      "firasans",
-                      "Hello, World!",
-                      (0, 0, 0, 0),
-                      &mut renderer)
-        .unwrap();
 
     let mut scene = Scene::new();
 

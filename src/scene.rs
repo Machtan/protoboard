@@ -40,10 +40,9 @@ impl Behavior for Scene {
     /// Initializes the object when it is added to the game.
     fn initialize(&mut self,
                   state: &mut State,
-                  queue: &mut Vec<Message>,
-                  renderer: &mut Renderer) {
+                  queue: &mut Vec<Message>) {
         for object in &mut self.objects {
-            object.initialize(state, queue, renderer);
+            object.initialize(state, queue);
         }
     }
 
@@ -108,13 +107,13 @@ impl Behavior for Scene {
         }
     }
 
-    fn render(&self, state: &Self::State, renderer: &mut Renderer) {
-        for object in &self.objects {
+    fn render(&mut self, state: &Self::State, renderer: &mut Renderer) {
+        for object in &mut self.objects {
             object.render(state, renderer);
         }
-        if let SceneState::Modal(ref modal_stack) = self.state {
+        if let SceneState::Modal(ref mut modal_stack) = self.state {
             let last = modal_stack.len() - 1;
-            let ref modal = modal_stack[last];
+            let ref mut modal = modal_stack[last];
             modal.render(state, renderer);
         }
     }

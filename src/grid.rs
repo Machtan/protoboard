@@ -73,7 +73,8 @@ impl Grid {
         field.unit = Some(unit);
     }
 
-    fn move_unit_to(&mut self, col: u32, row: u32, queue: &mut Vec<Message>) {
+    fn move_unit_to(&mut self, col: u32, row: u32, state: &State, queue: &mut Vec<Message>) {
+        use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
         if col == ucol && row == urow {
             self.selected_unit = None;
@@ -91,6 +92,7 @@ impl Grid {
                                       0,
                                       (50, 50),
                                       "firasans",
+                                      state,
                                       |option, queue| {
                 match option {
                     "Attack" => {
@@ -109,9 +111,9 @@ impl Grid {
         }
     }
 
-    fn on_confirm(&mut self, col: u32, row: u32, queue: &mut Vec<Message>) {
+    fn on_confirm(&mut self, col: u32, row: u32, state: &State, queue: &mut Vec<Message>) {
         if self.selected_unit.is_some() {
-            self.move_unit_to(col, row, queue);
+            self.move_unit_to(col, row, state, queue);
         } else if self.unit(col, row).is_some() {
             self.selected_unit = Some((col, row));
         }
@@ -122,25 +124,12 @@ impl Behavior for Grid {
     type State = State;
     type Message = Message;
 
-    /// Initializes the object when it is added to the game.
-    fn initialize(&mut self,
-                  _state: &mut State,
-                  _queue: &mut Vec<Message>,
-                  _renderer: &mut Renderer) {
-        // Do nothing by default
-    }
-
-    /// Updates the object each frame.
-    fn update(&mut self, _state: &mut State, _queue: &mut Vec<Message>) {
-        // Do nothing by default
-    }
-
     /// Handles new messages since the last frame.
-    fn handle(&mut self, _state: &mut State, message: Message, queue: &mut Vec<Message>) {
+    fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
             CursorConfirm(col, row) => {
-                self.on_confirm(col, row, queue);
+                self.on_confirm(col, row, state, queue);
             }
             LeftClickAt(x, y) => {
                 assert!(x >= 0 && y >= 0);
@@ -148,7 +137,7 @@ impl Behavior for Grid {
                 let col = (x as u32 - (x as u32 % w)) / w;
                 let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
                 queue.push(MoveCursorTo(col, row));
-                self.on_confirm(col, row, queue);
+                self.on_confirm(col, row, state, queue);
             }
             CursorCancel(..) => {
                 if self.selected_unit.is_some() {
@@ -160,7 +149,7 @@ impl Behavior for Grid {
     }
 
     /// Renders the object.
-    fn render(&self, state: &State, renderer: &mut Renderer) {
+    fn render(&mut self, state: &State, renderer: &mut Renderer) {
         let grid_height = self.rows * self.cell_size.1;
         for col in 0..self.cols {
             for row in 0..self.rows {
@@ -191,8 +180,5 @@ impl Behavior for Grid {
                 }
             }
         }
-
-        let label = state.resources.label("hello_world").unwrap();
-        label.render(renderer, 200, 200, None);
     }
 }
