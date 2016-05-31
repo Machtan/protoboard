@@ -19,6 +19,7 @@ use common::State;
 use grid::Grid;
 use cursor::Cursor;
 use scene::Scene;
+use unit::{Unit, AttackType};
 
 mod common;
 mod scene;
@@ -78,7 +79,7 @@ pub fn main() {
     let mut scene = Scene::new();
 
     let mut grid = Grid::new(N_COLS, N_ROWS, CELL_SIZE);
-    let unit = unit::Unit::new("raccoon");
+    let unit = unit::Unit::new("raccoon", AttackType::Melee);
     for i in 0..N_COLS {
         grid.add_unit(unit.clone(), i, 0);
         grid.add_unit(unit.clone(), i, N_ROWS - 1);

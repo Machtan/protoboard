@@ -70,6 +70,16 @@ impl Grid {
         assert!(field.unit.is_none());
         field.unit = Some(unit);
     }
+    
+    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) -> Vec<(u32, u32)> {
+        let mut attackable = Vec::new();
+        for (tc, tr) in unit.attack.cells_in_range(col, row, (self.cols, self.rows)) {
+            if self.unit(tc, tr).is_some() {
+                attackable.push((tc, tr));
+            }
+        }
+        attackable
+    }
 
     fn move_unit_to(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
         use common::Message::*;
