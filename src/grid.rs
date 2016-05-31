@@ -1,3 +1,5 @@
+use std::mem;
+
 use glorious::Behavior;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -7,7 +9,7 @@ use common::{State, Message};
 use unit::Unit;
 use menus::ModalMenu;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GridField {
     unit: Option<Unit>,
     terrain: Option<()>,
@@ -28,67 +30,60 @@ pub struct Grid {
     cols: u32,
     rows: u32,
     cell_size: (u32, u32),
-    contents: Vec<Vec<GridField>>,
+    contents: Box<[GridField]>,
     selected_unit: Option<(u32, u32)>,
 }
 
 impl Grid {
     pub fn new(cols: u32, rows: u32, cell_size: (u32, u32)) -> Grid {
-        let mut contents = Vec::new();
-        for _ in 0..cols {
-            let mut col = Vec::new();
-            for _ in 0..rows {
-                col.push(GridField::new(None));
-            }
-            contents.push(col);
-        }
+        let mut contents = vec![GridField::new(None); cols as usize * rows as usize];
         Grid {
             cols: cols,
             rows: rows,
             cell_size: cell_size,
-            contents: contents,
+            contents: contents.into_boxed_slice(),
             selected_unit: None,
         }
     }
 
-    pub fn field(&mut self, col: u32, row: u32) -> &mut GridField {
-        &mut self.contents[col as usize][row as usize]
+    fn index(&self, col: u32, row: u32) -> usize {
+        assert!(row < self.rows && col < self.cols);
+        col as usize * self.rows as usize + row as usize
     }
 
-    pub fn unit(&mut self, col: u32, row: u32) -> Option<&mut Unit> {
-        if let Some(ref mut unit) = self.contents[col as usize][row as usize].unit {
-            Some(unit)
-        } else {
-            None
-        }
+    pub fn field(&self, col: u32, row: u32) -> &GridField {
+        &self.contents[self.index(col, row)]
     }
 
-    pub fn add_unit(&mut self, unit: Unit, col: u32, row: u32) -> Result<(), String> {
-        if col > (self.cols - 1) {
-            return Err(format!("Column {} > {}", col, self.cols - 1));
-        }
-        if row > (self.rows - 1) {
-            return Err(format!("Row {} > {}", row, self.rows - 1));
-        }
-        self.contents[col as usize][row as usize].unit = Some(unit);
-        Ok(())
+    pub fn field_mut(&mut self, col: u32, row: u32) -> &mut GridField {
+        &mut self.contents[self.index(col, row)]
+    }
+
+    pub fn unit(&self, col: u32, row: u32) -> Option<&Unit> {
+        self.field(col, row).unit.as_ref()
+    }
+
+    pub fn unit_mut(&mut self, col: u32, row: u32) -> Option<&mut Unit> {
+        self.field_mut(col, row).unit.as_mut()
+    }
+
+    pub fn add_unit(&mut self, unit: Unit, col: u32, row: u32) {
+        let field = self.field_mut(col, row);
+        assert!(field.unit.is_none());
+        field.unit = Some(unit);
     }
 
     fn move_unit_to(&mut self, col: u32, row: u32, queue: &mut Vec<Message>) {
-        use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
-        let occupied = self.unit(col, row).is_some();
         if col == ucol && row == urow {
             self.selected_unit = None;
-        }
-        if !occupied {
-            let selected = self.unit(ucol, urow)
-                .expect("selected_unit points to vacant tile")
-                .clone();
+        } else if self.unit(col, row).is_none() {
+            let i = self.index(ucol, urow);
+            let j = self.index(col, row);
 
-            self.field(col, row).unit = Some(selected);
+            assert!(self.contents[i].unit.is_some(), "selected unit points to vacant tile");
+            self.contents.swap(i, j);
             self.selected_unit = None;
-            self.field(ucol, urow).unit = None;
 
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
 
@@ -110,7 +105,7 @@ impl Grid {
                 }
             })
                 .expect("could not create menu");
-            queue.push(PushModal(Box::new(menu)));
+            queue.push(Message::PushModal(Box::new(menu)));
         }
     }
 
@@ -187,9 +182,8 @@ impl Behavior for Grid {
                 // TODO: When can `fill_rect` fail?
                 renderer.fill_rect(rect).unwrap();
 
-                let field = &self.contents[col as usize][row as usize];
+                let field = self.field(col, row);
                 if let Some(()) = field.terrain {
-
                 }
                 if let Some(ref obj) = field.unit {
                     let sprite = state.resources.sprite(obj.texture).unwrap();

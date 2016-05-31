@@ -87,9 +87,8 @@ pub fn main() {
     let mut grid = Grid::new(N_COLS, N_ROWS, CELL_SIZE);
     let unit = unit::Unit::new("raccoon");
     for i in 0..N_COLS {
-        // TODO: Consider when these functions can err.
-        grid.add_unit(unit.clone(), i, 0).unwrap();
-        grid.add_unit(unit.clone(), i, N_ROWS - 1).unwrap();
+        grid.add_unit(unit.clone(), i, 0);
+        grid.add_unit(unit.clone(), i, N_ROWS - 1);
     }
     scene.add(Box::new(grid));
 
