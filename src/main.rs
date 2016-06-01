@@ -45,6 +45,13 @@ pub fn main() {
     // Set up logging.
 
     let mut builder = env_logger::LogBuilder::new();
+    builder.format(|record| {
+        format!("[{}][{}] {}",
+                record.level(),
+                record.location().module_path(),
+                record.args())
+    });
+
     // Set default level to debug.
     // (setting this before `parse`, makes it be considered *after* env vars (for now).)
     builder.filter(Some("protoboard"), log::LogLevelFilter::Debug);
