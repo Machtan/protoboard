@@ -2,7 +2,7 @@
 use glorious::{Behavior, Renderer, Sprite};
 use common::{State, Message, MARKER_PATH};
 use unit::Unit;
-use grid::GridField;
+use grid::Tile;
 
 #[derive(Debug)]
 pub struct TargetSelector {
@@ -12,7 +12,7 @@ pub struct TargetSelector {
     selected: usize,
     cell_size: (u32, u32),
     grid_size: (u32, u32),
-    targets: Vec<((u32, u32), GridField)>,
+    targets: Vec<((u32, u32), Tile)>,
 }
 
 impl TargetSelector {
@@ -21,7 +21,7 @@ impl TargetSelector {
                origin: (u32, u32),
                grid_size: (u32, u32),
                cell_size: (u32, u32),
-               targets: Vec<((u32, u32), GridField)>)
+               targets: Vec<((u32, u32), Tile)>)
                -> TargetSelector {
         assert!(!targets.is_empty(), "No targets given to selector");
         TargetSelector {

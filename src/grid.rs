@@ -10,15 +10,15 @@ use menus::ModalMenu;
 use target_selector::TargetSelector;
 
 #[derive(Debug, Clone)]
-pub struct GridField {
+pub struct Tile {
     unit: Option<Unit>,
     terrain: Option<()>,
 }
 
-impl GridField {
+impl Tile {
     #[inline]
-    pub fn new(unit: Option<Unit>) -> GridField {
-        GridField {
+    pub fn new(unit: Option<Unit>) -> Tile {
+        Tile {
             unit: unit,
             terrain: None,
         }
@@ -28,13 +28,13 @@ impl GridField {
 pub struct Grid {
     size: (u32, u32),
     cell_size: (u32, u32),
-    contents: Box<[GridField]>,
+    contents: Box<[Tile]>,
     selected_unit: Option<(u32, u32)>,
 }
 
 impl Grid {
     pub fn new(size: (u32, u32), cell_size: (u32, u32)) -> Grid {
-        let contents = vec![GridField::new(None); size.0 as usize * size.1 as usize];
+        let contents = vec![Tile::new(None); size.0 as usize * size.1 as usize];
         Grid {
             size: size,
             cell_size: cell_size,
@@ -50,11 +50,11 @@ impl Grid {
         col as usize * rows as usize + row as usize
     }
 
-    pub fn field(&self, cell: (u32, u32)) -> &GridField {
+    pub fn field(&self, cell: (u32, u32)) -> &Tile {
         &self.contents[self.index(cell)]
     }
 
-    pub fn field_mut(&mut self, cell: (u32, u32)) -> &mut GridField {
+    pub fn field_mut(&mut self, cell: (u32, u32)) -> &mut Tile {
         &mut self.contents[self.index(cell)]
     }
 
@@ -74,7 +74,7 @@ impl Grid {
     }
 
     /// Finds fields attackable by the given unit if moved to the given position.
-    fn find_attackable(&self, unit: &Unit, cell: (u32, u32)) -> Vec<((u32, u32), GridField)> {
+    fn find_attackable(&self, unit: &Unit, cell: (u32, u32)) -> Vec<((u32, u32), Tile)> {
         let mut attackable = Vec::new();
         for target_cell in unit.attack.cells_in_range(cell, self.size) {
             if self.unit(target_cell).is_some() {
