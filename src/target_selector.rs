@@ -8,6 +8,7 @@ use grid::GridField;
 pub struct TargetSelector {
     unit: Unit,
     cell: (u32, u32),
+    origin: (u32, u32),
     selected: usize,
     cell_size: (u32, u32),
     grid_size: (u32, u32),
@@ -17,6 +18,7 @@ pub struct TargetSelector {
 impl TargetSelector {
     pub fn new(unit: Unit,
                cell: (u32, u32),
+               origin: (u32, u32),
                grid_size: (u32, u32),
                cell_size: (u32, u32),
                targets: Vec<((u32, u32), GridField)>)
@@ -25,6 +27,7 @@ impl TargetSelector {
         TargetSelector {
             unit: unit,
             cell: cell,
+            origin: origin,
             selected: 0,
             grid_size: grid_size,
             cell_size: cell_size,
@@ -45,7 +48,13 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
                 let (col, row) = self.cell;
                 state.break_modal(queue);
                 queue.push(UnitSpent(col, row));
+                queue.push(Deselect);
                 queue.push(ShowCursor);
+            }
+            Cancel => {
+                state.break_modal(queue);
+                queue.push(MoveUnit(self.cell, self.origin));
+                queue.push(MoveUnitAndAct(self.origin, self.cell));
             }
             MoveCursorDown | MoveCursorRight => {
                 self.selected = (self.selected + 1) % self.targets.len();

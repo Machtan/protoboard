@@ -23,10 +23,11 @@ pub enum Message {
     UnitSpent(u32, u32),
     MoveUnit((u32, u32), (u32, u32)),
     SelectUnit(u32, u32),
+    MoveUnitAndAct((u32, u32), (u32, u32)),
     Deselect,
     HideCursor,
     ShowCursor,
-    SelectTarget(u32, u32),
+    SelectTarget((u32, u32), (u32, u32)),
     ApplyOneModal,
 }
 

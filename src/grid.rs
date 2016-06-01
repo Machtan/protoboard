@@ -97,27 +97,40 @@ impl Grid {
         self.contents.swap(i, j);
     }
 
-    fn select_target(&mut self, cell: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
+    fn select_target(&mut self,
+                     origin: (u32, u32),
+                     cell: (u32, u32),
+                     state: &mut State,
+                     queue: &mut Vec<Message>) {
         info!("Selecting target...");
         let (col, row) = cell;
         let unit = self.unit(col, row).unwrap().clone();
         let targets = self.find_attackable(&unit, col, row);
         let selector = TargetSelector::new(unit,
                                            (col, row),
+                                           origin,
                                            (self.cols, self.rows),
                                            self.cell_size,
                                            targets);
-        queue.push(Message::Deselect);
         queue.push(Message::HideCursor);
         state.push_modal(Box::new(selector), queue);
     }
 
-    fn do_action_at(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
+    fn move_unit_and_act(&mut self,
+                         origin: (u32, u32),
+                         target: (u32, u32),
+                         state: &mut State,
+                         queue: &mut Vec<Message>) {
         use common::Message::*;
-        let (ucol, urow) = self.selected_unit.expect("no unit was selected");
-        if self.unit(col, row).is_none() || (col == ucol && row == urow) {
-            self.move_unit((ucol, urow), (col, row));
-            debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
+        let (src_col, src_row) = origin;
+        let (col, row) = target;
+        if self.unit(col, row).is_none() || (col == src_col && row == src_row) {
+            self.move_unit((src_col, src_row), (col, row));
+            debug!("Moved unit from ({}, {}) to ({}, {})",
+                   src_col,
+                   src_row,
+                   col,
+                   row);
 
             let targets = self.find_attackable(self.unit(col, row).unwrap(), col, row);
             let mut options = Vec::new();
@@ -137,7 +150,7 @@ impl Grid {
                         // TODO: Just to prevent a crash after failing to attack.
                         state.pop_modal(queue);
                         queue.push(MoveCursorTo(col, row));
-                        queue.push(SelectTarget(col, row));
+                        queue.push(SelectTarget(origin, target));
                     }
                     Some("Wait") => {
                         info!("Wait!");
@@ -150,9 +163,9 @@ impl Grid {
                     None => {
                         info!("Cancel!");
                         state.pop_modal(queue);
-                        queue.push(MoveUnit((col, row), (ucol, urow)));
-                        queue.push(MoveCursorTo(ucol, urow));
-                        queue.push(SelectUnit(ucol, urow));
+                        queue.push(MoveUnit((col, row), (src_col, src_row)));
+                        queue.push(MoveCursorTo(src_col, src_row));
+                        queue.push(SelectUnit(src_col, src_row));
                         queue.push(ShowCursor);
                     }
                     _ => unreachable!(),
@@ -165,8 +178,8 @@ impl Grid {
     }
 
     fn on_confirm(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
-        if self.selected_unit.is_some() {
-            self.do_action_at(col, row, state, queue);
+        if let Some(origin) = self.selected_unit {
+            self.move_unit_and_act(origin, (col, row), state, queue);
         } else if self.unit(col, row).is_some() {
             self.selected_unit = Some((col, row));
         }
@@ -214,8 +227,11 @@ impl<'a> Behavior<State<'a>> for Grid {
                         "Received deselect with no unit selected");
                 self.selected_unit = None;
             }
-            SelectTarget(col, row) => {
-                self.select_target((col, row), state, queue);
+            SelectTarget(origin, cell) => {
+                self.select_target(origin, cell, state, queue);
+            }
+            MoveUnitAndAct(origin, destination) => {
+                self.move_unit_and_act(origin, destination, state, queue);
             }
             _ => {}
         }
