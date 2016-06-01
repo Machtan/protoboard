@@ -80,6 +80,18 @@ impl Grid {
         }
         attackable
     }
+    
+    fn move_unit(&mut self, from: (u32, u32), to: (u32, u32)) {
+        let (src_col, src_row) = from;
+        let (dst_col, dst_row) = to;
+        assert!(self.unit(dst_col, dst_row).is_none(),
+                "Transport units not supported!");
+        assert!(self.unit(src_col, src_row).is_some(),
+                "No unit at move origin");
+        let i = self.index(src_col, src_row);
+        let j = self.index(dst_col, dst_row);
+        self.contents.swap(i, j);
+    }
 
     fn do_action_at(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
         use common::Message::*;
@@ -87,16 +99,17 @@ impl Grid {
         if col == ucol && row == urow {
             self.selected_unit = None;
         } else if self.unit(col, row).is_none() {
-            let i = self.index(ucol, urow);
-            let j = self.index(col, row);
-
-            assert!(self.contents[i].unit.is_some(),
-                    "selected unit points to vacant tile");
-            self.contents.swap(i, j);
-
+            self.move_unit((ucol, urow), (col, row));
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
-
-            let menu = ModalMenu::new(["Attack", "Wait"].iter().map(|&s| s.to_owned()),
+            
+            let targets = self.find_attackable(self.unit(col, row).unwrap(),
+                col, row);
+            let mut options = Vec::new();
+            if ! targets.is_empty() {
+                options.push("Attack");
+            }
+            options.push("Wait");
+            let menu = ModalMenu::new(options.iter().map(|&s| s.to_owned()),
                                       0,
                                       (50, 50),
                                       state.resources.font(FIRA_SANS_PATH, 16),
@@ -105,6 +118,7 @@ impl Grid {
                 match option {
                     Some("Attack") => {
                         info!("Attack!");
+                        println!("Targets: {:?}", targets);
                         // TODO: Just to prevent a crash after failing to attack.
                         queue.push(Deselect);
                         state.pop_modal();
@@ -167,12 +181,8 @@ impl<'a> Behavior<State<'a>> for Grid {
                     .expect("No unit at the spent cell!")
                     .spent = true;
             }
-            MoveUnit((src_col, src_row), (dst_col, dst_row)) => {
-                assert!(self.unit(dst_col, dst_row).is_none(),
-                        "Transport units not supported!");
-                let unit = self.unit(src_col, src_row).expect("Bad move src").clone();
-                self.field_mut(dst_col, dst_row).unit = Some(unit);
-                self.field_mut(src_col, src_row).unit = None;
+            MoveUnit(from, to) => {
+                self.move_unit(from, to);
             }
             SelectUnit(col, row) => {
                 assert!(self.unit(col, row).is_some(),
