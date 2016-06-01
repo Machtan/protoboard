@@ -25,6 +25,7 @@ impl Tile {
     }
 }
 
+#[derive(Clone)]
 pub struct Grid {
     size: (u32, u32),
     tile_size: (u32, u32),
@@ -281,6 +282,11 @@ impl<'a> Behavior<State<'a>> for Grid {
 
 impl Debug for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Grid {{ .. }}")
+        f.debug_struct("Grid")
+            .field("size", &self.size)
+            .field("tile_size", &self.tile_size)
+            .field("tiles", &(..))
+            .field("selected_unit", &self.selected_unit)
+            .finish()
     }
 }
