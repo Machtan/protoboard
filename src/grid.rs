@@ -27,58 +27,58 @@ impl Tile {
 
 pub struct Grid {
     size: (u32, u32),
-    cell_size: (u32, u32),
-    contents: Box<[Tile]>,
+    tile_size: (u32, u32),
+    tiles: Box<[Tile]>,
     selected_unit: Option<(u32, u32)>,
 }
 
 impl Grid {
-    pub fn new(size: (u32, u32), cell_size: (u32, u32)) -> Grid {
-        let contents = vec![Tile::new(None); size.0 as usize * size.1 as usize];
+    pub fn new(size: (u32, u32), tile_size: (u32, u32)) -> Grid {
+        let tiles = vec![Tile::new(None); size.0 as usize * size.1 as usize];
         Grid {
             size: size,
-            cell_size: cell_size,
-            contents: contents.into_boxed_slice(),
+            tile_size: tile_size,
+            tiles: tiles.into_boxed_slice(),
             selected_unit: None,
         }
     }
 
-    fn index(&self, cell: (u32, u32)) -> usize {
-        let (col, row) = cell;
+    fn index(&self, pos: (u32, u32)) -> usize {
+        let (col, row) = pos;
         let (cols, rows) = self.size;
         assert!(row < rows && col < cols);
         col as usize * rows as usize + row as usize
     }
 
-    pub fn tile(&self, cell: (u32, u32)) -> &Tile {
-        &self.contents[self.index(cell)]
+    pub fn tile(&self, pos: (u32, u32)) -> &Tile {
+        &self.tiles[self.index(pos)]
     }
 
-    pub fn tile_mut(&mut self, cell: (u32, u32)) -> &mut Tile {
-        &mut self.contents[self.index(cell)]
+    pub fn tile_mut(&mut self, pos: (u32, u32)) -> &mut Tile {
+        &mut self.tiles[self.index(pos)]
     }
 
-    pub fn unit(&self, cell: (u32, u32)) -> Option<&Unit> {
-        self.tile(cell).unit.as_ref()
+    pub fn unit(&self, pos: (u32, u32)) -> Option<&Unit> {
+        self.tile(pos).unit.as_ref()
     }
 
-    pub fn unit_mut(&mut self, cell: (u32, u32)) -> Option<&mut Unit> {
-        self.tile_mut(cell).unit.as_mut()
+    pub fn unit_mut(&mut self, pos: (u32, u32)) -> Option<&mut Unit> {
+        self.tile_mut(pos).unit.as_mut()
     }
 
     /// Adds a unit to the grid.
-    pub fn add_unit(&mut self, unit: Unit, cell: (u32, u32)) {
-        let tile = self.tile_mut(cell);
+    pub fn add_unit(&mut self, unit: Unit, pos: (u32, u32)) {
+        let tile = self.tile_mut(pos);
         assert!(tile.unit.is_none());
         tile.unit = Some(unit);
     }
 
     /// Finds tiles attackable by the given unit if moved to the given position.
-    fn find_attackable(&self, unit: &Unit, cell: (u32, u32)) -> Vec<((u32, u32), Tile)> {
+    fn find_attackable(&self, unit: &Unit, pos: (u32, u32)) -> Vec<((u32, u32), Tile)> {
         let mut attackable = Vec::new();
-        for target_cell in unit.attack.cells_in_range(cell, self.size) {
-            if self.unit(target_cell).is_some() {
-                attackable.push((target_cell, self.tile(cell).clone()));
+        for target_pos in unit.attack.tiles_in_range(pos, self.size) {
+            if self.unit(target_pos).is_some() {
+                attackable.push((target_pos, self.tile(pos).clone()));
             }
         }
         attackable
@@ -93,20 +93,20 @@ impl Grid {
         assert!(self.unit(from).is_some(), "No unit at move origin");
         let i = self.index(from);
         let j = self.index(to);
-        self.contents.swap(i, j);
+        self.tiles.swap(i, j);
     }
 
     /// Opens the target selection modal for the unit at Cell.
     /// The origin is used to return to the menu when cancelling.
     fn select_target(&mut self,
                      origin: (u32, u32),
-                     cell: (u32, u32),
+                     pos: (u32, u32),
                      state: &mut State,
                      queue: &mut Vec<Message>) {
         info!("Selecting target...");
-        let unit = self.unit(cell).unwrap().clone();
-        let targets = self.find_attackable(&unit, cell);
-        let selector = TargetSelector::new(unit, cell, origin, self.size, self.cell_size, targets);
+        let unit = self.unit(pos).unwrap().clone();
+        let targets = self.find_attackable(&unit, pos);
+        let selector = TargetSelector::new(unit, pos, origin, self.size, self.tile_size, targets);
         queue.push(Message::HideCursor);
         state.push_modal(Box::new(selector), queue);
     }
@@ -169,7 +169,7 @@ impl Grid {
         }
     }
 
-    /// Handles a confirm press at the given target cell when a unit is selected.
+    /// Handles a confirm press at the given target tile when a unit is selected.
     fn on_confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         if let Some(origin) = self.selected_unit {
             self.move_unit_and_act(origin, target, state, queue);
@@ -186,12 +186,12 @@ impl<'a> Behavior<State<'a>> for Grid {
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
-            CursorConfirm(cell) => {
-                self.on_confirm(cell, state, queue);
+            CursorConfirm(pos) => {
+                self.on_confirm(pos, state, queue);
             }
             LeftClickAt(x, y) => {
                 assert!(x >= 0 && y >= 0);
-                let (w, h) = self.cell_size;
+                let (w, h) = self.tile_size;
                 let (_, rows) = self.size;
                 let col = (x as u32 - (x as u32 % w)) / w;
                 let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
@@ -203,34 +203,34 @@ impl<'a> Behavior<State<'a>> for Grid {
                     self.selected_unit = None;
                 }
             }
-            UnitSpent(cell) => {
-                self.unit_mut(cell)
-                    .expect("No unit at the spent cell!")
+            UnitSpent(pos) => {
+                self.unit_mut(pos)
+                    .expect("No unit on the spent tile!")
                     .spent = true;
             }
             MoveUnit(from, to) => {
                 self.move_unit(from, to);
             }
-            SelectUnit(cell) => {
-                assert!(self.unit(cell).is_some(),
+            SelectUnit(pos) => {
+                assert!(self.unit(pos).is_some(),
                         "The tile for the selected unit is empty!");
-                self.selected_unit = Some(cell);
+                self.selected_unit = Some(pos);
             }
             Deselect => {
                 assert!(self.selected_unit.is_some(),
                         "Received deselect with no unit selected");
                 self.selected_unit = None;
             }
-            SelectTarget(origin, cell) => {
-                self.select_target(origin, cell, state, queue);
+            SelectTarget(origin, pos) => {
+                self.select_target(origin, pos, state, queue);
             }
             MoveUnitAndAct(origin, destination) => {
                 self.move_unit_and_act(origin, destination, state, queue);
             }
-            DestroyUnit(origin) => {
-                let tile = self.tile_mut(origin);
-                info!("Unit at {:?} destroyed! {:?}",
-                      origin,
+            DestroyUnit(pos) => {
+                let tile = self.tile_mut(pos);
+                info!("Unit at {:?} destroyed! ({:?})",
+                      pos,
                       tile.unit.as_ref().expect("no unit to destroy"));
                 tile.unit = None;
             }
@@ -241,13 +241,13 @@ impl<'a> Behavior<State<'a>> for Grid {
     /// Renders the object.
     fn render(&mut self, _state: &State<'a>, renderer: &mut Renderer) {
         let (cols, rows) = self.size;
-        let (cw, ch) = self.cell_size;
+        let (cw, ch) = self.tile_size;
         let grid_height = rows * ch;
         for col in 0..cols {
             for row in 0..rows {
                 let x = col * cw;
                 let y = grid_height - ch - (row * ch);
-                // sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
+                // sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
                 if (col + row) % 2 == 0 {
                     renderer.set_draw_color(Color::RGB(210, 210, 210));
                 } else {
@@ -272,7 +272,7 @@ impl<'a> Behavior<State<'a>> for Grid {
                         renderer.fill_rect(rect).unwrap();
                     }
                     let sprite = Sprite::new(obj.texture.clone(), None);
-                    sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
+                    sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
                 }
             }
         }

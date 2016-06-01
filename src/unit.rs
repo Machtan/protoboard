@@ -43,9 +43,9 @@ pub enum AttackType {
 }
 
 impl AttackType {
-    pub fn cells_in_range(&self, cell: (u32, u32), grid_size: (u32, u32)) -> Vec<(u32, u32)> {
-        let mut cells = Vec::new();
-        let (col, row) = cell;
+    pub fn tiles_in_range(&self, pos: (u32, u32), grid_size: (u32, u32)) -> Vec<(u32, u32)> {
+        let mut tiles = Vec::new();
+        let (col, row) = pos;
         let (n_cols, n_rows) = grid_size;
         let max_col = n_cols - 1;
         let max_row = n_rows - 1;
@@ -53,19 +53,19 @@ impl AttackType {
             _ => {
                 // Melee
                 if col > 0 {
-                    cells.push((col - 1, row));
+                    tiles.push((col - 1, row));
                 }
                 if col < max_col {
-                    cells.push((col + 1, row));
+                    tiles.push((col + 1, row));
                 }
                 if row > 0 {
-                    cells.push((col, row - 1));
+                    tiles.push((col, row - 1));
                 }
                 if row < max_row {
-                    cells.push((col, row + 1));
+                    tiles.push((col, row + 1));
                 }
             }
         }
-        cells
+        tiles
     }
 }
