@@ -16,6 +16,7 @@ pub struct ModalMenu<F>
 {
     pos: (i32, i32),
     width: u32,
+    line_spacing: u32,
     options: Vec<Label>,
     handler: F,
     selected: usize,
@@ -33,6 +34,11 @@ impl<F> ModalMenu<F>
                   -> Result<ModalMenu<F>, String>
         where I: IntoIterator<Item = String>
     {
+        // TODO: Having to remember to scale ourselves is a bit annoying.
+        let (_, scale_y) = state.resources.renderer().scale();
+        let line_spacing = font.recommended_line_spacing();
+        let line_spacing = (line_spacing as f32 / scale_y) as u32;
+
         let mut max_width = 0;
         let labels = options.into_iter()
             .map(|option| {
@@ -54,10 +60,20 @@ impl<F> ModalMenu<F>
         Ok(ModalMenu {
             pos: pos,
             width: 2 * PAD + max_width,
+            line_spacing: line_spacing,
             selected: selected,
             options: labels,
             handler: handler,
         })
+    }
+
+    fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        let option = &self.options[self.selected];
+        (self.handler)(Some(option.text()), state, queue);
+    }
+
+    fn cancel(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        (self.handler)(None, state, queue);
     }
 }
 
@@ -71,17 +87,43 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
         use common::Message::*;
         match message {
             Confirm => {
-                let option = &self.options[self.selected];
-                (self.handler)(Some(option.text()), state, queue);
+                self.confirm(state, queue);
             }
             Cancel => {
-                (self.handler)(None, state, queue);
+                self.cancel(state, queue);
             }
             MoveCursorDown => {
                 self.selected = (self.selected + 1) % self.options.len();
             }
             MoveCursorUp => {
                 self.selected = (self.selected + self.options.len() - 1) % self.options.len();
+            }
+            MouseMovedTo(x, y) |
+            LeftClickAt(x, y) => {
+                let (outer_left, outer_top) = self.pos;
+
+                let left = outer_left + PAD as i32;
+                let top = outer_top + PAD as i32;
+
+                let rx = x - left;
+                let ry = y - top;
+
+                let mut is_in_range = false;
+                if 0 <= rx && rx <= ((self.width - PAD) as i32) && 0 <= ry {
+                    let i = (ry / self.line_spacing as i32) as usize;
+                    if i < self.options.len() {
+                        is_in_range = true;
+                        self.selected = i as usize;
+                    }
+                }
+
+                if let LeftClickAt(..) = message {
+                    if is_in_range {
+                        self.confirm(state, queue);
+                    } else {
+                        self.cancel(state, queue);
+                    }
+                }
             }
             _ => {}
         }
@@ -90,11 +132,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
     /// Renders the object.
     fn render(&mut self, _state: &State, renderer: &mut Renderer) {
         let (sx, sy) = self.pos;
-        // TODO: Having to remember to scale ourselves is a bit annoying.
-        let (_, scale_y) = renderer.scale();
-        let line_spacing = self.options[0].font().recommended_line_spacing();
-        let line_spacing = (line_spacing as f32 / scale_y) as i32;
-        let height = PAD * 2 + line_spacing as u32 * self.options.len() as u32;
+        let height = PAD * 2 + self.line_spacing * self.options.len() as u32;
 
         renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
         renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
@@ -103,11 +141,11 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
         for (i, label) in self.options.iter_mut().enumerate() {
             if i == self.selected {
                 renderer.set_draw_color(Color::RGB(255, 150, 0));
-                let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, line_spacing as u32);
+                let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, self.line_spacing);
                 renderer.fill_rect(rect).unwrap();
             }
             label.render(renderer, x, y);
-            y += line_spacing;
+            y += self.line_spacing as i32;
         }
     }
 }

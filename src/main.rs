@@ -133,6 +133,10 @@ pub fn main() {
          MouseButtonDown { x, y, mouse_btn: Mouse::Right, .. },
          RightClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
+    mapper.add(map_event!(
+        MouseMotion { x, y, .. },
+        MouseMovedTo((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
+    ));
 
     // Run the main loop.
 

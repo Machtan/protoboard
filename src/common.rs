@@ -24,6 +24,7 @@ pub enum Message {
 
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
+    MouseMovedTo(i32, i32),
 
     UnitSpent((u32, u32)),
     MoveUnit((u32, u32), (u32, u32)),
