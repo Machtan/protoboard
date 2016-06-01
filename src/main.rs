@@ -1,5 +1,6 @@
 #![feature(question_mark)]
 
+use std::env;
 use std::rc::Rc;
 
 extern crate env_logger;
@@ -32,11 +33,6 @@ mod menus;
 mod target_selector;
 
 pub fn main() {
-    env_logger::LogBuilder::new()
-        .filter(Some("protoboard"), log::LogLevelFilter::Trace)
-        .init()
-        .unwrap();
-
     use sdl2::event::Event::*;
     use common::Message::*;
 
@@ -45,6 +41,17 @@ pub fn main() {
     const N_ROWS: u32 = 20;
     const CELL_SIZE: (u32, u32) = (32, 32);
     const MAX_FPS: u32 = 60;
+
+    // Set up logging.
+
+    let mut builder = env_logger::LogBuilder::new();
+    // Set default level to debug.
+    // (setting this before `parse`, makes it be considered *after* env vars (for now).)
+    builder.filter(Some("protoboard"), log::LogLevelFilter::Debug);
+    if let Ok(var) = env::var("RUST_LOG") {
+        builder.parse(&var);
+    }
+    builder.init().unwrap();
 
     // Set up SDL2.
 
