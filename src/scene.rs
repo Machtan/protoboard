@@ -33,8 +33,6 @@ impl<'a> Behavior<State<'a>> for Scene<'a> {
 
     /// Updates the object each frame.
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
-        state.apply_modal_stack(&mut self.modal_stack);
-
         for object in &mut self.objects {
             object.update(state, queue);
         }
@@ -45,7 +43,10 @@ impl<'a> Behavior<State<'a>> for Scene<'a> {
 
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         trace!("Message: {:?}", message);
-
+        if let Message::ApplyOneModal = message {
+            state.apply_one_modal(&mut self.modal_stack);
+            return;
+        }
         match self.modal_stack.last_mut() {
             None => {
                 for object in &mut self.objects {

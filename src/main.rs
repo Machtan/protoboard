@@ -29,6 +29,7 @@ mod unit;
 mod grid;
 mod cursor;
 mod menus;
+mod target_selector;
 
 macro_rules! map_event_move {
     ($pat:pat, $message:expr) => {{

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-
+use std::fmt::{self, Debug};
 use sdl2::render::Texture;
 
 #[derive(Clone)]
@@ -17,6 +17,12 @@ impl Unit {
             spent: false,
             attack: attack_type,
         }
+    }
+}
+
+impl Debug for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Unit {{ attack: {:?}, spent: {} }}", self.attack, self.spent)
     }
 }
 

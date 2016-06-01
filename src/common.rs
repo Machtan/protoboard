@@ -20,11 +20,21 @@ pub enum Message {
     FinishTurn,
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
-    MenuSelect(&'static str),
     UnitSpent(u32, u32),
     MoveUnit((u32, u32), (u32, u32)),
     SelectUnit(u32, u32),
     Deselect,
+    HideCursor,
+    ShowCursor,
+    SelectTarget(u32, u32),
+    ApplyOneModal,
+}
+
+#[derive(Debug)]
+pub enum ModalMessage<'a> {
+    Push(GameObject<'a>),
+    Pop,
+    Break,
 }
 
 #[derive(Debug)]
@@ -32,7 +42,7 @@ pub struct State<'a> {
     pub resources: ResourceManager<'a>,
     player_turn: u32,
     player_count: u32,
-    modal_stack: Vec<Option<GameObject<'a>>>,
+    modal_stack: Vec<ModalMessage<'a>>,
 }
 
 impl<'a> State<'a> {
@@ -46,32 +56,41 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn push_modal(&mut self, behavior: GameObject<'a>) {
-        self.modal_stack.push(Some(behavior));
+    pub fn push_modal(&mut self, behavior: GameObject<'a>, queue: &mut Vec<Message>) {
+        self.modal_stack.push(ModalMessage::Push(behavior));
+        queue.push(Message::ApplyOneModal);
     }
 
-    pub fn pop_modal(&mut self) {
-        if self.modal_stack.pop().is_none() {
-            self.modal_stack.push(None);
-        }
+    pub fn pop_modal(&mut self, queue: &mut Vec<Message>) {
+        self.modal_stack.push(ModalMessage::Pop);
+        queue.push(Message::ApplyOneModal);
     }
-
-    pub fn apply_modal_stack(&mut self, dst: &mut Vec<GameObject<'a>>) {
-        for modal in self.modal_stack.drain(..) {
-            match modal {
-                Some(modal) => {
-                    debug!("Pushing modal state: {:?}", modal);
-                    dst.push(modal);
-                }
-                None => {
-                    let old = dst.pop();
-                    match old {
-                        Some(old) => {
-                            debug!("Popped modal state: {:?}", old);
-                        }
-                        None => panic!("cannot pop from empty modal queue"),
+    
+    pub fn break_modal(&mut self, queue: &mut Vec<Message>) {
+        self.modal_stack.push(ModalMessage::Break);
+        queue.push(Message::ApplyOneModal);
+    }
+    
+    pub fn apply_one_modal(&mut self, dst: &mut Vec<GameObject<'a>>) {
+        use self::ModalMessage::*;
+        let modal = self.modal_stack.pop()
+            .expect("Modal applied with empty stack");
+        match modal {
+            Push(modal) => {
+                debug!("Pushing modal state: {:?}", modal);
+                dst.push(modal);
+            }
+            Pop => {
+                let old = dst.pop();
+                match old {
+                    Some(old) => {
+                        debug!("Popped modal state: {:?}", old);
                     }
+                    None => panic!("cannot pop from empty modal queue"),
                 }
+            }
+            Break => {
+                dst.clear();
             }
         }
     }

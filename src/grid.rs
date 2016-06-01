@@ -7,8 +7,9 @@ use sdl2::rect::Rect;
 use common::{FIRA_SANS_PATH, State, Message};
 use unit::Unit;
 use menus::ModalMenu;
+use target_selector::TargetSelector;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct GridField {
     unit: Option<Unit>,
     terrain: Option<()>,
@@ -71,17 +72,21 @@ impl Grid {
         field.unit = Some(unit);
     }
 
-    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) -> Vec<(u32, u32)> {
+    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) 
+            -> Vec<((u32, u32), GridField)> {
         let mut attackable = Vec::new();
         for (tc, tr) in unit.attack.cells_in_range(col, row, (self.cols, self.rows)) {
             if self.unit(tc, tr).is_some() {
-                attackable.push((tc, tr));
+                attackable.push(((tc, tr), self.field(col, row).clone()));
             }
         }
         attackable
     }
     
     fn move_unit(&mut self, from: (u32, u32), to: (u32, u32)) {
+        if from == to {
+            return;
+        }
         let (src_col, src_row) = from;
         let (dst_col, dst_row) = to;
         assert!(self.unit(dst_col, dst_row).is_none(),
@@ -92,13 +97,27 @@ impl Grid {
         let j = self.index(dst_col, dst_row);
         self.contents.swap(i, j);
     }
+    
+    fn select_target(&mut self, cell: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
+        info!("Selecting target...");
+        let (col, row) = cell;
+        let unit = self.unit(col, row).unwrap().clone();
+        let targets = self.find_attackable(&unit, col, row);
+        let selector = TargetSelector::new(
+            unit,
+            (col, row),
+            (self.cols, self.rows),
+            self.cell_size, 
+            targets);
+        queue.push(Message::Deselect);
+        queue.push(Message::HideCursor);
+        state.push_modal(Box::new(selector), queue);
+    }
 
-    fn do_action_at(&mut self, col: u32, row: u32, state: &mut State, _queue: &mut Vec<Message>) {
+    fn do_action_at(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
         use common::Message::*;
         let (ucol, urow) = self.selected_unit.expect("no unit was selected");
-        if col == ucol && row == urow {
-            self.selected_unit = None;
-        } else if self.unit(col, row).is_none() {
+        if self.unit(col, row).is_none() || (col == ucol && row == urow) {
             self.move_unit((ucol, urow), (col, row));
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
             
@@ -118,29 +137,33 @@ impl Grid {
                 match option {
                     Some("Attack") => {
                         info!("Attack!");
-                        println!("Targets: {:?}", targets);
                         // TODO: Just to prevent a crash after failing to attack.
-                        queue.push(Deselect);
-                        state.pop_modal();
+                        state.pop_modal(queue);
+                        queue.push(MoveCursorTo(col, row));
+                        queue.push(SelectTarget(col, row));
                     }
                     Some("Wait") => {
                         info!("Wait!");
+                        state.pop_modal(queue);
                         queue.push(UnitSpent(col, row));
                         queue.push(Deselect);
                         queue.push(MoveCursorTo(col, row));
-                        state.pop_modal();
+                        queue.push(ShowCursor);
                     }
                     None => {
                         info!("Cancel!");
+                        state.pop_modal(queue);
                         queue.push(MoveUnit((col, row), (ucol, urow)));
+                        queue.push(MoveCursorTo(ucol, urow));
                         queue.push(SelectUnit(ucol, urow));
-                        state.pop_modal();
+                        queue.push(ShowCursor);
                     }
                     _ => unreachable!(),
                 }
             })
                 .expect("could not create menu");
-            state.push_modal(Box::new(menu));
+            queue.push(HideCursor);
+            state.push_modal(Box::new(menu), queue);
         }
     }
 
@@ -193,6 +216,9 @@ impl<'a> Behavior<State<'a>> for Grid {
                 assert!(self.selected_unit.is_some(),
                         "Received deselect with no unit selected");
                 self.selected_unit = None;
+            }
+            SelectTarget(col, row) => {
+                self.select_target((col, row), state, queue);
             }
             _ => {}
         }
