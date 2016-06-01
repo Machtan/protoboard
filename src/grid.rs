@@ -50,35 +50,35 @@ impl Grid {
         col as usize * rows as usize + row as usize
     }
 
-    pub fn field(&self, cell: (u32, u32)) -> &Tile {
+    pub fn tile(&self, cell: (u32, u32)) -> &Tile {
         &self.contents[self.index(cell)]
     }
 
-    pub fn field_mut(&mut self, cell: (u32, u32)) -> &mut Tile {
+    pub fn tile_mut(&mut self, cell: (u32, u32)) -> &mut Tile {
         &mut self.contents[self.index(cell)]
     }
 
     pub fn unit(&self, cell: (u32, u32)) -> Option<&Unit> {
-        self.field(cell).unit.as_ref()
+        self.tile(cell).unit.as_ref()
     }
 
     pub fn unit_mut(&mut self, cell: (u32, u32)) -> Option<&mut Unit> {
-        self.field_mut(cell).unit.as_mut()
+        self.tile_mut(cell).unit.as_mut()
     }
 
     /// Adds a unit to the grid.
     pub fn add_unit(&mut self, unit: Unit, cell: (u32, u32)) {
-        let field = self.field_mut(cell);
-        assert!(field.unit.is_none());
-        field.unit = Some(unit);
+        let tile = self.tile_mut(cell);
+        assert!(tile.unit.is_none());
+        tile.unit = Some(unit);
     }
 
-    /// Finds fields attackable by the given unit if moved to the given position.
+    /// Finds tiles attackable by the given unit if moved to the given position.
     fn find_attackable(&self, unit: &Unit, cell: (u32, u32)) -> Vec<((u32, u32), Tile)> {
         let mut attackable = Vec::new();
         for target_cell in unit.attack.cells_in_range(cell, self.size) {
             if self.unit(target_cell).is_some() {
-                attackable.push((target_cell, self.field(cell).clone()));
+                attackable.push((target_cell, self.tile(cell).clone()));
             }
         }
         attackable
@@ -140,7 +140,6 @@ impl Grid {
                 match option {
                     Some("Attack") => {
                         info!("Attack!");
-                        // TODO: Just to prevent a crash after failing to attack.
                         state.pop_modal(queue);
                         queue.push(MoveCursorTo(target));
                         queue.push(SelectTarget(origin, target));
@@ -214,7 +213,7 @@ impl<'a> Behavior<State<'a>> for Grid {
             }
             SelectUnit(cell) => {
                 assert!(self.unit(cell).is_some(),
-                        "The field for the selected unit is empty!");
+                        "The tile for the selected unit is empty!");
                 self.selected_unit = Some(cell);
             }
             Deselect => {
@@ -227,6 +226,13 @@ impl<'a> Behavior<State<'a>> for Grid {
             }
             MoveUnitAndAct(origin, destination) => {
                 self.move_unit_and_act(origin, destination, state, queue);
+            }
+            DestroyUnit(origin) => {
+                let tile = self.tile_mut(origin);
+                info!("Unit at {:?} destroyed! {:?}",
+                      origin,
+                      tile.unit.as_ref().expect("no unit to destroy"));
+                tile.unit = None;
             }
             _ => {}
         }
@@ -257,10 +263,10 @@ impl<'a> Behavior<State<'a>> for Grid {
                 // TODO: When can `fill_rect` fail?
                 renderer.fill_rect(rect).unwrap();
 
-                let field = self.field((col, row));
-                if let Some(()) = field.terrain {
+                let tile = self.tile((col, row));
+                if let Some(()) = tile.terrain {
                 }
-                if let Some(ref obj) = field.unit {
+                if let Some(ref obj) = tile.unit {
                     if obj.spent {
                         renderer.set_draw_color(Color::RGB(100, 150, 100));
                         renderer.fill_rect(rect).unwrap();

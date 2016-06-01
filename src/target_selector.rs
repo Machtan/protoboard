@@ -45,8 +45,12 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
             Confirm => {
                 let selected = self.targets[self.selected].0;
                 info!("Attacking target at {:?}", selected);
+                // TODO: It might be better to have a cleaner model for
+                // breaking out of a given number of modals. We might
+                // want to have non-menu modals not be broken here?
                 state.break_modal(queue);
                 queue.push(UnitSpent(self.cell));
+                queue.push(DestroyUnit(selected));
                 queue.push(Deselect);
                 queue.push(ShowCursor);
             }

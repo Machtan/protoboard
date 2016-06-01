@@ -13,13 +13,18 @@ pub enum Message {
     MoveCursorLeft,
     MoveCursorRight,
     MoveCursorTo((u32, u32)),
+
     Confirm,
     CursorConfirm((u32, u32)),
+
     Cancel,
     CursorCancel((u32, u32)),
+
     FinishTurn,
+
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
+
     UnitSpent((u32, u32)),
     MoveUnit((u32, u32), (u32, u32)),
     SelectUnit((u32, u32)),
@@ -28,7 +33,10 @@ pub enum Message {
     HideCursor,
     ShowCursor,
     SelectTarget((u32, u32), (u32, u32)),
+    DestroyUnit((u32, u32)),
+
     ApplyOneModal,
+
     Exit,
 }
 
