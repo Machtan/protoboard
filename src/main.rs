@@ -82,11 +82,11 @@ pub fn main() {
 
     let mut scene = Scene::new();
 
-    let mut grid = Grid::new(N_COLS, N_ROWS, CELL_SIZE);
+    let mut grid = Grid::new((N_COLS, N_ROWS), CELL_SIZE);
     let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
     for i in 0..N_COLS {
-        grid.add_unit(unit.clone(), i, 0);
-        grid.add_unit(unit.clone(), i, N_ROWS - 1);
+        grid.add_unit(unit.clone(), (i, 0));
+        grid.add_unit(unit.clone(), (i, N_ROWS - 1));
     }
     scene.add(Box::new(grid));
 

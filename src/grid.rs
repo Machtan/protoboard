@@ -26,113 +26,106 @@ impl GridField {
 }
 
 pub struct Grid {
-    cols: u32,
-    rows: u32,
+    size: (u32, u32),
     cell_size: (u32, u32),
     contents: Box<[GridField]>,
     selected_unit: Option<(u32, u32)>,
 }
 
 impl Grid {
-    pub fn new(cols: u32, rows: u32, cell_size: (u32, u32)) -> Grid {
-        let contents = vec![GridField::new(None); cols as usize * rows as usize];
+    pub fn new(size: (u32, u32), cell_size: (u32, u32)) -> Grid {
+        let contents = vec![GridField::new(None); size.0 as usize * size.1 as usize];
         Grid {
-            cols: cols,
-            rows: rows,
+            size: size,
             cell_size: cell_size,
             contents: contents.into_boxed_slice(),
             selected_unit: None,
         }
     }
 
-    fn index(&self, col: u32, row: u32) -> usize {
-        assert!(row < self.rows && col < self.cols);
-        col as usize * self.rows as usize + row as usize
+    fn index(&self, cell: (u32, u32)) -> usize {
+        let (col, row) = cell;
+        let (cols, rows) = self.size;
+        assert!(row < rows && col < cols);
+        col as usize * rows as usize + row as usize
     }
 
-    pub fn field(&self, col: u32, row: u32) -> &GridField {
-        &self.contents[self.index(col, row)]
+    pub fn field(&self, cell: (u32, u32)) -> &GridField {
+        &self.contents[self.index(cell)]
     }
 
-    pub fn field_mut(&mut self, col: u32, row: u32) -> &mut GridField {
-        &mut self.contents[self.index(col, row)]
+    pub fn field_mut(&mut self, cell: (u32, u32)) -> &mut GridField {
+        &mut self.contents[self.index(cell)]
     }
 
-    pub fn unit(&self, col: u32, row: u32) -> Option<&Unit> {
-        self.field(col, row).unit.as_ref()
+    pub fn unit(&self, cell: (u32, u32)) -> Option<&Unit> {
+        self.field(cell).unit.as_ref()
     }
 
-    pub fn unit_mut(&mut self, col: u32, row: u32) -> Option<&mut Unit> {
-        self.field_mut(col, row).unit.as_mut()
+    pub fn unit_mut(&mut self, cell: (u32, u32)) -> Option<&mut Unit> {
+        self.field_mut(cell).unit.as_mut()
     }
 
-    pub fn add_unit(&mut self, unit: Unit, col: u32, row: u32) {
-        let field = self.field_mut(col, row);
+    /// Adds a unit to the grid.
+    pub fn add_unit(&mut self, unit: Unit, cell: (u32, u32)) {
+        let field = self.field_mut(cell);
         assert!(field.unit.is_none());
         field.unit = Some(unit);
     }
 
-    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) -> Vec<((u32, u32), GridField)> {
+    /// Finds fields attackable by the given unit if moved to the given position.
+    fn find_attackable(&self, unit: &Unit, cell: (u32, u32)) -> Vec<((u32, u32), GridField)> {
         let mut attackable = Vec::new();
-        for (tc, tr) in unit.attack.cells_in_range(col, row, (self.cols, self.rows)) {
-            if self.unit(tc, tr).is_some() {
-                attackable.push(((tc, tr), self.field(col, row).clone()));
+        for target_cell in unit.attack.cells_in_range(cell, self.size) {
+            if self.unit(target_cell).is_some() {
+                attackable.push((target_cell, self.field(cell).clone()));
             }
         }
         attackable
     }
 
+    /// Moves a unit from the source to the destination.
     fn move_unit(&mut self, from: (u32, u32), to: (u32, u32)) {
         if from == to {
             return;
         }
-        let (src_col, src_row) = from;
-        let (dst_col, dst_row) = to;
-        assert!(self.unit(dst_col, dst_row).is_none(),
-                "Transport units not supported!");
-        assert!(self.unit(src_col, src_row).is_some(),
-                "No unit at move origin");
-        let i = self.index(src_col, src_row);
-        let j = self.index(dst_col, dst_row);
+        assert!(self.unit(to).is_none(), "Transport units not supported!");
+        assert!(self.unit(from).is_some(), "No unit at move origin");
+        let i = self.index(from);
+        let j = self.index(to);
         self.contents.swap(i, j);
     }
 
+    /// Opens the target selection modal for the unit at Cell.
+    /// The origin is used to return to the menu when cancelling.
     fn select_target(&mut self,
                      origin: (u32, u32),
                      cell: (u32, u32),
                      state: &mut State,
                      queue: &mut Vec<Message>) {
         info!("Selecting target...");
-        let (col, row) = cell;
-        let unit = self.unit(col, row).unwrap().clone();
-        let targets = self.find_attackable(&unit, col, row);
-        let selector = TargetSelector::new(unit,
-                                           (col, row),
-                                           origin,
-                                           (self.cols, self.rows),
-                                           self.cell_size,
-                                           targets);
+        let unit = self.unit(cell).unwrap().clone();
+        let targets = self.find_attackable(&unit, cell);
+        let selector = TargetSelector::new(unit, cell, origin, self.size, self.cell_size, targets);
         queue.push(Message::HideCursor);
         state.push_modal(Box::new(selector), queue);
     }
 
+    /// Moves the selected unit from origin to target and opens up the action menu.
+    /// If the menu is cancelled, the unit moves back.
     fn move_unit_and_act(&mut self,
                          origin: (u32, u32),
                          target: (u32, u32),
                          state: &mut State,
                          queue: &mut Vec<Message>) {
         use common::Message::*;
-        let (src_col, src_row) = origin;
-        let (col, row) = target;
-        if self.unit(col, row).is_none() || (col == src_col && row == src_row) {
-            self.move_unit((src_col, src_row), (col, row));
-            debug!("Moved unit from ({}, {}) to ({}, {})",
-                   src_col,
-                   src_row,
-                   col,
-                   row);
+        assert!(self.selected_unit == Some(origin),
+                "The moved unit isn't selected");
+        if self.unit(target).is_none() || target == origin {
+            self.move_unit(origin, target);
+            debug!("Moved unit from {:?} to {:?}", origin, target);
 
-            let targets = self.find_attackable(self.unit(col, row).unwrap(), col, row);
+            let targets = self.find_attackable(self.unit(target).unwrap(), target);
             let mut options = Vec::new();
             if !targets.is_empty() {
                 options.push("Attack");
@@ -149,23 +142,23 @@ impl Grid {
                         info!("Attack!");
                         // TODO: Just to prevent a crash after failing to attack.
                         state.pop_modal(queue);
-                        queue.push(MoveCursorTo(col, row));
+                        queue.push(MoveCursorTo(target));
                         queue.push(SelectTarget(origin, target));
                     }
                     Some("Wait") => {
                         info!("Wait!");
                         state.pop_modal(queue);
-                        queue.push(UnitSpent(col, row));
+                        queue.push(UnitSpent(target));
                         queue.push(Deselect);
-                        queue.push(MoveCursorTo(col, row));
+                        queue.push(MoveCursorTo(target));
                         queue.push(ShowCursor);
                     }
                     None => {
                         info!("Cancel!");
                         state.pop_modal(queue);
-                        queue.push(MoveUnit((col, row), (src_col, src_row)));
-                        queue.push(MoveCursorTo(src_col, src_row));
-                        queue.push(SelectUnit(src_col, src_row));
+                        queue.push(MoveUnit(target, origin));
+                        queue.push(MoveCursorTo(origin));
+                        queue.push(SelectUnit(origin));
                         queue.push(ShowCursor);
                     }
                     _ => unreachable!(),
@@ -177,11 +170,12 @@ impl Grid {
         }
     }
 
-    fn on_confirm(&mut self, col: u32, row: u32, state: &mut State, queue: &mut Vec<Message>) {
+    /// Handles a confirm press at the given target cell when a unit is selected.
+    fn on_confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         if let Some(origin) = self.selected_unit {
-            self.move_unit_and_act(origin, (col, row), state, queue);
-        } else if self.unit(col, row).is_some() {
-            self.selected_unit = Some((col, row));
+            self.move_unit_and_act(origin, target, state, queue);
+        } else if self.unit(target).is_some() {
+            self.selected_unit = Some(target);
         }
     }
 }
@@ -193,34 +187,35 @@ impl<'a> Behavior<State<'a>> for Grid {
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
-            CursorConfirm(col, row) => {
-                self.on_confirm(col, row, state, queue);
+            CursorConfirm(cell) => {
+                self.on_confirm(cell, state, queue);
             }
             LeftClickAt(x, y) => {
                 assert!(x >= 0 && y >= 0);
                 let (w, h) = self.cell_size;
+                let (_, rows) = self.size;
                 let col = (x as u32 - (x as u32 % w)) / w;
-                let row = self.rows - 1 - (y as u32 - (y as u32 % h)) / h;
-                queue.push(MoveCursorTo(col, row));
-                self.on_confirm(col, row, state, queue);
+                let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+                queue.push(MoveCursorTo((col, row)));
+                self.on_confirm((col, row), state, queue);
             }
             CursorCancel(..) => {
                 if self.selected_unit.is_some() {
                     self.selected_unit = None;
                 }
             }
-            UnitSpent(col, row) => {
-                self.unit_mut(col, row)
+            UnitSpent(cell) => {
+                self.unit_mut(cell)
                     .expect("No unit at the spent cell!")
                     .spent = true;
             }
             MoveUnit(from, to) => {
                 self.move_unit(from, to);
             }
-            SelectUnit(col, row) => {
-                assert!(self.unit(col, row).is_some(),
+            SelectUnit(cell) => {
+                assert!(self.unit(cell).is_some(),
                         "The field for the selected unit is empty!");
-                self.selected_unit = Some((col, row));
+                self.selected_unit = Some(cell);
             }
             Deselect => {
                 assert!(self.selected_unit.is_some(),
@@ -239,11 +234,13 @@ impl<'a> Behavior<State<'a>> for Grid {
 
     /// Renders the object.
     fn render(&mut self, _state: &State<'a>, renderer: &mut Renderer) {
-        let grid_height = self.rows * self.cell_size.1;
-        for col in 0..self.cols {
-            for row in 0..self.rows {
-                let x = col * self.cell_size.0;
-                let y = grid_height - self.cell_size.1 - (row * self.cell_size.1);
+        let (cols, rows) = self.size;
+        let (cw, ch) = self.cell_size;
+        let grid_height = rows * ch;
+        for col in 0..cols {
+            for row in 0..rows {
+                let x = col * cw;
+                let y = grid_height - ch - (row * ch);
                 // sprite.render(renderer, x as i32, y as i32, Some(self.cell_size));
                 if (col + row) % 2 == 0 {
                     renderer.set_draw_color(Color::RGB(210, 210, 210));
@@ -256,11 +253,11 @@ impl<'a> Behavior<State<'a>> for Grid {
                     }
                 }
 
-                let rect = Rect::new(x as i32, y as i32, self.cell_size.0, self.cell_size.1);
+                let rect = Rect::new(x as i32, y as i32, cw, ch);
                 // TODO: When can `fill_rect` fail?
                 renderer.fill_rect(rect).unwrap();
 
-                let field = self.field(col, row);
+                let field = self.field((col, row));
                 if let Some(()) = field.terrain {
                 }
                 if let Some(ref obj) = field.unit {

@@ -42,9 +42,10 @@ pub enum AttackType {
 }
 
 impl AttackType {
-    pub fn cells_in_range(&self, col: u32, row: u32, n_tiles: (u32, u32)) -> Vec<(u32, u32)> {
+    pub fn cells_in_range(&self, cell: (u32, u32), grid_size: (u32, u32)) -> Vec<(u32, u32)> {
         let mut cells = Vec::new();
-        let (n_cols, n_rows) = n_tiles;
+        let (col, row) = cell;
+        let (n_cols, n_rows) = grid_size;
         let max_col = n_cols - 1;
         let max_row = n_rows - 1;
         match *self {

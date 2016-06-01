@@ -45,9 +45,8 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
             Confirm => {
                 let selected = self.targets[self.selected].0;
                 info!("Attacking target at {:?}", selected);
-                let (col, row) = self.cell;
                 state.break_modal(queue);
-                queue.push(UnitSpent(col, row));
+                queue.push(UnitSpent(self.cell));
                 queue.push(Deselect);
                 queue.push(ShowCursor);
             }

@@ -52,16 +52,16 @@ impl<'a> Behavior<State<'a>> for Cursor {
                     self.col += 1;
                 }
             }
-            MoveCursorTo(col, row) => {
+            MoveCursorTo((col, row)) => {
                 self.col = col;
                 self.row = row;
             }
             Confirm => {
-                let new_message = CursorConfirm(self.col, self.row);
+                let new_message = CursorConfirm((self.col, self.row));
                 queue.push(new_message);
             }
             Cancel => {
-                let new_message = CursorCancel(self.col, self.row);
+                let new_message = CursorCancel((self.col, self.row));
                 queue.push(new_message);
             }
             ShowCursor => {
