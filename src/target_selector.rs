@@ -11,12 +11,16 @@ pub struct TargetSelector {
     selected: usize,
     cell_size: (u32, u32),
     grid_size: (u32, u32),
-    targets: Vec<((u32, u32), GridField)>
+    targets: Vec<((u32, u32), GridField)>,
 }
 
 impl TargetSelector {
-    pub fn new(unit: Unit, cell: (u32, u32), grid_size: (u32, u32), cell_size: (u32, u32), 
-            targets: Vec<((u32, u32), GridField)>) -> TargetSelector {
+    pub fn new(unit: Unit,
+               cell: (u32, u32),
+               grid_size: (u32, u32),
+               cell_size: (u32, u32),
+               targets: Vec<((u32, u32), GridField)>)
+               -> TargetSelector {
         assert!(!targets.is_empty(), "No targets given to selector");
         TargetSelector {
             unit: unit,
@@ -30,8 +34,8 @@ impl TargetSelector {
 }
 
 impl<'a> Behavior<State<'a>> for TargetSelector {
-    type Message = Message;    
-    
+    type Message = Message;
+
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
@@ -43,10 +47,16 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
                 queue.push(UnitSpent(col, row));
                 queue.push(ShowCursor);
             }
+            MoveCursorDown | MoveCursorRight => {
+                self.selected = (self.selected + 1) % self.targets.len();
+            }
+            MoveCursorUp | MoveCursorLeft => {
+                self.selected = (self.selected + self.targets.len() - 1) % self.targets.len();
+            }
             _ => {}
         }
     }
-    
+
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         let (col, row) = self.targets[self.selected].0;
         let x = (col * self.cell_size.0) as i32;

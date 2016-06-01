@@ -72,8 +72,7 @@ impl Grid {
         field.unit = Some(unit);
     }
 
-    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) 
-            -> Vec<((u32, u32), GridField)> {
+    fn find_attackable(&self, unit: &Unit, col: u32, row: u32) -> Vec<((u32, u32), GridField)> {
         let mut attackable = Vec::new();
         for (tc, tr) in unit.attack.cells_in_range(col, row, (self.cols, self.rows)) {
             if self.unit(tc, tr).is_some() {
@@ -82,7 +81,7 @@ impl Grid {
         }
         attackable
     }
-    
+
     fn move_unit(&mut self, from: (u32, u32), to: (u32, u32)) {
         if from == to {
             return;
@@ -97,18 +96,17 @@ impl Grid {
         let j = self.index(dst_col, dst_row);
         self.contents.swap(i, j);
     }
-    
+
     fn select_target(&mut self, cell: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         info!("Selecting target...");
         let (col, row) = cell;
         let unit = self.unit(col, row).unwrap().clone();
         let targets = self.find_attackable(&unit, col, row);
-        let selector = TargetSelector::new(
-            unit,
-            (col, row),
-            (self.cols, self.rows),
-            self.cell_size, 
-            targets);
+        let selector = TargetSelector::new(unit,
+                                           (col, row),
+                                           (self.cols, self.rows),
+                                           self.cell_size,
+                                           targets);
         queue.push(Message::Deselect);
         queue.push(Message::HideCursor);
         state.push_modal(Box::new(selector), queue);
@@ -120,11 +118,10 @@ impl Grid {
         if self.unit(col, row).is_none() || (col == ucol && row == urow) {
             self.move_unit((ucol, urow), (col, row));
             debug!("Moved unit from ({}, {}) to ({}, {})", ucol, urow, col, row);
-            
-            let targets = self.find_attackable(self.unit(col, row).unwrap(),
-                col, row);
+
+            let targets = self.find_attackable(self.unit(col, row).unwrap(), col, row);
             let mut options = Vec::new();
-            if ! targets.is_empty() {
+            if !targets.is_empty() {
                 options.push("Attack");
             }
             options.push("Wait");

@@ -65,15 +65,16 @@ impl<'a> State<'a> {
         self.modal_stack.push(ModalMessage::Pop);
         queue.push(Message::ApplyOneModal);
     }
-    
+
     pub fn break_modal(&mut self, queue: &mut Vec<Message>) {
         self.modal_stack.push(ModalMessage::Break);
         queue.push(Message::ApplyOneModal);
     }
-    
+
     pub fn apply_one_modal(&mut self, dst: &mut Vec<GameObject<'a>>) {
         use self::ModalMessage::*;
-        let modal = self.modal_stack.pop()
+        let modal = self.modal_stack
+            .pop()
             .expect("Modal applied with empty stack");
         match modal {
             Push(modal) => {

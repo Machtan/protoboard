@@ -22,7 +22,10 @@ impl Unit {
 
 impl Debug for Unit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Unit {{ attack: {:?}, spent: {} }}", self.attack, self.spent)
+        write!(f,
+               "Unit {{ attack: {:?}, spent: {} }}",
+               self.attack,
+               self.spent)
     }
 }
 
