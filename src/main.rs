@@ -12,7 +12,7 @@ extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
 
-use glorious::{BoxedInputMapper, Game, ExitSignal, Renderer, ResourceManager};
+use glorious::{BoxedInputMapper, Game, Renderer, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_PNG, INIT_JPG};
@@ -30,17 +30,6 @@ mod grid;
 mod cursor;
 mod menus;
 mod target_selector;
-
-macro_rules! map_event_move {
-    ($pat:pat, $message:expr) => {{
-        use sdl2::event::Event;
-        Box::new(move |event: &Event, push: &mut FnMut(_)| {
-            if let $pat = *event {
-                push($message);
-            }
-        })
-    }};
-}
 
 pub fn main() {
     env_logger::LogBuilder::new()
@@ -83,7 +72,7 @@ pub fn main() {
 
     // Set up game state.
 
-    let state = State::new(resources);
+    let mut state = State::new(resources);
 
     // Cause a few assets to be preloaded.
 
@@ -108,6 +97,8 @@ pub fn main() {
 
     let mut mapper = BoxedInputMapper::new();
 
+    mapper.add(map_event!(Quit { .. }, Exit));
+
     mapper.add(map_key_pressed!(Keycode::Up, MoveCursorUp));
     mapper.add(map_key_pressed!(Keycode::Down, MoveCursorDown));
     mapper.add(map_key_pressed!(Keycode::Left, MoveCursorLeft));
@@ -120,11 +111,11 @@ pub fn main() {
 
     mapper.add(map_scan_pressed!(Scancode::Z, Confirm));
     mapper.add(map_scan_pressed!(Scancode::X, Cancel));
-    mapper.add(map_event_move!(
+    mapper.add(map_event!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Left, .. },
          LeftClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
-    mapper.add(map_event_move!(
+    mapper.add(map_event!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Right, .. },
          RightClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
@@ -134,13 +125,5 @@ pub fn main() {
     let event_pump = sdl_context.event_pump().unwrap();
     let mut game = Game::new(MAX_FPS, renderer, event_pump);
 
-    game.run(state, &mapper, &mut scene, |signal| {
-        match signal {
-            ExitSignal::ApplicationQuit => true,
-            ExitSignal::EscapePressed => {
-                info!("Escape exit signal sent!");
-                false
-            }
-        }
-    });
+    game.run(&mut state, &mapper, &mut scene, |m| *m == Exit);
 }

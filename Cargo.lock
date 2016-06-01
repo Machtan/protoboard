@@ -3,7 +3,7 @@ name = "protoboard"
 version = "0.1.0"
 dependencies = [
  "env_logger 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "glorious 0.2.0 (git+https://github.com/Machtan/glorious)",
+ "glorious 0.2.0 (git+https://github.com/Machtan/glorious?branch=is-quit-message)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -40,7 +40,7 @@ dependencies = [
 [[package]]
 name = "glorious"
 version = "0.2.0"
-source = "git+https://github.com/Machtan/glorious#598b8855e2f2437a63ec70cdf8c0408486cc1740"
+source = "git+https://github.com/Machtan/glorious?branch=is-quit-message#de66b826c9dc336b26932c8b327f0c049337e44a"
 dependencies = [
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",

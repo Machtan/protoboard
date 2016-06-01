@@ -7,7 +7,7 @@ authors = ["Machtan <jako3047@gmail.com>"]
 env_logger = "0.3"
 log = "0.3"
 
-glorious = { git = "https://github.com/Machtan/glorious" }
+glorious = { git = "https://github.com/Machtan/glorious", branch = "is-quit-message" }
 sdl2 = "0.19.0"
 sdl2_image = "0.19.0"
 sdl2_ttf = "0.19.0"
