@@ -30,6 +30,17 @@ mod grid;
 mod cursor;
 mod menus;
 
+macro_rules! map_event_move {
+    ($pat:pat, $message:expr) => {{
+        use sdl2::event::Event;
+        Box::new(move |event: &Event, push: &mut FnMut(_)| {
+            if let $pat = *event {
+                push($message);
+            }
+        })
+    }};
+}
+
 pub fn main() {
     env_logger::LogBuilder::new()
         .filter(Some("protoboard"), log::LogLevelFilter::Trace)
@@ -54,14 +65,19 @@ pub fn main() {
     let font_context = sdl2_ttf::init().expect("Font init");
     // let mut limiter = FrameLimiter::new(60);
 
-    // TODO: Implement scaling, so we can support high-DPI monitors.
     let window = video_subsystem.window(WINDOW_TITLE, 640, 640)
+        .allow_highdpi()
         .position_centered()
         .opengl()
         .build()
         .unwrap();
 
-    let renderer = Renderer::new(window.renderer().build().unwrap());
+    let (w, h) = window.size();
+    let (pw, ph) = window.drawable_size();
+    let mut renderer = window.renderer().build().unwrap();
+    let _ = renderer.set_logical_size(w, h);
+
+    let renderer = Renderer::new(renderer);
     let resources = ResourceManager::new(renderer.clone(), Rc::new(font_context));
 
     // Set up game state.
@@ -103,13 +119,13 @@ pub fn main() {
 
     mapper.add(map_scan_pressed!(Scancode::Z, Confirm));
     mapper.add(map_scan_pressed!(Scancode::X, Cancel));
-    mapper.add(map_event!(
+    mapper.add(map_event_move!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Left, .. },
-         LeftClickAt(x, y)
+         LeftClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
-    mapper.add(map_event!(
+    mapper.add(map_event_move!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Right, .. },
-         RightClickAt(x, y)
+         RightClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
 
     // Run the main loop.

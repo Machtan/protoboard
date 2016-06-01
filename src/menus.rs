@@ -90,7 +90,10 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
     /// Renders the object.
     fn render(&mut self, _state: &State, renderer: &mut Renderer) {
         let (sx, sy) = self.pos;
+        // TODO: Having to remember to scale ourselves is a bit annoying.
+        let (_, scale_y) = renderer.scale();
         let line_spacing = self.options[0].font().recommended_line_spacing();
+        let line_spacing = (line_spacing as f32 / scale_y) as i32;
         let height = PAD * 2 + line_spacing as u32 * self.options.len() as u32;
 
         renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
