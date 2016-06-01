@@ -34,6 +34,27 @@ impl TargetSelector {
             targets: targets,
         }
     }
+
+    fn confirm<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+        use common::Message::*;
+        let selected = self.targets[self.selected].0;
+        info!("Attacking target at {:?}", selected);
+        // TODO: It might be better to have a cleaner model for
+        // breaking out of a given number of modals. We might
+        // want to have non-menu modals not be broken here?
+        state.break_modal(queue);
+        queue.push(UnitSpent(self.pos));
+        queue.push(DestroyUnit(selected));
+        queue.push(Deselect);
+        queue.push(ShowCursor);
+    }
+
+    fn cancel<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+        use common::Message::*;
+        state.break_modal(queue);
+        queue.push(MoveUnit(self.pos, self.origin));
+        queue.push(MoveUnitAndAct(self.origin, self.pos));
+    }
 }
 
 impl<'a> Behavior<State<'a>> for TargetSelector {
@@ -43,27 +64,39 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
         use common::Message::*;
         match message {
             Confirm => {
-                let selected = self.targets[self.selected].0;
-                info!("Attacking target at {:?}", selected);
-                // TODO: It might be better to have a cleaner model for
-                // breaking out of a given number of modals. We might
-                // want to have non-menu modals not be broken here?
-                state.break_modal(queue);
-                queue.push(UnitSpent(self.pos));
-                queue.push(DestroyUnit(selected));
-                queue.push(Deselect);
-                queue.push(ShowCursor);
+                self.confirm(state, queue);
             }
             Cancel => {
-                state.break_modal(queue);
-                queue.push(MoveUnit(self.pos, self.origin));
-                queue.push(MoveUnitAndAct(self.origin, self.pos));
+                self.cancel(state, queue);
             }
             MoveCursorDown | MoveCursorRight => {
                 self.selected = (self.selected + 1) % self.targets.len();
             }
             MoveCursorUp | MoveCursorLeft => {
                 self.selected = (self.selected + self.targets.len() - 1) % self.targets.len();
+            }
+            MouseMovedTo(x, y) |
+            LeftClickAt(x, y) => {
+                assert!(x >= 0 && y >= 0);
+                let (w, h) = self.tile_size;
+                let (_, rows) = self.grid_size;
+                let col = (x as u32 - (x as u32 % w)) / w;
+                let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+                let mut is_valid_target = false;
+                for (i, &(tile, _)) in self.targets.iter().enumerate() {
+                    if tile == (col, row) {
+                        self.selected = i;
+                        is_valid_target = true;
+                    }
+                }
+
+                if let LeftClickAt(..) = message {
+                    if is_valid_target {
+                        self.confirm(state, queue);
+                    } else {
+                        self.cancel(state, queue);
+                    }
+                }
             }
             _ => {}
         }
