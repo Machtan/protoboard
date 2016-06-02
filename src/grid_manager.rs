@@ -175,7 +175,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 if self.selected.is_some() {
                     self.selected = None;
                 } else {
-                    self.showing_range_of = Some(pos);
+                    if self.grid.unit(pos).is_some() {
+                        self.showing_range_of = Some(pos);
+                    }
                 }
             }
             CancelReleased => {
