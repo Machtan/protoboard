@@ -70,7 +70,12 @@ impl GridManager {
         let unit = self.grid.unit(target).expect("unreachable; failed to move unit");
 
         let mut options = Vec::with_capacity(2);
-        if self.grid.find_attackable(unit, target).next().is_some() {
+        let can_attack = if unit.is_ranged() {
+            origin == target
+        } else {
+            true
+        };
+        if can_attack && self.grid.find_attackable(unit, target).next().is_some() {
             options.push("Attack");
         }
         options.push("Wait");

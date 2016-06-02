@@ -32,6 +32,10 @@ impl Unit {
     pub fn texture(&self) -> Rc<Texture> {
         self.unit_type.texture.clone()
     }
+
+    pub fn is_ranged(&self) -> bool {
+        self.unit_type.attack.is_ranged()
+    }
 }
 
 #[derive(Clone)]
@@ -146,6 +150,14 @@ impl AttackType {
             cur: (0, max as i32),
             size: size,
             min: min,
+        }
+    }
+
+    pub fn is_ranged(&self) -> bool {
+        use self::AttackType::*;
+        match *self {
+            Ranged { .. } => true,
+            Melee | Spear { .. } => false,
         }
     }
 }
