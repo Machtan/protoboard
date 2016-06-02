@@ -1,6 +1,6 @@
 use glorious::{Behavior, Renderer, Sprite};
 
-use resources::{MARKER_PATH};
+use resources::MARKER_PATH;
 use common::{State, Message};
 
 #[derive(Debug)]

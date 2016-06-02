@@ -1,5 +1,5 @@
 
-use resources::{MARKER_PATH};
+use resources::MARKER_PATH;
 use glorious::{Behavior, Renderer, Sprite};
 use common::{State, Message};
 use unit::Unit;

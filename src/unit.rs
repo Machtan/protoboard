@@ -14,7 +14,11 @@ pub struct Unit {
 
 impl Unit {
     #[inline]
-    pub fn new(texture: Rc<Texture>, max_health: u32, attack_type: AttackType, damage: u32) -> Unit {
+    pub fn new(texture: Rc<Texture>,
+               max_health: u32,
+               attack_type: AttackType,
+               damage: u32)
+               -> Unit {
         Unit {
             max_health: max_health,
             health: max_health,
@@ -24,7 +28,7 @@ impl Unit {
             texture: texture,
         }
     }
-    
+
     /// Returns whether this unit is destroyed.
     pub fn on_attack(&mut self, attacker: &Unit) -> bool {
         if attacker.damage >= self.health {

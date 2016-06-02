@@ -4,7 +4,7 @@ use glorious::{Behavior, Renderer, Sprite};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
-use resources::{FIRA_SANS_PATH};
+use resources::FIRA_SANS_PATH;
 use common::{State, Message};
 use unit::Unit;
 use menus::ModalMenu;
@@ -176,7 +176,7 @@ impl Grid {
         if let Some(origin) = self.selected_unit {
             self.move_unit_and_act(origin, target, state, queue);
         } else if let Some(unit) = self.unit(target).map(|u| u.clone()) {
-            if ! unit.spent {
+            if !unit.spent {
                 info!("Unit at {:?} selected!", target);
                 self.selected_unit = Some(target);
             }

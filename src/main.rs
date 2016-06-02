@@ -101,15 +101,14 @@ pub fn main() {
     let mut scene = Scene::new();
 
     let mut grid = Grid::new((N_COLS, N_ROWS), CELL_SIZE);
-    
+
     let warrior = Unit::new(warrior_texture, 5, AttackType::Melee, 2);
-    let archer = Unit::new(archer_texture, 5, 
-        AttackType::Ranged { min: 2, max: 3}, 2);
+    let archer = Unit::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
     let raccoon = Unit::new(raccoon_texture, 25, AttackType::Melee, 5);
-    //let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
-    
+    // let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
+
     for i in 0..N_COLS {
-        let unit = if i == N_COLS/2 {
+        let unit = if i == N_COLS / 2 {
             raccoon.clone()
         } else if i % 2 == 0 {
             warrior.clone()
