@@ -1,5 +1,5 @@
 
-use resources::MARKER_PATH;
+use resources::CROSSHAIR_PATH;
 use glorious::{Behavior, Renderer, Sprite};
 use common::{State, Message};
 use unit::Unit;
@@ -108,7 +108,7 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
         let x = (col * self.tile_size.0) as i32;
         let grid_height = self.grid_size.1 * self.tile_size.1;
         let y = (grid_height - self.tile_size.1 - (row * self.tile_size.1)) as i32;
-        let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
+        let sprite = Sprite::new(state.resources.texture(CROSSHAIR_PATH), None);
         sprite.render(renderer, x, y, Some(self.tile_size));
     }
 }

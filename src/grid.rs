@@ -286,12 +286,12 @@ impl<'a> Behavior<State<'a>> for Grid {
                     let mut color = if !unit.spent {
                         match unit.faction {
                             Faction::Red => Color::RGB(220, 100, 100),
-                            Faction::Blue => Color::RGB(100, 100, 220),
+                            Faction::Blue => Color::RGB(100, 180, 220),
                         }
                     } else {
                         match unit.faction {
-                            Faction::Red => Color::RGB(170, 140, 140),
-                            Faction::Blue => Color::RGB(140, 140, 170),
+                            Faction::Red => Color::RGB(150, 43, 43),
+                            Faction::Blue => Color::RGB(65, 120, 140),
                         }
                     };
                     if let Some((ucol, urow)) = self.selected_unit {
