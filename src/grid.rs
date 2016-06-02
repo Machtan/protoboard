@@ -182,6 +182,15 @@ impl Grid {
             }
         }
     }
+
+    /// Destroys the unit on the given tile.
+    fn destroy_unit(&mut self, pos: (u32, u32)) {
+        let tile = self.tile_mut(pos);
+        info!("Unit at {:?} destroyed! ({:?})",
+              pos,
+              tile.unit.as_ref().expect("no unit to destroy"));
+        tile.unit = None;
+    }
 }
 
 impl<'a> Behavior<State<'a>> for Grid {
@@ -233,11 +242,13 @@ impl<'a> Behavior<State<'a>> for Grid {
                 self.move_unit_and_act(origin, destination, state, queue);
             }
             DestroyUnit(pos) => {
-                let tile = self.tile_mut(pos);
-                info!("Unit at {:?} destroyed! ({:?})",
-                      pos,
-                      tile.unit.as_ref().expect("no unit to destroy"));
-                tile.unit = None;
+                self.destroy_unit(pos);
+            }
+            AttackWithUnit(pos, target) => {
+                let unit = self.unit(pos).expect("No attacking unit").clone();
+                if self.unit_mut(target).expect("No attacked unit").receive_attack(&unit) {
+                    self.destroy_unit(target);
+                }
             }
             _ => {}
         }

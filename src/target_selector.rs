@@ -44,8 +44,8 @@ impl TargetSelector {
         // breaking out of a given number of modals. We might
         // want to have non-menu modals not be broken here?
         state.break_modal(queue);
+        queue.push(AttackWithUnit(self.pos, selected));
         queue.push(UnitSpent(self.pos));
-        queue.push(DestroyUnit(selected));
         queue.push(Deselect);
         queue.push(ShowCursor);
     }

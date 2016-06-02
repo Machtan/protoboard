@@ -29,8 +29,8 @@ impl Unit {
         }
     }
 
-    /// Returns whether this unit is destroyed.
-    pub fn on_attack(&mut self, attacker: &Unit) -> bool {
+    /// Attacks this unit and returns whether it gets destroyed.
+    pub fn receive_attack(&mut self, attacker: &Unit) -> bool {
         if attacker.damage >= self.health {
             self.health = 0;
             true

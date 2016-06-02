@@ -30,6 +30,7 @@ pub enum Message {
     HideCursor,
     ShowCursor,
     SelectTarget((u32, u32), (u32, u32)),
+    AttackWithUnit((u32, u32), (u32, u32)),
     DestroyUnit((u32, u32)),
 
     ApplyOneModal,
