@@ -1,19 +1,71 @@
 
-use glorious::{Behavior, Renderer};
+use std::cmp;
+use std::rc::Rc;
+use std::collections::HashMap;
+use glorious::{Behavior, Renderer, Label};
 use common::{Message, State};
 use faction::Faction;
+use sdl2_ttf::Font;
+
+const TEXT_COLOR: (u8, u8, u8, u8) = (0, 0, 0, 255);
+const POS: (i32, i32) = (400, 50);
 
 #[derive(Debug)]
 pub struct TurnManager {
     action_limit: u32,
     factions: Vec<Faction>,
+    line_spacing: u32,
+    faction_label: Label,
+    actions_label: Label,
+    faction_labels: HashMap<Faction, Label>,
+    number_labels: Vec<Label>,
+    max_num_width: u32,
 }
 
 impl TurnManager {
-    pub fn new(action_limit: u32, factions: Vec<Faction>) -> TurnManager {
+    pub fn new(action_limit: u32,
+               factions: Vec<Faction>,
+               font: Rc<Font>,
+               state: &State)
+               -> TurnManager {
+        let (_, scale_y) = state.resources.renderer().scale();
+        let line_spacing = font.recommended_line_spacing();
+        let line_spacing = (line_spacing as f32 / scale_y) as u32;
+        let faction_label = Label::new(font.clone(),
+                                       "Current faction:   ",
+                                       TEXT_COLOR,
+                                       state.resources.renderer());
+        let actions_label = Label::new(font.clone(),
+                                       "Actions left:",
+                                       TEXT_COLOR,
+                                       state.resources.renderer());
+        let mut faction_labels = HashMap::new();
+        for &faction in &factions {
+            let label = Label::new(font.clone(),
+                                   format!("{:?}", faction),
+                                   TEXT_COLOR,
+                                   state.resources.renderer());
+            faction_labels.insert(faction, label);
+        }
+        let mut number_labels = Vec::new();
+        let mut max_width = 0;
+        for number in 0..action_limit + 1 {
+            let label = Label::new(font.clone(),
+                                   format!("{}", number),
+                                   TEXT_COLOR,
+                                   state.resources.renderer());
+            max_width = cmp::max(max_width, label.width());
+            number_labels.push(label);
+        }
         TurnManager {
             action_limit: action_limit,
             factions: factions,
+            line_spacing: line_spacing,
+            faction_label: faction_label,
+            actions_label: actions_label,
+            faction_labels: faction_labels,
+            number_labels: number_labels,
+            max_num_width: max_width,
         }
     }
 
@@ -55,8 +107,21 @@ impl<'a> Behavior<State<'a>> for TurnManager {
     }
 
     /// Renders the object.
-    fn render(&mut self, _state: &State<'a>, _renderer: &mut Renderer) {
+    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         // Render which faction's turn it is.
         // Render the amount of actions left somewhere.
+        let (x, y) = POS;
+        let right = x + self.faction_label.width() as i32;
+        self.faction_label.render(renderer, x, y);
+        self.faction_labels
+            .get_mut(&state.current_turn)
+            .expect("Invalid current faction")
+            .render(renderer, right, y);
+        let second = y + self.line_spacing as i32;
+        self.actions_label.render(renderer, x, second);
+        self.number_labels
+            .get_mut(state.actions_left as usize)
+            .expect("Invalid number of actions left")
+            .render(renderer, right, second);
     }
 }

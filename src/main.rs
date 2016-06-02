@@ -136,7 +136,10 @@ pub fn main() {
     let cursor = Cursor::new((0, 0), (N_COLS, N_ROWS), CELL_SIZE);
     scene.add(Box::new(cursor));
 
-    let turner = TurnManager::new(NUMBER_OF_ACTIONS, vec![Faction::Red, Faction::Blue]);
+    let turner = TurnManager::new(NUMBER_OF_ACTIONS,
+                                  vec![Faction::Red, Faction::Blue],
+                                  state.resources.font(FIRA_SANS_PATH, 16),
+                                  &state);
     scene.add(Box::new(turner));
 
     // Set up input handling.
