@@ -114,7 +114,6 @@ impl Iterator for TilesInRange {
                 _ => unreachable!(),
             };
 
-            println!("({}, {})", dx, dy);
             if 0 <= tx && tx < w as i32 && 0 <= ty && ty < h as i32 {
                 return Some((tx as u32, ty as u32));
             }
