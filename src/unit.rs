@@ -93,7 +93,7 @@ impl Iterator for TilesInRange {
     fn next(&mut self) -> Option<(u32, u32)> {
         let (x, y) = self.pos;
         let (w, h) = self.size;
-        while self.cur != (0, -(self.min as i32 - 1)) {
+        while self.cur != (0, self.min as i32 - 1) {
             let (dx, dy) = self.cur;
 
             let tx = x as i32 + dx;
@@ -104,7 +104,7 @@ impl Iterator for TilesInRange {
                 (1, 0) | (1, -1) => (dx - 1, dy - 1), // E-S
                 (0, -1) | (-1, -1) => (dx - 1, dy + 1), // S-W
                 (-1, 0) | (-1, 1) => {
-                    // S-E
+                    // W-N
                     if dx == -1 {
                         (dx + 1, dy)
                     } else {
