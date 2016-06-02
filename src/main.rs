@@ -104,7 +104,7 @@ pub fn main() {
     }
     scene.add(Box::new(grid));
 
-    let cursor = Cursor::new(0, 0, N_COLS, N_ROWS, CELL_SIZE);
+    let cursor = Cursor::new((0, 0), (N_COLS, N_ROWS), CELL_SIZE);
     scene.add(Box::new(cursor));
 
     // Set up input handling.

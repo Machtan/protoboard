@@ -6,20 +6,19 @@ use common::{MARKER_PATH, State, Message};
 pub struct Cursor {
     col: u32,
     row: u32,
-    grid_rows: u32,
-    grid_cols: u32,
-    size: (u32, u32),
+    grid_size: (u32, u32),
+    tile_size: (u32, u32),
     hidden: bool,
 }
 
 impl Cursor {
-    pub fn new(col: u32, row: u32, grid_rows: u32, grid_cols: u32, size: (u32, u32)) -> Cursor {
+    pub fn new(tile: (u32, u32), grid_size: (u32, u32), tile_size: (u32, u32)) -> Cursor {
+        let (col, row) = tile;
         Cursor {
             col: col,
             row: row,
-            grid_rows: grid_rows,
-            grid_cols: grid_cols,
-            size: size,
+            grid_size: grid_size,
+            tile_size: tile_size,
             hidden: false,
         }
     }
@@ -33,7 +32,7 @@ impl<'a> Behavior<State<'a>> for Cursor {
         use common::Message::*;
         match message {
             MoveCursorUp => {
-                if self.row < (self.grid_rows - 1) {
+                if self.row < (self.grid_size.1 - 1) {
                     self.row += 1;
                 }
             }
@@ -48,7 +47,7 @@ impl<'a> Behavior<State<'a>> for Cursor {
                 }
             }
             MoveCursorRight => {
-                if self.col < (self.grid_cols - 1) {
+                if self.col < (self.grid_size.0 - 1) {
                     self.col += 1;
                 }
             }
@@ -70,6 +69,13 @@ impl<'a> Behavior<State<'a>> for Cursor {
             HideCursor => {
                 self.hidden = true;
             }
+            MouseMovedTo(x, y) => {
+                assert!(x >= 0 && y >= 0);
+                let (w, h) = self.tile_size;
+                let (_, rows) = self.grid_size;
+                self.col = (x as u32 - (x as u32 % w)) / w;
+                self.row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+            }
             _ => {}
         }
     }
@@ -79,10 +85,12 @@ impl<'a> Behavior<State<'a>> for Cursor {
         if self.hidden {
             return;
         }
-        let x = (self.col * self.size.0) as i32;
-        let grid_height = self.grid_rows * self.size.1;
-        let y = (grid_height - self.size.1 - (self.row * self.size.1)) as i32;
+        let (w, h) = self.tile_size;
+        let (_, gh) = self.grid_size;
+        let x = (self.col * w) as i32;
+        let grid_height = gh * h;
+        let y = (grid_height - h - (self.row * h)) as i32;
         let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
-        sprite.render(renderer, x, y, Some(self.size));
+        sprite.render(renderer, x, y, Some(self.tile_size));
     }
 }
