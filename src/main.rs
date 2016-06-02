@@ -23,7 +23,7 @@ use common::State;
 use grid::Grid;
 use cursor::Cursor;
 use scene::Scene;
-use unit::{Unit, AttackType};
+use unit::{AttackType, Faction, UnitType};
 
 mod common;
 mod resources;
@@ -102,21 +102,21 @@ pub fn main() {
 
     let mut grid = Grid::new((N_COLS, N_ROWS), CELL_SIZE);
 
-    let warrior = Unit::new(warrior_texture, 5, AttackType::Melee, 2);
-    let archer = Unit::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
-    let raccoon = Unit::new(raccoon_texture, 25, AttackType::Melee, 5);
+    let warrior = UnitType::new(warrior_texture, 5, AttackType::Melee, 2);
+    let archer = UnitType::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
+    let raccoon = UnitType::new(raccoon_texture, 25, AttackType::Melee, 5);
     // let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
 
     for i in 0..N_COLS {
-        let unit = if i == N_COLS / 2 {
+        let unit_type = if i == N_COLS / 2 {
             raccoon.clone()
         } else if i % 2 == 0 {
             warrior.clone()
         } else {
             archer.clone()
         };
-        grid.add_unit(unit.clone(), (i, 0));
-        grid.add_unit(unit, (i, N_ROWS - 1));
+        grid.add_unit(unit_type.instantiate(Faction::Red, None), (i, 0));
+        grid.add_unit(unit_type.instantiate(Faction::Blue, None), (i, N_ROWS - 1));
     }
     scene.add(Box::new(grid));
 

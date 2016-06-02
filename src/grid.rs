@@ -78,7 +78,7 @@ impl Grid {
     /// Finds tiles attackable by the given unit if moved to the given position.
     fn find_attackable(&self, unit: &Unit, pos: (u32, u32)) -> Vec<((u32, u32), Tile)> {
         let mut attackable = Vec::new();
-        for target_pos in unit.attack.tiles_in_range(pos, self.size) {
+        for target_pos in unit.tiles_in_attack_range(pos, self.size) {
             if self.unit(target_pos).is_some() {
                 attackable.push((target_pos, self.tile(pos).clone()));
             }
@@ -282,12 +282,12 @@ impl<'a> Behavior<State<'a>> for Grid {
                 let tile = self.tile((col, row));
                 if let Some(()) = tile.terrain {
                 }
-                if let Some(ref obj) = tile.unit {
-                    if obj.spent {
+                if let Some(ref unit) = tile.unit {
+                    if unit.spent {
                         renderer.set_draw_color(Color::RGB(100, 150, 100));
                         renderer.fill_rect(rect).unwrap();
                     }
-                    let sprite = Sprite::new(obj.texture.clone(), None);
+                    let sprite = Sprite::new(unit.texture(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
                 }
             }
