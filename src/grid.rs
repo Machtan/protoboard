@@ -160,7 +160,7 @@ impl Grid {
                 Some((first.as_mut(), last.as_mut()))
             }
         } else {
-            None
+            unreachable!();
         }
     }
 
