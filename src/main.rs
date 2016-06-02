@@ -20,7 +20,8 @@ use sdl2_image::{INIT_PNG, INIT_JPG};
 
 use resources::{FIRA_SANS_PATH, MARKER_PATH, WARRIOR_PATH, ARCHER_PATH, RACCOON_PATH};
 use common::State;
-use grid::{Grid, GridManager};
+use grid::Grid;
+use grid_manager::GridManager;
 use cursor::Cursor;
 use scene::Scene;
 use unit::{AttackType, UnitType};
@@ -33,6 +34,7 @@ mod scene;
 mod faction;
 mod unit;
 mod grid;
+mod grid_manager;
 mod cursor;
 mod menus;
 mod target_selector;
