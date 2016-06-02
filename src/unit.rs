@@ -4,18 +4,35 @@ use sdl2::render::Texture;
 
 #[derive(Clone)]
 pub struct Unit {
-    pub texture: Rc<Texture>,
-    pub spent: bool,
+    pub max_health: u32,
+    pub health: u32,
     pub attack: AttackType,
+    pub damage: u32,
+    pub spent: bool,
+    pub texture: Rc<Texture>,
 }
 
 impl Unit {
     #[inline]
-    pub fn new(texture: Rc<Texture>, attack_type: AttackType) -> Unit {
+    pub fn new(texture: Rc<Texture>, max_health: u32, attack_type: AttackType, damage: u32) -> Unit {
         Unit {
-            texture: texture,
-            spent: false,
+            max_health: max_health,
+            health: max_health,
             attack: attack_type,
+            damage: damage,
+            spent: false,
+            texture: texture,
+        }
+    }
+    
+    /// Returns whether this unit is destroyed.
+    pub fn on_attack(&mut self, attacker: &Unit) -> bool {
+        if attacker.damage >= self.health {
+            self.health = 0;
+            true
+        } else {
+            self.health -= attacker.damage;
+            false
         }
     }
 }

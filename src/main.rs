@@ -18,13 +18,15 @@ use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_PNG, INIT_JPG};
 
-use common::{FIRA_SANS_PATH, MARKER_PATH, RACCOON_PATH, State};
+use resources::{FIRA_SANS_PATH, MARKER_PATH, WARRIOR_PATH, ARCHER_PATH, RACCOON_PATH};
+use common::State;
 use grid::Grid;
 use cursor::Cursor;
 use scene::Scene;
-use unit::AttackType;
+use unit::{Unit, AttackType};
 
 mod common;
+mod resources;
 mod scene;
 mod unit;
 mod grid;
@@ -91,16 +93,31 @@ pub fn main() {
     // Cause a few assets to be preloaded.
 
     state.resources.texture(MARKER_PATH);
+    let warrior_texture = state.resources.texture(WARRIOR_PATH);
+    let archer_texture = state.resources.texture(ARCHER_PATH);
     let raccoon_texture = state.resources.texture(RACCOON_PATH);
     state.resources.font(FIRA_SANS_PATH, 16);
 
     let mut scene = Scene::new();
 
     let mut grid = Grid::new((N_COLS, N_ROWS), CELL_SIZE);
-    let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
+    
+    let warrior = Unit::new(warrior_texture, 5, AttackType::Melee, 2);
+    let archer = Unit::new(archer_texture, 5, 
+        AttackType::Ranged { min: 2, max: 3}, 2);
+    let raccoon = Unit::new(raccoon_texture, 25, AttackType::Melee, 5);
+    //let unit = unit::Unit::new(raccoon_texture, AttackType::Melee);
+    
     for i in 0..N_COLS {
+        let unit = if i == N_COLS/2 {
+            raccoon.clone()
+        } else if i % 2 == 0 {
+            warrior.clone()
+        } else {
+            archer.clone()
+        };
         grid.add_unit(unit.clone(), (i, 0));
-        grid.add_unit(unit.clone(), (i, N_ROWS - 1));
+        grid.add_unit(unit, (i, N_ROWS - 1));
     }
     scene.add(Box::new(grid));
 

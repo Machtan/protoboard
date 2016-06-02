@@ -1,6 +1,7 @@
 
+use resources::{MARKER_PATH};
 use glorious::{Behavior, Renderer, Sprite};
-use common::{State, Message, MARKER_PATH};
+use common::{State, Message};
 use unit::Unit;
 use grid::Tile;
 

@@ -4,7 +4,8 @@ use glorious::{Behavior, Renderer, Sprite};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
-use common::{FIRA_SANS_PATH, State, Message};
+use resources::{FIRA_SANS_PATH};
+use common::{State, Message};
 use unit::Unit;
 use menus::ModalMenu;
 use target_selector::TargetSelector;

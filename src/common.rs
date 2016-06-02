@@ -2,10 +2,6 @@ use std::fmt::Debug;
 
 use glorious::{Behavior, ResourceManager};
 
-pub const FIRA_SANS_PATH: &'static str = "assets/fonts/FiraSans-Regular.ttf";
-pub const MARKER_PATH: &'static str = "assets/marker.png";
-pub const RACCOON_PATH: &'static str = "assets/raccoon.png";
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     MoveCursorUp,
