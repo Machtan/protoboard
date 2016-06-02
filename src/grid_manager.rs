@@ -146,6 +146,24 @@ impl GridManager {
         }
     }
 
+    /// Handles a cancel press at the given position.
+    fn cancel(&mut self, cursor_pos: (u32, u32)) {
+        if self.selected.is_some() {
+            self.selected = None;
+        } else {
+            if self.grid.unit(cursor_pos).is_some() {
+                self.showing_range_of = Some(cursor_pos);
+            }
+        }
+    }
+
+    /// Handles the release of the cancel button.
+    fn cancel_release(&mut self) {
+        if self.showing_range_of.is_some() {
+            self.showing_range_of = None;
+        }
+    }
+
     /// Destroys the unit on the given tile.
     fn destroy_unit(&mut self, pos: (u32, u32), queue: &mut Vec<Message>) {
         let faction = {
@@ -161,6 +179,16 @@ impl GridManager {
             queue.push(Message::FactionDefeated(faction));
         }
     }
+
+    /// Returns the grid position of a window position.
+    fn window_to_grid(&self, x: i32, y: i32) -> (u32, u32) {
+        assert!(x >= 0 && y >= 0);
+        let (w, h) = self.tile_size;
+        let (_, rows) = self.grid.size();
+        let col = (x as u32 - (x as u32 % w)) / w;
+        let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+        (col, row)
+    }
 }
 
 impl<'a> Behavior<State<'a>> for GridManager {
@@ -174,27 +202,21 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.confirm(pos, state, queue);
             }
             LeftClickAt(x, y) => {
-                assert!(x >= 0 && y >= 0);
-                let (w, h) = self.tile_size;
-                let (_, rows) = self.grid.size();
-                let col = (x as u32 - (x as u32 % w)) / w;
-                let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
-                queue.push(MoveCursorTo((col, row)));
-                self.confirm((col, row), state, queue);
+                let pos = self.window_to_grid(x, y);
+                self.confirm(pos, state, queue);
+            }
+            RightClickAt(x, y) => {
+                let pos = self.window_to_grid(x, y);
+                self.cancel(pos);
+            }
+            RightReleasedAt(_, _) => {
+                self.cancel_release();
             }
             CursorCancel(pos) => {
-                if self.selected.is_some() {
-                    self.selected = None;
-                } else {
-                    if self.grid.unit(pos).is_some() {
-                        self.showing_range_of = Some(pos);
-                    }
-                }
+                self.cancel(pos);
             }
             CancelReleased => {
-                if self.showing_range_of.is_some() {
-                    self.showing_range_of = None;
-                }
+                self.cancel_release();
             }
             UnitSpent(pos) => {
                 self.grid
@@ -327,7 +349,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let rect = Rect::new(x as i32, y as i32, cw, ch);
                 renderer.fill_rect(rect).unwrap();
 
-                let (unit, terrain) = self.grid.tile((col, row));
+                let (unit, _) = self.grid.tile((col, row));
                 if let Some(unit) = unit {
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));

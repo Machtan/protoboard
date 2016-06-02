@@ -175,8 +175,16 @@ pub fn main() {
          LeftClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
     mapper.add(map_event!(
+         MouseButtonUp { x, y, mouse_btn: Mouse::Left, .. },
+         LeftReleasedAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
+    ));
+    mapper.add(map_event!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Right, .. },
          RightClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
+    ));
+    mapper.add(map_event!(
+         MouseButtonUp { x, y, mouse_btn: Mouse::Right, .. },
+         RightReleasedAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
     mapper.add(map_event!(
         MouseMotion { x, y, .. },
