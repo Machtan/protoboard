@@ -6,7 +6,7 @@ use sdl2::rect::Rect;
 
 use resources::FIRA_SANS_PATH;
 use common::{State, Message};
-use unit::Unit;
+use unit::{Unit, Faction};
 use menus::ModalMenu;
 use target_selector::TargetSelector;
 
@@ -79,8 +79,11 @@ impl Grid {
     fn find_attackable(&self, unit: &Unit, pos: (u32, u32)) -> Vec<((u32, u32), Tile)> {
         let mut attackable = Vec::new();
         for target_pos in unit.tiles_in_attack_range(pos, self.size) {
-            if self.unit(target_pos).is_some() {
-                attackable.push((target_pos, self.tile(pos).clone()));
+            if let Some(ref other) = self.unit(target_pos) {
+                // TODO: Add alliances?
+                if other.faction != unit.faction {
+                    attackable.push((target_pos, self.tile(pos).clone()));
+                }
             }
         }
         attackable
@@ -127,7 +130,8 @@ impl Grid {
             self.move_unit(origin, target);
             debug!("Moved unit from {:?} to {:?}", origin, target);
 
-            let targets = self.find_attackable(self.unit(target).unwrap(), target);
+            let targets =
+                self.find_attackable(self.unit(target).expect("move unit failed"), target);
             let mut options = Vec::new();
             if !targets.is_empty() {
                 options.push("Attack");
@@ -269,11 +273,7 @@ impl<'a> Behavior<State<'a>> for Grid {
                 } else {
                     renderer.set_draw_color(Color::RGB(255, 255, 255));
                 }
-                if let Some((ucol, urow)) = self.selected_unit {
-                    if ucol == col && urow == row {
-                        renderer.set_draw_color(Color::RGB(0, 255, 0));
-                    }
-                }
+
 
                 let rect = Rect::new(x as i32, y as i32, cw, ch);
                 // TODO: When can `fill_rect` fail?
@@ -283,10 +283,24 @@ impl<'a> Behavior<State<'a>> for Grid {
                 if let Some(()) = tile.terrain {
                 }
                 if let Some(ref unit) = tile.unit {
-                    if unit.spent {
-                        renderer.set_draw_color(Color::RGB(100, 150, 100));
-                        renderer.fill_rect(rect).unwrap();
+                    let mut color = if !unit.spent {
+                        match unit.faction {
+                            Faction::Red => Color::RGB(220, 100, 100),
+                            Faction::Blue => Color::RGB(100, 100, 220),
+                        }
+                    } else {
+                        match unit.faction {
+                            Faction::Red => Color::RGB(170, 140, 140),
+                            Faction::Blue => Color::RGB(140, 140, 170),
+                        }
+                    };
+                    if let Some((ucol, urow)) = self.selected_unit {
+                        if ucol == col && urow == row {
+                            color = Color::RGB(184, 239, 160);
+                        }
                     }
+                    renderer.set_draw_color(color);
+                    renderer.fill_rect(rect).unwrap();
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
                 }
