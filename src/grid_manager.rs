@@ -1,30 +1,36 @@
-use glorious::{Behavior, Renderer, Sprite};
+use std::fmt::{self, Debug};
+use std::time::Duration;
+
+use glorious::{Behavior, Label, Renderer, Sprite};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use lru_time_cache::LruCache;
 
-use resources::FIRA_SANS_PATH;
 use common::{State, Message};
 use faction::Faction;
-use menus::ModalMenu;
-use target_selector::TargetSelector;
 use grid::{Grid, Terrain};
+use menus::ModalMenu;
+use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
+use target_selector::TargetSelector;
 
-#[derive(Clone, Debug)]
 pub struct GridManager {
     grid: Grid,
     tile_size: (u32, u32),
     selected: Option<(u32, u32)>,
     showing_range_of: Option<(u32, u32)>,
+    health_labels: LruCache<u32, Label>,
 }
 
 impl GridManager {
     #[inline]
     pub fn new(grid: Grid, tile_size: (u32, u32)) -> GridManager {
+        let expiry_duration = Duration::from_millis(100);
         GridManager {
             grid: grid,
             tile_size: tile_size,
             selected: None,
             showing_range_of: None,
+            health_labels: LruCache::with_expiry_duration(expiry_duration),
         }
     }
 
@@ -248,7 +254,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
     }
 
     /// Renders the object.
-    fn render(&mut self, _state: &State<'a>, renderer: &mut Renderer) {
+    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         let (cols, rows) = self.grid.size();
         let (cw, ch) = self.tile_size;
         let grid_height = rows * ch;
@@ -273,27 +279,41 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
 
                 if let Some(unit) = unit {
-                    let mut color = if !unit.spent {
-                        match unit.faction {
-                            Faction::Red => Color::RGB(220, 100, 100),
-                            Faction::Blue => Color::RGB(100, 180, 220),
-                        }
-                    } else {
+                    let color = if self.selected == Some((col, row)) {
+                        Color::RGB(244, 237, 129)
+                    } else if unit.spent {
                         match unit.faction {
                             Faction::Red => Color::RGB(150, 43, 43),
                             Faction::Blue => Color::RGB(65, 120, 140),
                         }
-                    };
-                    if let Some((ucol, urow)) = self.selected {
-                        if ucol == col && urow == row {
-                            color = Color::RGB(244, 237, 129);
+                    } else {
+                        match unit.faction {
+                            Faction::Red => Color::RGB(220, 100, 100),
+                            Faction::Blue => Color::RGB(100, 180, 220),
                         }
-                    }
+                    };
 
                     renderer.set_draw_color(color);
                     renderer.fill_rect(rect).unwrap();
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
+
+                    let font = state.resources.font(FIRA_SANS_BOLD_PATH, 16);
+                    let (_, sy) = renderer.scale();
+                    // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
+                    let descent = (font.descent() as f32 / sy) as i32;
+                    let height = (font.height() as f32 / sy) as i32;
+
+                    let label = self.health_labels.entry(unit.health).or_insert_with(|| {
+                        let string = format!("{}", unit.health);
+                        Label::new(font, string, (255, 255, 255, 255), renderer.clone())
+                    });
+                    let (w, _) = label.size();
+
+                    let lx = x as i32 + cw as i32 - 3 - w as i32;
+                    let ly = y as i32 + ch as i32 - 3 - height - descent;
+
+                    label.render(renderer, lx, ly);
                 }
             }
         }
@@ -314,5 +334,16 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
             }
         }
+    }
+}
+
+impl Debug for GridManager {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("GridManager")
+            .field("tile_size", &self.tile_size)
+            .field("selected", &self.selected)
+            .field("showing_range_of", &self.showing_range_of)
+            .field("health_labels", &(..))
+            .finish()
     }
 }

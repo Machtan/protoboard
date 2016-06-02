@@ -1,7 +1,8 @@
-use std::rc::Rc;
-use std::borrow::Cow;
 use std::fmt::{self, Debug};
+use std::rc::Rc;
+
 use sdl2::render::Texture;
+
 use faction::Faction;
 
 #[derive(Clone, Debug)]
