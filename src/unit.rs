@@ -106,9 +106,9 @@ impl Iterator for TilesInRange {
                 (-1, 0) | (-1, 1) => {
                     // S-E
                     if dx == -1 {
-                        self.cur = (dx + 1, dy);
+                        (dx + 1, dy)
                     } else {
-                        self.cur = (dx + 1, dy + 1);
+                        (dx + 1, dy + 1)
                     }
                 }
                 _ => unreachable!(),
