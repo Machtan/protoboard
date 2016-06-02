@@ -146,15 +146,19 @@ impl Grid {
         let i = self.index(a);
         let j = self.index(b);
 
-        let (i, j) = if i < j {
-            (i, j)
+        let (i, j, swapped) = if i < j {
+            (i, j, false)
         } else {
-            (j, i)
+            (j, i, true)
         };
 
         if let Some((last, rest)) = self.units[..j + 1].split_last_mut() {
             let first = &mut rest[i];
-            Some((first.as_mut(), last.as_mut()))
+            if swapped {
+                Some((last.as_mut(), first.as_mut()))
+            } else {
+                Some((first.as_mut(), last.as_mut()))
+            }
         } else {
             None
         }
