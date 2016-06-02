@@ -1,4 +1,3 @@
-
 pub const FIRA_SANS_PATH: &'static str = "assets/fonts/FiraSans-Regular.ttf";
 pub const MARKER_PATH: &'static str = "assets/marker.png";
 pub const CROSSHAIR_PATH: &'static str = "assets/crosshair_whitish.png";

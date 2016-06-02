@@ -1,32 +1,27 @@
-
-use resources::CROSSHAIR_PATH;
 use glorious::{Behavior, Renderer, Sprite};
+
 use common::{State, Message};
-use unit::Unit;
-use grid::Tile;
+use resources::CROSSHAIR_PATH;
 
 #[derive(Debug)]
 pub struct TargetSelector {
-    unit: Unit,
     pos: (u32, u32),
     origin: (u32, u32),
     selected: usize,
     tile_size: (u32, u32),
     grid_size: (u32, u32),
-    targets: Vec<((u32, u32), Tile)>,
+    targets: Vec<(u32, u32)>,
 }
 
 impl TargetSelector {
-    pub fn new(unit: Unit,
-               pos: (u32, u32),
+    pub fn new(pos: (u32, u32),
                origin: (u32, u32),
                grid_size: (u32, u32),
                tile_size: (u32, u32),
-               targets: Vec<((u32, u32), Tile)>)
+               targets: Vec<(u32, u32)>)
                -> TargetSelector {
         assert!(!targets.is_empty(), "No targets given to selector");
         TargetSelector {
-            unit: unit,
             pos: pos,
             origin: origin,
             selected: 0,
@@ -38,7 +33,7 @@ impl TargetSelector {
 
     fn confirm<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         use common::Message::*;
-        let selected = self.targets[self.selected].0;
+        let selected = self.targets[self.selected];
         info!("Attacking target at {:?}", selected);
         // TODO: It might be better to have a cleaner model for
         // breaking out of a given number of modals. We might
@@ -83,9 +78,10 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
                 let (_, rows) = self.grid_size;
                 let col = (x as u32 - (x as u32 % w)) / w;
                 let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+
                 let mut is_valid_target = false;
-                for (i, &(tile, _)) in self.targets.iter().enumerate() {
-                    if tile == (col, row) {
+                for (i, &pos) in self.targets.iter().enumerate() {
+                    if pos == (col, row) {
                         self.selected = i;
                         is_valid_target = true;
                     }
@@ -104,7 +100,7 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
     }
 
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
-        let (col, row) = self.targets[self.selected].0;
+        let (col, row) = self.targets[self.selected];
         let x = (col * self.tile_size.0) as i32;
         let grid_height = self.grid_size.1 * self.tile_size.1;
         let y = (grid_height - self.tile_size.1 - (row * self.tile_size.1)) as i32;

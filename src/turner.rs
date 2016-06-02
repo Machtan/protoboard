@@ -38,7 +38,8 @@ impl<'a> Behavior<State<'a>> for TurnManager {
                 // TODO: Display a turn change animation here
             }
             UnitSpent(_) => {
-                assert!(state.actions_left != 0, "A unit was spent with no actions left");
+                assert!(state.actions_left != 0,
+                        "A unit was spent with no actions left");
                 state.actions_left -= 1;
             }
             FactionDefeated(faction) => {

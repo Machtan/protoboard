@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 use sdl2::render::Texture;
 use faction::Faction;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Unit {
     pub health: u32,
     pub faction: Faction,
@@ -24,7 +24,7 @@ impl Unit {
     }
 
     /// Returns the tiles in the attack range of this unit.
-    pub fn tiles_in_attack_range(&self, pos: (u32, u32), grid_size: (u32, u32)) -> Vec<(u32, u32)> {
+    pub fn tiles_in_attack_range(&self, pos: (u32, u32), grid_size: (u32, u32)) -> TilesInRange {
         self.unit_type.attack.tiles_in_range(pos, grid_size)
     }
 
@@ -56,9 +56,9 @@ impl UnitType {
         }
     }
 
-    /// Instantiates a unit of this type in the given faction.
+    /// Creates a unit of this type in the given faction.
     /// If not health is given, the unit starts with full health.
-    pub fn instantiate(&self, faction: Faction, health: Option<u32>) -> Unit {
+    pub fn create(&self, faction: Faction, health: Option<u32>) -> Unit {
         Unit {
             unit_type: self.clone(),
             health: health.unwrap_or(self.health),
@@ -79,6 +79,37 @@ impl Debug for UnitType {
     }
 }
 
+const DELTAS_MELEE: &'static [(i32, i32)] = &[(-1, 0), (0, -1), (1, 0), (0, 1)];
+
+pub struct TilesInRange {
+    deltas: &'static [(i32, i32)],
+    pos: (u32, u32),
+    size: (u32, u32),
+}
+
+impl Iterator for TilesInRange {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<(u32, u32)> {
+        let (x, y) = self.pos;
+        let (w, h) = self.size;
+        loop {
+            let (dx, dy) = match self.deltas.first() {
+                Some(delta) => *delta,
+                None => return None,
+            };
+            self.deltas = &self.deltas[1..];
+
+            let tx = x as i32 + dx;
+            let ty = y as i32 + dy;
+
+            if 0 <= tx && tx < w as i32 && 0 <= ty && ty < h as i32 {
+                return Some((tx as u32, ty as u32));
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum AttackType {
     Melee,
@@ -92,29 +123,15 @@ pub enum AttackType {
 }
 
 impl AttackType {
-    pub fn tiles_in_range(&self, pos: (u32, u32), grid_size: (u32, u32)) -> Vec<(u32, u32)> {
-        let mut tiles = Vec::new();
-        let (col, row) = pos;
-        let (n_cols, n_rows) = grid_size;
-        let max_col = n_cols - 1;
-        let max_row = n_rows - 1;
-        match *self {
-            _ => {
-                // Melee
-                if col > 0 {
-                    tiles.push((col - 1, row));
-                }
-                if col < max_col {
-                    tiles.push((col + 1, row));
-                }
-                if row > 0 {
-                    tiles.push((col, row - 1));
-                }
-                if row < max_row {
-                    tiles.push((col, row + 1));
-                }
-            }
+    pub fn tiles_in_range(&self, pos: (u32, u32), size: (u32, u32)) -> TilesInRange {
+        let deltas = match *self {
+            AttackType::Melee => DELTAS_MELEE,
+            _ => &[],
+        };
+        TilesInRange {
+            deltas: deltas,
+            pos: pos,
+            size: size,
         }
-        tiles
     }
 }
