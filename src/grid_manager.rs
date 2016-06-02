@@ -292,7 +292,20 @@ impl<'a> Behavior<State<'a>> for GridManager {
         }
 
         if let Some(pos) = self.showing_range_of {
-            // for pos in
+            let target_color = Color::RGB(252, 223, 80);
+            renderer.set_draw_color(target_color);
+            for (col, row) in self.grid.tiles_in_range(pos) {
+                let x = col * cw;
+                let y = grid_height - ch - (row * ch);
+                let rect = Rect::new(x as i32, y as i32, cw, ch);
+                renderer.fill_rect(rect).unwrap();
+
+                let (unit, terrain) = self.grid.tile((col, row));
+                if let Some(unit) = unit {
+                    let sprite = Sprite::new(unit.texture(), None);
+                    sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
+                }
+            }
         }
     }
 }

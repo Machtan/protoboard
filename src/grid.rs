@@ -164,6 +164,11 @@ impl Grid {
         }
     }
 
+    /// Finds the tiles that the unit at the given position can attack.
+    pub fn tiles_in_range(&self, pos: (u32, u32)) -> TilesInRange {
+        self.unit(pos).expect("No unit for range check!").tiles_in_attack_range(pos, self.size)
+    }
+
     /// Finds tiles attackable by the given unit if moved to the given position.
     pub fn find_attackable<'a>(&'a self, unit: &'a Unit, pos: (u32, u32)) -> FindAttackable<'a> {
         FindAttackable {
