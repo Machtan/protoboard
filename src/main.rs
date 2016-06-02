@@ -161,6 +161,7 @@ pub fn main() {
     mapper.add(map_scan_pressed!(Scancode::Space, FinishTurn));
     mapper.add(map_scan_pressed!(Scancode::Z, Confirm));
     mapper.add(map_scan_pressed!(Scancode::X, Cancel));
+    mapper.add(map_scan_released!(Scancode::X, CancelReleased));
     mapper.add(map_event!(
          MouseButtonDown { x, y, mouse_btn: Mouse::Left, .. },
          LeftClickAt((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)

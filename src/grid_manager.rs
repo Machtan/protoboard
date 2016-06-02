@@ -14,6 +14,7 @@ pub struct GridManager {
     grid: Grid,
     tile_size: (u32, u32),
     selected: Option<(u32, u32)>,
+    showing_range_of: Option<(u32, u32)>,
 }
 
 impl GridManager {
@@ -23,6 +24,7 @@ impl GridManager {
             grid: grid,
             tile_size: tile_size,
             selected: None,
+            showing_range_of: None,
         }
     }
 
@@ -169,9 +171,16 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 queue.push(MoveCursorTo((col, row)));
                 self.confirm((col, row), state, queue);
             }
-            CursorCancel(..) => {
+            CursorCancel(pos) => {
                 if self.selected.is_some() {
                     self.selected = None;
+                } else {
+                    self.showing_range_of = Some(pos);
+                }
+            }
+            CancelReleased => {
+                if self.showing_range_of.is_some() {
+                    self.showing_range_of = None;
                 }
             }
             UnitSpent(pos) => {
@@ -273,12 +282,17 @@ impl<'a> Behavior<State<'a>> for GridManager {
                             color = Color::RGB(244, 237, 129);
                         }
                     }
+
                     renderer.set_draw_color(color);
                     renderer.fill_rect(rect).unwrap();
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
                 }
             }
+        }
+
+        if let Some(pos) = self.showing_range_of {
+            // for pos in
         }
     }
 }

@@ -15,6 +15,7 @@ pub enum Message {
     CursorConfirm((u32, u32)),
 
     Cancel,
+    CancelReleased,
     CursorCancel((u32, u32)),
 
     FinishTurn,

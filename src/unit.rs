@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use sdl2::render::Texture;
 use faction::Faction;
@@ -82,9 +83,39 @@ impl Debug for UnitType {
 const DELTAS_MELEE: &'static [(i32, i32)] = &[(-1, 0), (0, -1), (1, 0), (0, 1)];
 
 pub struct TilesInRange {
-    deltas: &'static [(i32, i32)],
+    deltas: Vec<(i32, i32)>,
+    index: usize,
     pos: (u32, u32),
     size: (u32, u32),
+}
+
+fn ranged_deltas(min: u32, max: u32) -> Vec<(i32, i32)> {
+    let min = min as i32;
+    let max = max as i32;
+    let mut deltas = Vec::new();
+    for i in 0..max {
+        let col = max - i;
+        if col > min {
+            deltas.push((-col, 0));
+            deltas.push((col, 0));
+            deltas.push((0, col));
+            deltas.push((0, -col));
+        }
+        let row_end = max - col;
+        let delta = max - min;
+        let row_start = if row_end < delta {
+            1
+        } else {
+            row_end - delta
+        };
+        for row in row_start..row_end {
+            deltas.push((col, row));
+            deltas.push((col, -row));
+            deltas.push((-col, row));
+            deltas.push((-col, -row));
+        }
+    }
+    deltas
 }
 
 impl Iterator for TilesInRange {
@@ -94,17 +125,19 @@ impl Iterator for TilesInRange {
         let (x, y) = self.pos;
         let (w, h) = self.size;
         loop {
-            let (dx, dy) = match self.deltas.first() {
-                Some(delta) => *delta,
-                None => return None,
-            };
-            self.deltas = &self.deltas[1..];
+            if self.index >= self.deltas.len() {
+                return None;
+            }
+            let (dx, dy) = self.deltas[self.index];
 
             let tx = x as i32 + dx;
             let ty = y as i32 + dy;
 
             if 0 <= tx && tx < w as i32 && 0 <= ty && ty < h as i32 {
+                self.index += 1;
                 return Some((tx as u32, ty as u32));
+            } else {
+                self.index += 1;
             }
         }
     }
@@ -125,11 +158,13 @@ pub enum AttackType {
 impl AttackType {
     pub fn tiles_in_range(&self, pos: (u32, u32), size: (u32, u32)) -> TilesInRange {
         let deltas = match *self {
-            AttackType::Melee => DELTAS_MELEE,
-            _ => &[],
+            AttackType::Melee => DELTAS_MELEE.iter().map(|&d| d).collect(),
+            AttackType::Ranged { min, max } => ranged_deltas(min, max),
+            _ => Vec::new(),
         };
         TilesInRange {
             deltas: deltas,
+            index: 0,
             pos: pos,
             size: size,
         }
