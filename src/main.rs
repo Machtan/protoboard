@@ -18,7 +18,7 @@ use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_PNG, INIT_JPG};
 
-use resources::{FIRA_SANS_PATH, MARKER_PATH, WARRIOR_PATH, ARCHER_PATH, RACCOON_PATH};
+use resources::{FIRA_SANS_PATH, MARKER_PATH, WARRIOR_PATH, ARCHER_PATH, PROTECTOR_PATH, RACCOON_PATH};
 use common::State;
 use grid::Grid;
 use grid_manager::GridManager;
@@ -108,9 +108,11 @@ pub fn main() {
 
     let warrior_texture = state.resources.texture(WARRIOR_PATH);
     let archer_texture = state.resources.texture(ARCHER_PATH);
+    let protector_texture = state.resources.texture(PROTECTOR_PATH);
     let raccoon_texture = state.resources.texture(RACCOON_PATH);
     let warrior = UnitType::new(warrior_texture, 5, AttackType::Melee, 2);
     let archer = UnitType::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
+    let protector = UnitType::new(protector_texture, 8, AttackType::Melee, 1);
     let raccoon = UnitType::new(raccoon_texture, 25, AttackType::Melee, 5);
 
     // Prepare the scene
@@ -118,14 +120,14 @@ pub fn main() {
     let mut scene = Scene::new();
 
     let mut grid = Grid::new((N_COLS, N_ROWS));
-
+    
+    let unit_types = &[warrior, archer, protector];
     for i in 0..N_COLS {
         let unit_type = if i == N_COLS / 2 - 1 {
             raccoon.clone()
-        } else if i % 2 == 0 {
-            warrior.clone()
         } else {
-            archer.clone()
+            let index = i as usize % unit_types.len();
+            unit_types[index].clone()
         };
         grid.add_unit(unit_type.create(Faction::Red, None), (i, 0));
         grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 1));
