@@ -48,7 +48,7 @@ pub fn main() {
 
     // Load settings
 
-    const WINDOW_TITLE: &'static str = "Protect P R 0 T 0 B 0 A R D";
+    const WINDOW_TITLE: &'static str = "Raccoon Squad";
     const N_COLS: u32 = 20;
     const N_ROWS: u32 = 20;
     const CELL_SIZE: (u32, u32) = (32, 32);
@@ -132,9 +132,13 @@ pub fn main() {
             let index = i as usize % unit_types.len();
             unit_types[index].clone()
         };
-        grid.add_unit(unit_type.create(Faction::Red, None), (i, 0));
         grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 1));
     }
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 0));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 1, 0));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 0, 0));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
+
     scene.add(Box::new(GridManager::new(grid, CELL_SIZE)));
 
     let cursor = Cursor::new((0, 0), (N_COLS, N_ROWS), CELL_SIZE);
