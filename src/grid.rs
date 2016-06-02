@@ -174,8 +174,11 @@ impl Grid {
     fn on_confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         if let Some(origin) = self.selected_unit {
             self.move_unit_and_act(origin, target, state, queue);
-        } else if self.unit(target).is_some() {
-            self.selected_unit = Some(target);
+        } else if let Some(unit) = self.unit(target).map(|u| u.clone()) {
+            if ! unit.spent {
+                info!("Unit at {:?} selected!", target);
+                self.selected_unit = Some(target);
+            }
         }
     }
 }
