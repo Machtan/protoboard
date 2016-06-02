@@ -1,12 +1,7 @@
 use std::rc::Rc;
 use std::fmt::{self, Debug};
 use sdl2::render::Texture;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Faction {
-    Red,
-    Blue,
-}
+use faction::Faction;
 
 #[derive(Debug, Clone)]
 pub struct Unit {

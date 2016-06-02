@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use glorious::{Behavior, ResourceManager};
+use faction::Faction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
@@ -17,6 +18,8 @@ pub enum Message {
     CursorCancel((u32, u32)),
 
     FinishTurn,
+    FactionDefeated(Faction),
+    FactionWins(Faction),
 
     LeftClickAt(i32, i32),
     RightClickAt(i32, i32),
@@ -48,18 +51,18 @@ pub enum ModalMessage<'a> {
 #[derive(Debug)]
 pub struct State<'a> {
     pub resources: ResourceManager<'a>,
-    player_turn: u32,
-    player_count: u32,
+    pub current_turn: Faction,
+    pub actions_left: u32,
     modal_stack: Vec<ModalMessage<'a>>,
 }
 
 impl<'a> State<'a> {
     #[inline]
-    pub fn new(resources: ResourceManager<'a>) -> State<'a> {
+    pub fn new(resources: ResourceManager<'a>, actions_left: u32) -> State<'a> {
         State {
             resources: resources,
-            player_turn: 1,
-            player_count: 1,
+            current_turn: Faction::Red,
+            actions_left: actions_left,
             modal_stack: Vec::new(),
         }
     }

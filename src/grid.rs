@@ -6,7 +6,8 @@ use sdl2::rect::Rect;
 
 use resources::FIRA_SANS_PATH;
 use common::{State, Message};
-use unit::{Unit, Faction};
+use unit::Unit;
+use faction::Faction;
 use menus::ModalMenu;
 use target_selector::TargetSelector;
 
@@ -175,25 +176,47 @@ impl Grid {
         }
     }
 
+    /// Handles the selection of a unit.
+    fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
+        let unit = self.unit(pos).expect("The tile for the selected unit is empty!").clone();
+        if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
+            info!("Unit at {:?} selected!", pos);
+            self.selected_unit = Some(pos);
+        }
+    }
+
     /// Handles a confirm press at the given target tile when a unit is selected.
     fn on_confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         if let Some(origin) = self.selected_unit {
             self.move_unit_and_act(origin, target, state, queue);
-        } else if let Some(unit) = self.unit(target).map(|u| u.clone()) {
-            if !unit.spent {
-                info!("Unit at {:?} selected!", target);
-                self.selected_unit = Some(target);
-            }
+        } else if self.unit(target).is_some() {
+            self.select_unit(target, state, queue);
         }
     }
 
     /// Destroys the unit on the given tile.
-    fn destroy_unit(&mut self, pos: (u32, u32)) {
-        let tile = self.tile_mut(pos);
-        info!("Unit at {:?} destroyed! ({:?})",
-              pos,
-              tile.unit.as_ref().expect("no unit to destroy"));
-        tile.unit = None;
+    fn destroy_unit(&mut self, pos: (u32, u32), queue: &mut Vec<Message>) {
+        let faction = {
+            let faction = self.unit(pos).expect("No unit to destroy").faction;
+            let tile = self.tile_mut(pos);
+            info!("Unit at {:?} destroyed! ({:?})",
+                  pos,
+                  tile.unit.as_ref().expect("no unit to destroy"));
+            tile.unit = None;
+            faction
+        };
+        let mut faction_exists = false;
+        for tile in self.tiles.iter_mut() {
+            if let Some(ref unit) = tile.unit {
+                if unit.faction == faction {
+                    faction_exists = true;
+                    break;
+                }
+            }
+        }
+        if !faction_exists {
+            queue.push(Message::FactionDefeated(faction));
+        }
     }
 }
 
@@ -230,9 +253,7 @@ impl<'a> Behavior<State<'a>> for Grid {
                 self.move_unit(from, to);
             }
             SelectUnit(pos) => {
-                assert!(self.unit(pos).is_some(),
-                        "The tile for the selected unit is empty!");
-                self.selected_unit = Some(pos);
+                self.select_unit(pos, state, queue);
             }
             Deselect => {
                 assert!(self.selected_unit.is_some(),
@@ -246,12 +267,19 @@ impl<'a> Behavior<State<'a>> for Grid {
                 self.move_unit_and_act(origin, destination, state, queue);
             }
             DestroyUnit(pos) => {
-                self.destroy_unit(pos);
+                self.destroy_unit(pos, queue);
             }
             AttackWithUnit(pos, target) => {
                 let unit = self.unit(pos).expect("No attacking unit").clone();
                 if self.unit_mut(target).expect("No attacked unit").receive_attack(&unit) {
-                    self.destroy_unit(target);
+                    self.destroy_unit(target, queue);
+                }
+            }
+            FinishTurn => {
+                for tile in self.tiles.iter_mut() {
+                    if let Some(ref mut unit) = tile.unit {
+                        unit.spent = false;
+                    }
                 }
             }
             _ => {}
