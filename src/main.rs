@@ -99,7 +99,6 @@ pub fn main() {
 
     let mut state = State::new(resources, NUMBER_OF_ACTIONS);
 
-
     // Cause a few assets to be preloaded.
 
     state.resources.texture(MARKER_PATH);
