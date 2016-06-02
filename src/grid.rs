@@ -161,7 +161,7 @@ impl Grid {
             (j, i)
         };
 
-        if let Some((last, rest)) = self.units[..j].split_last_mut() {
+        if let Some((last, rest)) = self.units[..j + 1].split_last_mut() {
             let first = &mut rest[i];
             Some((first.as_mut(), last.as_mut()))
         } else {
@@ -398,7 +398,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             Deselect => {
                 assert!(self.selected.is_some(),
-                        "Received deselect with no unit selected");
+                        "received deselect with no unit selected");
                 self.selected = None;
             }
             SelectTarget(origin, pos) => {
@@ -415,6 +415,12 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     // TODO: Have target not borrow attacker.
                     let (attacker, target_unit) =
                         self.grid.unit_pair_mut(pos, target).expect("a unit cannot attack itself");
+
+                    info!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
+                          pos,
+                          attacker,
+                          target,
+                          target_unit);
 
                     let attacker = attacker.expect("no attacking unit");
                     let target_unit = target_unit.expect("no unit to attack");

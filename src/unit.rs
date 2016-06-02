@@ -70,7 +70,7 @@ impl UnitType {
 
 impl Debug for UnitType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Unit")
+        f.debug_struct("UnitType")
             .field("health", &self.health)
             .field("attack", &self.attack)
             .field("damage", &self.damage)
