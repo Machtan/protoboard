@@ -1,6 +1,6 @@
 use glorious::{Behavior, Renderer, Sprite};
 
-use common::{State, Message};
+use common::{Message, State};
 use resources::CROSSHAIR_PATH;
 
 #[derive(Debug)]

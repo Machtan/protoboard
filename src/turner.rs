@@ -1,11 +1,12 @@
-
 use std::cmp;
-use std::rc::Rc;
 use std::collections::HashMap;
-use glorious::{Behavior, Renderer, Label};
+use std::rc::Rc;
+
+use glorious::{Behavior, Label, Renderer};
+use sdl2_ttf::Font;
+
 use common::{Message, State};
 use faction::Faction;
-use sdl2_ttf::Font;
 
 const TEXT_COLOR: (u8, u8, u8, u8) = (0, 0, 0, 255);
 const POS: (i32, i32) = (400, 50);

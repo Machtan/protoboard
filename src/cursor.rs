@@ -1,7 +1,7 @@
 use glorious::{Behavior, Renderer, Sprite};
 
+use common::{Message, State};
 use resources::MARKER_PATH;
-use common::{State, Message};
 
 #[derive(Debug)]
 pub struct Cursor {

@@ -1,8 +1,5 @@
 #![feature(question_mark)]
 
-use std::env;
-use std::rc::Rc;
-
 extern crate env_logger;
 #[macro_use]
 extern crate log;
@@ -14,33 +11,36 @@ extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
 
+use std::env;
+use std::rc::Rc;
+
 use glorious::{BoxedInputMapper, Game, Renderer, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
-use sdl2_image::{INIT_PNG, INIT_JPG};
+use sdl2_image::{INIT_JPG, INIT_PNG};
 
-use resources::{FIRA_SANS_PATH, MARKER_PATH, WARRIOR_PATH, ARCHER_PATH, PROTECTOR_PATH,
-                RACCOON_PATH};
+use resources::{ARCHER_PATH, FIRA_SANS_PATH, MARKER_PATH, PROTECTOR_PATH, RACCOON_PATH,
+                WARRIOR_PATH};
 use common::State;
+use cursor::Cursor;
+use faction::Faction;
 use grid::Grid;
 use grid_manager::GridManager;
-use cursor::Cursor;
 use scene::Scene;
-use unit::{AttackType, UnitType};
-use faction::Faction;
 use turner::TurnManager;
+use unit::{AttackType, UnitType};
 
 mod common;
-mod resources;
-mod scene;
+mod cursor;
 mod faction;
-mod unit;
 mod grid;
 mod grid_manager;
-mod cursor;
 mod menus;
+mod resources;
+mod scene;
 mod target_selector;
 mod turner;
+mod unit;
 
 pub fn main() {
     use sdl2::event::Event::*;
@@ -136,7 +136,7 @@ pub fn main() {
     }
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 0));
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 1, 0));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 0, 0));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 0));
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
 
     scene.add(Box::new(GridManager::new(grid, CELL_SIZE)));

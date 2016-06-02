@@ -2,9 +2,9 @@ use std::fmt::{self, Debug};
 use std::time::Duration;
 
 use glorious::{Behavior, Label, Renderer, Sprite};
+use lru_time_cache::LruCache;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use lru_time_cache::LruCache;
 
 use common::{State, Message};
 use faction::Faction;
@@ -150,10 +150,8 @@ impl GridManager {
     fn cancel(&mut self, cursor_pos: (u32, u32)) {
         if self.selected.is_some() {
             self.selected = None;
-        } else {
-            if self.grid.unit(cursor_pos).is_some() {
-                self.showing_range_of = Some(cursor_pos);
-            }
+        } else if self.grid.unit(cursor_pos).is_some() {
+            self.showing_range_of = Some(cursor_pos);
         }
     }
 
@@ -240,9 +238,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             MoveUnitAndAct(origin, destination) => {
                 self.move_unit_and_act(origin, destination, state, queue);
-            }
-            DestroyUnit(pos) => {
-                self.destroy_unit(pos, queue);
             }
             AttackWithUnit(pos, target) => {
                 let destroyed = {

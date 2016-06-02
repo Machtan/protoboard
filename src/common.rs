@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
-use glorious::{Behavior, ResourceManager};
 use faction::Faction;
+use glorious::{Behavior, ResourceManager};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
@@ -37,7 +37,6 @@ pub enum Message {
     ShowCursor,
     SelectTarget((u32, u32), (u32, u32)),
     AttackWithUnit((u32, u32), (u32, u32)),
-    DestroyUnit((u32, u32)),
 
     ApplyOneModal,
 
@@ -96,13 +95,8 @@ impl<'a> State<'a> {
                 dst.push(modal);
             }
             Pop => {
-                let old = dst.pop();
-                match old {
-                    Some(old) => {
-                        debug!("Popped modal state: {:?}", old);
-                    }
-                    None => panic!("cannot pop from empty modal queue"),
-                }
+                let old = dst.pop().expect("cannot pop modal from empty queue");
+                debug!("Popped modal state: {:?}", old);
             }
             Break => {
                 dst.clear();

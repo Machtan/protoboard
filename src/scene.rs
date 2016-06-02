@@ -1,14 +1,15 @@
 use glorious::{Behavior, Renderer};
 
-use common::{Message, State, GameObject};
+use common::{GameObject, Message, State};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Scene<'a> {
     objects: Vec<GameObject<'a>>,
     modal_stack: Vec<GameObject<'a>>,
 }
 
 impl<'a> Scene<'a> {
+    #[inline]
     pub fn new() -> Self {
         Scene {
             objects: Vec::new(),
@@ -16,6 +17,7 @@ impl<'a> Scene<'a> {
         }
     }
 
+    #[inline]
     pub fn add(&mut self, object: GameObject<'a>) {
         self.objects.push(object);
     }

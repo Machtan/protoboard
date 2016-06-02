@@ -7,7 +7,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2_ttf::Font;
 
-use common::{State, Message};
+use common::{Message, State};
 
 const PAD: u32 = 10;
 

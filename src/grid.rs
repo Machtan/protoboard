@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 use std::mem;
 
-use unit::{Unit, TilesInRange};
+use unit::{TilesInRange, Unit};
 
 #[derive(Clone, Debug)]
 pub enum Terrain {
@@ -126,13 +126,6 @@ impl Grid {
         let dst = &mut self.units[self.index(to)];
         assert!(dst.is_none());
         *dst = unit;
-    }
-
-    #[inline]
-    pub fn swap_units(&mut self, a: (u32, u32), b: (u32, u32)) {
-        let i = self.index(a);
-        let j = self.index(b);
-        self.units.swap(i, j);
     }
 
     pub fn unit_pair_mut(&mut self,
