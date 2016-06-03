@@ -41,7 +41,7 @@ impl GridManager {
                          pos: (u32, u32),
                          state: &mut State<'a>,
                          queue: &mut Vec<Message>) {
-        info!("Selecting target...");
+        debug!("Selecting target...");
         let unit = self.grid.unit(pos).expect("no unit to select");
         let targets = self.grid
             .find_attackable(unit, pos)
@@ -94,13 +94,13 @@ impl GridManager {
                                   move |option, state, queue| {
             match option {
                 Some("Attack") => {
-                    info!("Attack!");
+                    debug!("Attack!");
                     state.pop_modal(queue);
                     queue.push(MoveCursorTo(target));
                     queue.push(SelectTarget(origin, target));
                 }
                 Some("Wait") => {
-                    info!("Wait!");
+                    debug!("Wait!");
                     state.pop_modal(queue);
                     queue.push(UnitSpent(target));
                     queue.push(Deselect);
@@ -108,7 +108,7 @@ impl GridManager {
                     queue.push(ShowCursor);
                 }
                 None => {
-                    info!("Cancel!");
+                    debug!("Cancel!");
                     state.pop_modal(queue);
                     queue.push(MoveUnit(target, origin));
                     queue.push(MoveCursorTo(origin));
@@ -127,7 +127,7 @@ impl GridManager {
     fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
         let unit = self.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
-            info!("Unit at {:?} selected!", pos);
+            debug!("Unit at {:?} selected!", pos);
             self.selected = Some(pos);
         }
     }
@@ -167,7 +167,7 @@ impl GridManager {
         let faction = {
             let faction = {
                 let unit = self.grid.unit(pos).expect("no unit to destroy");
-                info!("Unit at {:?} destroyed! ({:?})", pos, unit);
+                debug!("Unit at {:?} destroyed! ({:?})", pos, unit);
                 unit.faction
             };
             self.grid.remove_unit(pos);
@@ -245,11 +245,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     let (attacker, target_unit) =
                         self.grid.unit_pair_mut(pos, target).expect("a unit cannot attack itself");
 
-                    info!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
-                          pos,
-                          attacker,
-                          target,
-                          target_unit);
+                    debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
+                           pos,
+                           attacker,
+                           target,
+                           target_unit);
 
                     let attacker = attacker.expect("no attacking unit");
                     let target_unit = target_unit.expect("no unit to attack");

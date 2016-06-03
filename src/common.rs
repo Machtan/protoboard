@@ -88,15 +88,15 @@ impl<'a> State<'a> {
         use self::ModalMessage::*;
         let modal = self.modal_stack
             .pop()
-            .expect("Modal applied with empty stack");
+            .expect("cannot apply modal message from empty stack");
         match modal {
             Push(modal) => {
-                debug!("Pushing modal state: {:?}", modal);
+                trace!("Pushing modal state: {:?}", modal);
                 dst.push(modal);
             }
             Pop => {
                 let old = dst.pop().expect("cannot pop modal from empty queue");
-                debug!("Popped modal state: {:?}", old);
+                trace!("Popped modal state: {:?}", old);
             }
             Break => {
                 dst.clear();

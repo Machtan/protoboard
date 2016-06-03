@@ -85,6 +85,7 @@ impl Debug for UnitType {
     }
 }
 
+#[derive(Clone)]
 pub struct TilesInRange {
     pos: (u32, u32),
     cur: (i32, i32),

@@ -34,7 +34,7 @@ impl TargetSelector {
     fn confirm<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         use common::Message::*;
         let selected = self.targets[self.selected];
-        info!("Attacking target at {:?}", selected);
+        debug!("Attacking target at {:?}", selected);
         // TODO: It might be better to have a cleaner model for
         // breaking out of a given number of modals. We might
         // want to have non-menu modals not be broken here?
