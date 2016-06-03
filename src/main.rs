@@ -19,8 +19,7 @@ use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_JPG, INIT_PNG};
 
-use resources::{ARCHER_PATH, FIRA_SANS_PATH, MARKER_PATH, PROTECTOR_PATH, RACCOON_PATH,
-                WARRIOR_PATH};
+use resources::{ARCHER_PATH, FIRA_SANS_PATH, PROTECTOR_PATH, RACCOON_PATH, WARRIOR_PATH};
 use common::State;
 use faction::Faction;
 use grid::Grid;
@@ -52,7 +51,7 @@ pub fn main() {
     const WINDOW_TITLE: &'static str = "Raccoon Squad";
     const N_COLS: u32 = 20;
     const N_ROWS: u32 = 20;
-    const CELL_SIZE: (u32, u32) = (32, 32);
+    const TILE_SIZE: (u32, u32) = (32, 32);
     const MAX_FPS: u32 = 60;
     const NUMBER_OF_ACTIONS: u32 = 4;
 
@@ -98,30 +97,19 @@ pub fn main() {
     let renderer = Renderer::new(renderer);
     let resources = ResourceManager::new(renderer.clone(), Rc::new(font_context));
 
-    // Set up game state.
-
-    let mut state = State::new(resources, NUMBER_OF_ACTIONS);
-
-    // Cause a few assets to be preloaded.
-
-    state.resources.texture(MARKER_PATH);
-    state.resources.font(FIRA_SANS_PATH, 16);
-
     // Load units
 
-    let warrior_texture = state.resources.texture(WARRIOR_PATH);
-    let archer_texture = state.resources.texture(ARCHER_PATH);
-    let protector_texture = state.resources.texture(PROTECTOR_PATH);
-    let raccoon_texture = state.resources.texture(RACCOON_PATH);
+    let warrior_texture = resources.texture(WARRIOR_PATH);
+    let archer_texture = resources.texture(ARCHER_PATH);
+    let protector_texture = resources.texture(PROTECTOR_PATH);
+    let raccoon_texture = resources.texture(RACCOON_PATH);
 
     let warrior = UnitType::new(warrior_texture, 5, AttackType::Melee, 2);
     let archer = UnitType::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
     let protector = UnitType::new(protector_texture, 8, AttackType::Melee, 1);
     let raccoon = UnitType::new(raccoon_texture, 25, AttackType::Melee, 5);
 
-    // Prepare the scene
-
-    let mut scene = Scene::new();
+    // Set up game state.
 
     let mut grid = Grid::new((N_COLS, N_ROWS));
 
@@ -140,7 +128,13 @@ pub fn main() {
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 0));
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
 
-    scene.add(Box::new(GridManager::new(grid, CELL_SIZE)));
+    let mut state = State::new(resources, grid, TILE_SIZE, NUMBER_OF_ACTIONS);
+
+    // Prepare the scene
+
+    let mut scene = Scene::new();
+
+    scene.add(Box::new(GridManager::new()));
 
     let turner = TurnManager::new(NUMBER_OF_ACTIONS,
                                   vec![Faction::Red, Faction::Blue],

@@ -4,18 +4,15 @@ use std::time::Duration;
 use glorious::{Behavior, Label, Renderer, Sprite};
 use lru_time_cache::LruCache;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
-use grid::{Grid, Terrain};
+use grid::Terrain;
 use menus::ModalMenu;
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
 
 pub struct GridManager {
-    grid: Grid,
-    tile_size: (u32, u32),
     selected: Option<(u32, u32)>,
     showing_range_of: Option<(u32, u32)>,
     cursor: (u32, u32),
@@ -25,11 +22,9 @@ pub struct GridManager {
 
 impl GridManager {
     #[inline]
-    pub fn new(grid: Grid, tile_size: (u32, u32)) -> GridManager {
+    pub fn new() -> GridManager {
         let expiry_duration = Duration::from_millis(100);
         GridManager {
-            grid: grid,
-            tile_size: tile_size,
             selected: None,
             showing_range_of: None,
             cursor: (0, 0),
@@ -46,12 +41,14 @@ impl GridManager {
                          state: &mut State<'a>,
                          queue: &mut Vec<Message>) {
         debug!("Selecting target...");
-        let unit = self.grid.unit(pos).expect("no unit to select");
-        let targets = self.grid
-            .find_attackable(unit, pos)
-            .map(|(pos, _)| pos)
-            .collect();
-        let selector = TargetSelector::new(pos, origin, self.grid.size(), self.tile_size, targets);
+        let targets = {
+            let unit = state.grid.unit(pos).expect("no unit to select");
+            state.grid
+                .find_attackable(unit, pos)
+                .map(|(pos, _)| pos)
+                .collect()
+        };
+        let selector = TargetSelector::new(pos, origin, targets);
         self.cursor_hidden = true;
         state.push_modal(Box::new(selector), queue);
     }
@@ -68,29 +65,33 @@ impl GridManager {
         assert!(self.selected == Some(origin),
                 "the moved unit is not selected");
 
-        if target != origin && self.grid.unit(target).is_some() {
+        if target != origin && state.grid.unit(target).is_some() {
             // TODO: Beep!
             return;
         }
 
-        self.grid.move_unit(origin, target);
+        state.grid.move_unit(origin, target);
 
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
-        self.move_cursor_to(target);
+        self.move_cursor_to(target, state.grid.size());
         self.cursor_hidden = true;
-        let unit = self.grid.unit(target).expect("unreachable; failed to move unit");
 
-        let mut options = Vec::with_capacity(2);
-        let can_attack = if unit.is_ranged() {
-            origin == target
-        } else {
-            true
+        let options = {
+            let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
+
+            let mut options = Vec::with_capacity(2);
+            let can_attack = if unit.is_ranged() {
+                origin == target
+            } else {
+                true
+            };
+            if can_attack && state.grid.find_attackable(unit, target).next().is_some() {
+                options.push("Attack");
+            }
+            options.push("Wait");
+            options
         };
-        if can_attack && self.grid.find_attackable(unit, target).next().is_some() {
-            options.push("Attack");
-        }
-        options.push("Wait");
 
         let menu = ModalMenu::new(options.iter().map(|&s| s.to_owned()),
                                   0,
@@ -125,7 +126,7 @@ impl GridManager {
 
     /// Handles the selection of a unit.
     fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
-        let unit = self.grid.unit(pos).expect("cannot select unit on empty tile");
+        let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
             debug!("Unit at {:?} selected!", pos);
             self.selected = Some(pos);
@@ -139,7 +140,7 @@ impl GridManager {
                 self.move_unit_and_act(origin, target, state, queue);
             }
             None => {
-                if self.grid.unit(target).is_some() {
+                if state.grid.unit(target).is_some() {
                     self.select_unit(target, state, queue);
                 }
             }
@@ -147,10 +148,13 @@ impl GridManager {
     }
 
     /// Handles a cancel press at the given position.
-    fn cancel(&mut self, cursor_pos: (u32, u32)) {
+    fn cancel<'a>(&mut self,
+                  cursor_pos: (u32, u32),
+                  state: &State<'a>,
+                  _queue: &mut Vec<Message>) {
         if self.selected.is_some() {
             self.selected = None;
-        } else if self.grid.unit(cursor_pos).is_some() {
+        } else if state.grid.unit(cursor_pos).is_some() {
             self.showing_range_of = Some(cursor_pos);
         }
     }
@@ -163,17 +167,20 @@ impl GridManager {
     }
 
     /// Destroys the unit on the given tile.
-    fn destroy_unit(&mut self, pos: (u32, u32), queue: &mut Vec<Message>) {
+    fn destroy_unit<'a>(&mut self,
+                        pos: (u32, u32),
+                        state: &mut State<'a>,
+                        queue: &mut Vec<Message>) {
         let faction = {
             let faction = {
-                let unit = self.grid.unit(pos).expect("no unit to destroy");
+                let unit = state.grid.unit(pos).expect("no unit to destroy");
                 debug!("Unit at {:?} destroyed! ({:?})", pos, unit);
                 unit.faction
             };
-            self.grid.remove_unit(pos);
+            state.grid.remove_unit(pos);
             faction
         };
-        if self.grid.units().all(|u| u.faction != faction) {
+        if state.grid.units().all(|u| u.faction != faction) {
             queue.push(Message::FactionDefeated(faction));
         }
     }
@@ -185,46 +192,35 @@ impl GridManager {
         self.cursor_hidden = false;
     }
 
-    /// Returns the grid position of a window position.
-    fn window_to_grid(&self, x: i32, y: i32) -> (u32, u32) {
-        assert!(x >= 0 && y >= 0);
-        let (tw, th) = self.tile_size;
-        let (_, h) = self.grid.size();
-        let x = x as u32 / tw;
-        let y = h - 1 - (y as u32) / th;
-        (x, y)
-    }
-
-    fn move_cursor_to(&mut self, pos: (u32, u32)) {
-        let (w, h) = self.grid.size();
-        assert!(pos.0 < w && pos.1 < h);
+    fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
+        assert!(pos.0 < size.0 && pos.1 < size.1);
         self.cursor = pos;
     }
 
     #[inline]
-    fn move_cursor_up(&mut self) {
-        if self.cursor.1 < self.grid.size().1 {
+    fn move_cursor_up(&mut self, size: (u32, u32)) {
+        if self.cursor.1 < size.1 {
             self.cursor.1 += 1;
         }
     }
 
     #[inline]
-    fn move_cursor_down(&mut self) {
+    fn move_cursor_down(&mut self, _size: (u32, u32)) {
         if self.cursor.1 > 0 {
             self.cursor.1 -= 1;
         }
     }
 
     #[inline]
-    fn move_cursor_left(&mut self) {
+    fn move_cursor_left(&mut self, _size: (u32, u32)) {
         if self.cursor.0 > 0 {
             self.cursor.0 -= 1;
         }
     }
 
     #[inline]
-    fn move_cursor_right(&mut self) {
-        if self.cursor.0 < self.grid.size().0 {
+    fn move_cursor_right(&mut self, size: (u32, u32)) {
+        if self.cursor.0 < size.0 {
             self.cursor.0 += 1;
         }
     }
@@ -244,31 +240,31 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             Cancel => {
                 let cursor = self.cursor;
-                self.cancel(cursor);
+                self.cancel(cursor, state, queue);
             }
             LeftClickAt(x, y) => {
-                let pos = self.window_to_grid(x, y);
+                let pos = state.window_to_grid(x, y);
                 self.confirm(pos, state, queue);
             }
             RightClickAt(x, y) => {
-                let pos = self.window_to_grid(x, y);
-                self.cancel(pos);
+                let pos = state.window_to_grid(x, y);
+                self.cancel(pos, state, queue);
             }
             RightReleasedAt(_, _) |
             CancelReleased => {
                 self.cancel_release();
             }
             MoveCursorUp => {
-                self.move_cursor_up();
+                self.move_cursor_up(state.grid.size());
             }
             MoveCursorDown => {
-                self.move_cursor_down();
+                self.move_cursor_down(state.grid.size());
             }
             MoveCursorLeft => {
-                self.move_cursor_left();
+                self.move_cursor_left(state.grid.size());
             }
             MoveCursorRight => {
-                self.move_cursor_right();
+                self.move_cursor_right(state.grid.size());
             }
 
             // Modal messages
@@ -282,15 +278,15 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.cursor_hidden = false;
             }
             CancelSelected(pos, target) => {
-                self.grid.move_unit(target, pos);
-                self.move_cursor_to(pos);
+                state.grid.move_unit(target, pos);
+                self.move_cursor_to(pos, state.grid.size());
                 self.cursor_hidden = false;
                 self.select_unit(pos, state, queue);
             }
 
             // State changes
             UnitSpent(pos) => {
-                self.grid
+                state.grid
                     .unit_mut(pos)
                     .expect("no unit to mark as spent")
                     .spent = true;
@@ -299,7 +295,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.deselect();
             }
             MoveUnit(from, to) => {
-                self.grid.move_unit(from, to);
+                state.grid.move_unit(from, to);
             }
             MoveUnitAndAct(origin, destination) => {
                 self.move_unit_and_act(origin, destination, state, queue);
@@ -308,7 +304,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let destroyed = {
                     // TODO: Have target not borrow attacker.
                     let (attacker, target_unit) =
-                        self.grid.unit_pair_mut(pos, target).expect("a unit cannot attack itself");
+                        state.grid.unit_pair_mut(pos, target).expect("a unit cannot attack itself");
 
                     debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
                            pos,
@@ -323,18 +319,18 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     target_unit.receive_attack(attacker)
                 };
                 if destroyed {
-                    self.destroy_unit(target, queue);
+                    self.destroy_unit(target, state, queue);
                 }
             }
             FinishTurn => {
-                for unit in self.grid.units_mut() {
+                for unit in state.grid.units_mut() {
                     unit.spent = false;
                 }
             }
 
             MouseMovedTo(x, y) => {
-                let pos = self.window_to_grid(x, y);
-                self.move_cursor_to(pos);
+                let pos = state.window_to_grid(x, y);
+                self.move_cursor_to(pos, state.grid.size());
             }
             _ => {}
         }
@@ -342,16 +338,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
     /// Renders the object.
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
-        let (cols, rows) = self.grid.size();
-        let (cw, ch) = self.tile_size;
-        let grid_height = rows * ch;
+        let (cols, rows) = state.grid.size();
         for col in 0..cols {
             for row in 0..rows {
-                let x = col * cw;
-                let y = grid_height - ch - (row * ch);
-                let rect = Rect::new(x as i32, y as i32, cw, ch);
-
-                let (unit, terrain) = self.grid.tile((col, row));
+                let rect = state.tile_rect((col, row));
+                let (unit, terrain) = state.grid.tile((col, row));
 
                 match *terrain {
                     Terrain::Grass => {
@@ -383,7 +374,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     renderer.set_draw_color(color);
                     renderer.fill_rect(rect).unwrap();
                     let sprite = Sprite::new(unit.texture(), None);
-                    sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
+                    sprite.render_rect(renderer, rect);
 
                     let font = state.resources.font(FIRA_SANS_BOLD_PATH, 16);
                     let (_, sy) = renderer.scale();
@@ -397,35 +388,31 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     });
                     let (w, _) = label.size();
 
-                    let lx = x as i32 + cw as i32 - 3 - w as i32;
-                    let ly = y as i32 + ch as i32 - 3 - height - descent;
+                    let lx = rect.x() + rect.width() as i32 - 3 - w as i32;
+                    let ly = rect.y() + rect.height() as i32 - 3 - height - descent;
 
                     label.render(renderer, lx, ly);
                 }
 
                 if self.cursor == (col, row) && !self.cursor_hidden {
                     let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
-                    sprite.render(renderer,
-                                  rect.x(),
-                                  rect.y(),
-                                  Some((rect.width(), rect.height())));
+                    sprite.render_rect(renderer, rect);
                 }
             }
         }
 
+        // TODO: Just pre-compute the units to be highlighted, and
+        // render it above, as yet another alternative background colour.
         if let Some(pos) = self.showing_range_of {
             let target_color = Color::RGB(252, 223, 80);
             renderer.set_draw_color(target_color);
-            for (col, row) in self.grid.tiles_in_range(pos) {
-                let x = col * cw;
-                let y = grid_height - ch - (row * ch);
-                let rect = Rect::new(x as i32, y as i32, cw, ch);
+            for in_range in state.grid.tiles_in_range(pos) {
+                let rect = state.tile_rect(in_range);
                 renderer.fill_rect(rect).unwrap();
 
-                let (unit, _) = self.grid.tile((col, row));
-                if let Some(unit) = unit {
+                if let Some(unit) = state.grid.unit(in_range) {
                     let sprite = Sprite::new(unit.texture(), None);
-                    sprite.render(renderer, x as i32, y as i32, Some(self.tile_size));
+                    sprite.render_rect(renderer, rect);
                 }
             }
         }
@@ -435,8 +422,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
 impl Debug for GridManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GridManager")
-            .field("grid", &(..))
-            .field("tile_size", &self.tile_size)
             .field("selected", &self.selected)
             .field("showing_range_of", &self.showing_range_of)
             .field("cursor", &self.cursor)

@@ -8,25 +8,16 @@ pub struct TargetSelector {
     pos: (u32, u32),
     origin: (u32, u32),
     selected: usize,
-    tile_size: (u32, u32),
-    grid_size: (u32, u32),
     targets: Vec<(u32, u32)>,
 }
 
 impl TargetSelector {
-    pub fn new(pos: (u32, u32),
-               origin: (u32, u32),
-               grid_size: (u32, u32),
-               tile_size: (u32, u32),
-               targets: Vec<(u32, u32)>)
-               -> TargetSelector {
+    pub fn new(pos: (u32, u32), origin: (u32, u32), targets: Vec<(u32, u32)>) -> TargetSelector {
         assert!(!targets.is_empty(), "No targets given to selector");
         TargetSelector {
             pos: pos,
             origin: origin,
             selected: 0,
-            grid_size: grid_size,
-            tile_size: tile_size,
             targets: targets,
         }
     }
@@ -72,15 +63,11 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
             }
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) => {
-                assert!(x >= 0 && y >= 0);
-                let (w, h) = self.tile_size;
-                let (_, rows) = self.grid_size;
-                let col = (x as u32 - (x as u32 % w)) / w;
-                let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
+                let pos = state.window_to_grid(x, y);
 
                 let mut is_valid_target = false;
-                for (i, &pos) in self.targets.iter().enumerate() {
-                    if pos == (col, row) {
+                for (i, &target) in self.targets.iter().enumerate() {
+                    if pos == target {
                         self.selected = i;
                         is_valid_target = true;
                     }
@@ -99,11 +86,8 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
     }
 
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
-        let (col, row) = self.targets[self.selected];
-        let x = (col * self.tile_size.0) as i32;
-        let grid_height = self.grid_size.1 * self.tile_size.1;
-        let y = (grid_height - self.tile_size.1 - (row * self.tile_size.1)) as i32;
+        let rect = state.tile_rect(self.targets[self.selected]);
         let sprite = Sprite::new(state.resources.texture(CROSSHAIR_PATH), None);
-        sprite.render(renderer, x, y, Some(self.tile_size));
+        sprite.render_rect(renderer, rect);
     }
 }

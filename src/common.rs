@@ -1,7 +1,10 @@
 use std::fmt::Debug;
 
-use faction::Faction;
 use glorious::{Behavior, ResourceManager};
+use sdl2::rect::Rect;
+
+use faction::Faction;
+use grid::Grid;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
@@ -51,16 +54,24 @@ pub struct State<'a> {
     pub resources: ResourceManager<'a>,
     pub current_turn: Faction,
     pub actions_left: u32,
+    pub grid: Grid,
+    pub tile_size: (u32, u32),
     modal_stack: Vec<ModalMessage<'a>>,
 }
 
 impl<'a> State<'a> {
     #[inline]
-    pub fn new(resources: ResourceManager<'a>, actions_left: u32) -> State<'a> {
+    pub fn new(resources: ResourceManager<'a>,
+               grid: Grid,
+               tile_size: (u32, u32),
+               actions_left: u32)
+               -> State<'a> {
         State {
             resources: resources,
             current_turn: Faction::Red,
             actions_left: actions_left,
+            grid: grid,
+            tile_size: tile_size,
             modal_stack: Vec::new(),
         }
     }
@@ -98,6 +109,23 @@ impl<'a> State<'a> {
                 dst.clear();
             }
         }
+    }
+
+    pub fn window_to_grid(&self, x: i32, y: i32) -> (u32, u32) {
+        assert!(x >= 0 && y >= 0);
+        let (tw, th) = self.tile_size;
+        let (_, h) = self.grid.size();
+        let x = x as u32 / tw;
+        let y = h - 1 - (y as u32) / th;
+        (x, y)
+    }
+
+    pub fn tile_rect(&self, pos: (u32, u32)) -> Rect {
+        let (tw, th) = self.tile_size;
+        let (_, h) = self.grid.size();
+        let x = pos.0 * tw;
+        let y = h * th - th - (pos.1 * th);
+        Rect::new(x as i32, y as i32, tw, th)
     }
 }
 
