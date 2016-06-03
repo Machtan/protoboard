@@ -4,6 +4,7 @@ use std::time::Duration;
 use glorious::{Behavior, Label, Renderer, Sprite};
 use lru_time_cache::LruCache;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
@@ -414,6 +415,15 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render_rect(renderer, rect);
                 }
+            }
+            renderer.set_draw_color(Color::RGB(0, 255, 255));
+            let path_finder =
+                state.grid.unit(pos).expect("no unit to show range for").path_finder(pos, state);
+            for (target, cost) in path_finder.costs {
+                let rect = state.tile_rect(target);
+                let rh = ((rect.height() - 5) as f32 * (cost as f32 / 10.0)) as u32;
+                let rect = Rect::new(rect.x() + 5, rect.y() + rect.height() as i32 - rh as i32, rect.width() - 10, rh);
+                renderer.fill_rect(rect);
             }
         }
     }

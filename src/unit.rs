@@ -1,9 +1,12 @@
+use std::collections::{btree_map, BTreeMap};
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 use sdl2::render::Texture;
 
+use common::State;
 use faction::Faction;
+use grid::Terrain;
 
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -37,6 +40,77 @@ impl Unit {
     pub fn is_ranged(&self) -> bool {
         self.unit_type.attack.is_ranged()
     }
+
+    fn terrain_cost(&self, terrain: &Terrain) -> u32 {
+        match *terrain {
+            Terrain::Grass => 1,
+        }
+    }
+
+    pub fn path_finder<'a>(&self, pos: (u32, u32), state: &State<'a>) -> PathFinder {
+        let mut to_be_searched = vec![(pos, 0u32)];
+        let mut costs = BTreeMap::new();
+        let (w, h) = state.grid.size();
+
+        while let Some(((x, y), cost)) = to_be_searched.pop() {
+            let mut dir = 0;
+            loop {
+                let (dx, dy) = match dir {
+                    0 => (1, 0),
+                    1 => (0, 1),
+                    2 => (-1, 0),
+                    3 => (0, -1),
+                    _ => break,
+                };
+                dir += 1;
+
+                let nx = x as i32 + dx;
+                let ny = y as i32 + dy;
+
+                if nx < 0 || w as i32 <= nx || ny < 0 || h as i32 <= ny {
+                    continue;
+                }
+
+                let npos = (nx as u32, ny as u32);
+
+                let (unit, terrain) = state.grid.tile(npos);
+
+                // TODO: Alliances? Neutrals?
+                if let Some(unit) = unit {
+                    if unit.faction != self.faction {
+                        continue;
+                    }
+                }
+
+                let ncost = cost.saturating_add(self.terrain_cost(terrain));
+
+                if ncost > self.unit_type.movement {
+                    continue;
+                }
+
+                match costs.entry(npos) {
+                    btree_map::Entry::Vacant(entry) => {
+                        entry.insert(ncost);
+                    }
+                    btree_map::Entry::Occupied(mut entry) => {
+                        if *entry.get() > ncost {
+                            entry.insert(ncost);
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+                to_be_searched.push((npos, ncost));
+            }
+        }
+        PathFinder { costs: costs }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PathFinder {
+    // TODO: Should be private.
+    pub costs: BTreeMap<(u32, u32), u32>,
 }
 
 #[derive(Clone)]
@@ -44,24 +118,11 @@ pub struct UnitType {
     pub health: u32,
     pub attack: AttackType,
     pub damage: u32,
+    pub movement: u32,
     pub texture: Rc<Texture>,
 }
 
 impl UnitType {
-    #[inline]
-    pub fn new(texture: Rc<Texture>,
-               health: u32,
-               attack_type: AttackType,
-               damage: u32)
-               -> UnitType {
-        UnitType {
-            health: health,
-            attack: attack_type,
-            damage: damage,
-            texture: texture,
-        }
-    }
-
     /// Creates a unit of this type in the given faction.
     /// If not health is given, the unit starts with full health.
     pub fn create(&self, faction: Faction, health: Option<u32>) -> Unit {
@@ -80,6 +141,7 @@ impl Debug for UnitType {
             .field("health", &self.health)
             .field("attack", &self.attack)
             .field("damage", &self.damage)
+            .field("movement", &self.movement)
             .field("texture", &(..))
             .finish()
     }

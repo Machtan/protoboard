@@ -104,10 +104,34 @@ pub fn main() {
     let protector_texture = resources.texture(PROTECTOR_PATH);
     let raccoon_texture = resources.texture(RACCOON_PATH);
 
-    let warrior = UnitType::new(warrior_texture, 5, AttackType::Melee, 2);
-    let archer = UnitType::new(archer_texture, 5, AttackType::Ranged { min: 2, max: 3 }, 2);
-    let protector = UnitType::new(protector_texture, 8, AttackType::Melee, 1);
-    let raccoon = UnitType::new(raccoon_texture, 25, AttackType::Melee, 5);
+    let warrior = UnitType {
+        texture: warrior_texture,
+        health: 5,
+        attack: AttackType::Melee,
+        damage: 2,
+        movement: 6,
+    };
+    let archer = UnitType {
+        texture: archer_texture,
+        health: 4,
+        attack: AttackType::Ranged { min: 2, max: 3 },
+        damage: 3,
+        movement: 4,
+    };
+    let protector = UnitType {
+        texture: protector_texture,
+        health: 8,
+        attack: AttackType::Melee,
+        damage: 2,
+        movement: 5,
+    };
+    let raccoon = UnitType {
+        texture: raccoon_texture,
+        health: 21,
+        attack: AttackType::Melee,
+        damage: 5,
+        movement: 4,
+    };
 
     // Set up game state.
 
