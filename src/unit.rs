@@ -44,6 +44,7 @@ impl Unit {
     fn terrain_cost(&self, terrain: &Terrain) -> u32 {
         match *terrain {
             Terrain::Grass => 1,
+            Terrain::Mountain => 3,
         }
     }
 

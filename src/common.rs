@@ -49,8 +49,8 @@ pub enum ModalMessage<'a> {
     Break,
 }
 
-#[derive(Debug)]
 pub struct State<'a> {
+    pub debug_config: DebugConfig,
     pub resources: ResourceManager<'a>,
     pub current_turn: Faction,
     pub actions_left: u32,
@@ -64,9 +64,11 @@ impl<'a> State<'a> {
     pub fn new(resources: ResourceManager<'a>,
                grid: Grid,
                tile_size: (u32, u32),
-               actions_left: u32)
+               actions_left: u32,
+               debug_config: DebugConfig)
                -> State<'a> {
         State {
+            debug_config: debug_config,
             resources: resources,
             current_turn: Faction::Red,
             actions_left: actions_left,
@@ -127,6 +129,10 @@ impl<'a> State<'a> {
         let y = h * th - th - (pos.1 * th);
         Rect::new(x as i32, y as i32, tw, th)
     }
+}
+
+pub struct DebugConfig {
+    pub movement: bool,
 }
 
 pub trait BehaviorDebug<S>: Behavior<S> + Debug {}

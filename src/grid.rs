@@ -6,6 +6,7 @@ use unit::{TilesInRange, Unit};
 #[derive(Clone, Debug)]
 pub enum Terrain {
     Grass,
+    Mountain,
 }
 
 #[derive(Clone)]
@@ -62,12 +63,21 @@ impl<'a> Iterator for UnitsMut<'a> {
 
 
 impl Grid {
-    pub fn new(size: (u32, u32)) -> Grid {
+    pub fn new<F>(size: (u32, u32), mut func: F) -> Grid
+        where F: FnMut((u32, u32)) -> Terrain
+    {
         let count = size.0 as usize * size.1 as usize;
+        let terrain = (0..count)
+            .map(|i| {
+                let x = (i % size.1 as usize) as u32;
+                let y = (i / size.1 as usize) as u32;
+                func((x, y))
+            })
+            .collect::<Vec<_>>();
         Grid {
             size: size,
             units: vec![None; count].into_boxed_slice(),
-            terrain: vec![Terrain::Grass; count].into_boxed_slice(),
+            terrain: terrain.into_boxed_slice(),
         }
     }
 

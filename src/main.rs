@@ -11,6 +11,7 @@ extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
 
+use std::cmp;
 use std::env;
 use std::rc::Rc;
 
@@ -20,9 +21,9 @@ use sdl2::mouse::Mouse;
 use sdl2_image::{INIT_JPG, INIT_PNG};
 
 use resources::{ARCHER_PATH, FIRA_SANS_PATH, PROTECTOR_PATH, RACCOON_PATH, WARRIOR_PATH};
-use common::State;
+use common::{DebugConfig, State};
 use faction::Faction;
-use grid::Grid;
+use grid::{Grid, Terrain};
 use grid_manager::GridManager;
 use scene::Scene;
 use turner::TurnManager;
@@ -72,6 +73,14 @@ pub fn main() {
         builder.parse(&var);
     }
     builder.init().unwrap();
+
+    // Load debugging configuration from environment variables.
+
+    let debug_movement = env::var("PROTOBOARD_DEBUG_MOVEMENT")
+        .map(|s| s == "1")
+        .unwrap_or(false);
+
+    let debug_config = DebugConfig { movement: debug_movement };
 
     // Set up SDL2.
 
@@ -135,7 +144,13 @@ pub fn main() {
 
     // Set up game state.
 
-    let mut grid = Grid::new((N_COLS, N_ROWS));
+    let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
+        let dist = cmp::min(y, N_ROWS - 1 - y);
+        match dist {
+            3 if x % 3 < 2 => Terrain::Mountain,
+            _ => Terrain::Grass,
+        }
+    });
 
     let unit_types = &[warrior, archer, protector];
     for i in 0..N_COLS {
@@ -152,7 +167,7 @@ pub fn main() {
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 0));
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
 
-    let mut state = State::new(resources, grid, TILE_SIZE, NUMBER_OF_ACTIONS);
+    let mut state = State::new(resources, grid, TILE_SIZE, NUMBER_OF_ACTIONS, debug_config);
 
     // Prepare the scene
 
