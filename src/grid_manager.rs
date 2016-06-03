@@ -65,19 +65,14 @@ impl GridManager {
         use common::Message::*;
 
         let origin = {
-            let (origin, ref mut path_finder) =
-                *self.selected.as_mut().expect("no unit was selected");
+            let (origin, ref path_finder) = *self.selected.as_ref().expect("no unit was selected");
 
             if target != origin && state.grid.unit(target).is_some() {
                 // TODO: Beep!
                 return;
             }
 
-            if !path_finder.costs.contains_key(&target) {
-                info!("Cannot move outside movement range!");
-                // TODO: Beep!
-                return;
-            }
+            assert!(path_finder.costs.contains_key(&target));
             origin
         };
 
@@ -145,7 +140,8 @@ impl GridManager {
     }
 
     /// Handles a confirm press at the given target tile when a unit is selected.
-    fn confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
+    fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        let target = self.cursor;
         if self.selected.is_some() {
             self.move_selected_unit_and_act(target, state, queue);
         } else {
@@ -156,14 +152,11 @@ impl GridManager {
     }
 
     /// Handles a cancel press at the given position.
-    fn cancel<'a>(&mut self,
-                  cursor_pos: (u32, u32),
-                  state: &State<'a>,
-                  _queue: &mut Vec<Message>) {
+    fn cancel<'a>(&mut self, state: &State<'a>, _queue: &mut Vec<Message>) {
         if self.selected.is_some() {
             self.selected = None;
-        } else if state.grid.unit(cursor_pos).is_some() {
-            self.showing_range_of = Some(cursor_pos);
+        } else if state.grid.unit(self.cursor).is_some() {
+            self.showing_range_of = Some(self.cursor);
         }
     }
 
@@ -252,20 +245,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
         match message {
             // Input
             Confirm => {
-                let cursor = self.cursor;
-                self.confirm(cursor, state, queue);
+                self.confirm(state, queue);
             }
             Cancel => {
-                let cursor = self.cursor;
-                self.cancel(cursor, state, queue);
-            }
-            LeftClickAt(x, y) => {
-                let pos = state.window_to_grid(x, y);
-                self.confirm(pos, state, queue);
-            }
-            RightClickAt(x, y) => {
-                let pos = state.window_to_grid(x, y);
-                self.cancel(pos, state, queue);
+                self.cancel(state, queue);
             }
             RightReleasedAt(_, _) |
             CancelReleased => {
@@ -346,9 +329,21 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
             }
 
-            MouseMovedTo(x, y) => {
+            MouseMovedTo(x, y) |
+            LeftClickAt(x, y) |
+            RightClickAt(x, y) => {
                 let pos = state.window_to_grid(x, y);
                 self.move_cursor_to(pos, state.grid.size());
+                match message {
+                    MouseMovedTo(..) => {}
+                    LeftClickAt(..) => {
+                        self.confirm(state, queue);
+                    }
+                    RightClickAt(..) => {
+                        self.cancel(state, queue);
+                    }
+                    _ => unreachable!(),
+                }
             }
             _ => {}
         }
