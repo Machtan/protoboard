@@ -440,6 +440,7 @@ impl Debug for GridManager {
             .field("selected", &self.selected)
             .field("showing_range_of", &self.showing_range_of)
             .field("cursor", &self.cursor)
+            .field("cursor_hidden", &self.cursor)
             .field("health_labels", &(..))
             .finish()
     }
