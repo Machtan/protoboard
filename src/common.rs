@@ -9,14 +9,10 @@ pub enum Message {
     MoveCursorDown,
     MoveCursorLeft,
     MoveCursorRight,
-    MoveCursorTo((u32, u32)),
 
     Confirm,
-    CursorConfirm((u32, u32)),
-
     Cancel,
     CancelReleased,
-    CursorCancel((u32, u32)),
 
     FinishTurn,
     FactionDefeated(Faction),
@@ -28,17 +24,17 @@ pub enum Message {
     RightReleasedAt(i32, i32),
     MouseMovedTo(i32, i32),
 
+    Deselect,
     UnitSpent((u32, u32)),
     MoveUnit((u32, u32), (u32, u32)),
-    SelectUnit((u32, u32)),
     MoveUnitAndAct((u32, u32), (u32, u32)),
-    Deselect,
-    HideCursor,
-    ShowCursor,
-    SelectTarget((u32, u32), (u32, u32)),
     AttackWithUnit((u32, u32), (u32, u32)),
 
     ApplyOneModal,
+
+    AttackSelected((u32, u32), (u32, u32)),
+    WaitSelected,
+    CancelSelected((u32, u32), (u32, u32)),
 
     Exit,
 }

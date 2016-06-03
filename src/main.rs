@@ -22,7 +22,6 @@ use sdl2_image::{INIT_JPG, INIT_PNG};
 use resources::{ARCHER_PATH, FIRA_SANS_PATH, MARKER_PATH, PROTECTOR_PATH, RACCOON_PATH,
                 WARRIOR_PATH};
 use common::State;
-use cursor::Cursor;
 use faction::Faction;
 use grid::Grid;
 use grid_manager::GridManager;
@@ -31,7 +30,6 @@ use turner::TurnManager;
 use unit::{AttackType, UnitType};
 
 mod common;
-mod cursor;
 mod faction;
 mod grid;
 mod grid_manager;
@@ -41,6 +39,9 @@ mod scene;
 mod target_selector;
 mod turner;
 mod unit;
+
+// TODO: It might be, that the renderer argument for Behavior::render
+// should in fact be `&mut Renderer<'a>`, rather than `&mut Renderer`.
 
 pub fn main() {
     use sdl2::event::Event::*;
@@ -140,9 +141,6 @@ pub fn main() {
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
 
     scene.add(Box::new(GridManager::new(grid, CELL_SIZE)));
-
-    let cursor = Cursor::new((0, 0), (N_COLS, N_ROWS), CELL_SIZE);
-    scene.add(Box::new(cursor));
 
     let turner = TurnManager::new(NUMBER_OF_ACTIONS,
                                   vec![Faction::Red, Faction::Blue],

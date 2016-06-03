@@ -42,7 +42,6 @@ impl TargetSelector {
         queue.push(AttackWithUnit(self.pos, selected));
         queue.push(UnitSpent(self.pos));
         queue.push(Deselect);
-        queue.push(ShowCursor);
     }
 
     fn cancel<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {

@@ -10,7 +10,7 @@ use common::{State, Message};
 use faction::Faction;
 use grid::{Grid, Terrain};
 use menus::ModalMenu;
-use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
+use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
 
 pub struct GridManager {
@@ -18,6 +18,7 @@ pub struct GridManager {
     tile_size: (u32, u32),
     selected: Option<(u32, u32)>,
     showing_range_of: Option<(u32, u32)>,
+    cursor: CursorManager,
     health_labels: LruCache<u32, Label>,
 }
 
@@ -30,6 +31,10 @@ impl GridManager {
             tile_size: tile_size,
             selected: None,
             showing_range_of: None,
+            cursor: CursorManager {
+                pos: (0, 0),
+                hidden: false,
+            },
             health_labels: LruCache::with_expiry_duration(expiry_duration),
         }
     }
@@ -48,7 +53,7 @@ impl GridManager {
             .map(|(pos, _)| pos)
             .collect();
         let selector = TargetSelector::new(pos, origin, self.grid.size(), self.tile_size, targets);
-        queue.push(Message::HideCursor);
+        self.cursor.hidden = true;
         state.push_modal(Box::new(selector), queue);
     }
 
@@ -73,6 +78,8 @@ impl GridManager {
 
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
+        self.move_cursor_to(target);
+        self.cursor.hidden = true;
         let unit = self.grid.unit(target).expect("unreachable; failed to move unit");
 
         let mut options = Vec::with_capacity(2);
@@ -96,30 +103,24 @@ impl GridManager {
                 Some("Attack") => {
                     debug!("Attack!");
                     state.pop_modal(queue);
-                    queue.push(MoveCursorTo(target));
-                    queue.push(SelectTarget(origin, target));
+                    queue.push(AttackSelected(origin, target));
                 }
                 Some("Wait") => {
                     debug!("Wait!");
                     state.pop_modal(queue);
+                    // TODO
                     queue.push(UnitSpent(target));
-                    queue.push(Deselect);
-                    queue.push(MoveCursorTo(target));
-                    queue.push(ShowCursor);
+                    queue.push(WaitSelected);
                 }
                 None => {
                     debug!("Cancel!");
                     state.pop_modal(queue);
-                    queue.push(MoveUnit(target, origin));
-                    queue.push(MoveCursorTo(origin));
-                    queue.push(SelectUnit(origin));
-                    queue.push(ShowCursor);
+                    queue.push(CancelSelected(origin, target));
                 }
                 _ => unreachable!(),
             }
         })
             .expect("could not create menu");
-        queue.push(HideCursor);
         state.push_modal(Box::new(menu), queue);
     }
 
@@ -178,6 +179,13 @@ impl GridManager {
         }
     }
 
+    fn deselect(&mut self) {
+        assert!(self.selected.is_some(),
+                "received deselect with no unit selected");
+        self.selected = None;
+        self.cursor.hidden = false;
+    }
+
     /// Returns the grid position of a window position.
     fn window_to_grid(&self, x: i32, y: i32) -> (u32, u32) {
         assert!(x >= 0 && y >= 0);
@@ -186,6 +194,12 @@ impl GridManager {
         let col = (x as u32 - (x as u32 % w)) / w;
         let row = rows - 1 - (y as u32 - (y as u32 % h)) / h;
         (col, row)
+    }
+
+    fn move_cursor_to(&mut self, pos: (u32, u32)) {
+        let (w, h) = self.grid.size();
+        assert!(pos.0 < w && pos.1 < h);
+        self.cursor.pos = pos;
     }
 }
 
@@ -196,8 +210,14 @@ impl<'a> Behavior<State<'a>> for GridManager {
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
         match message {
-            CursorConfirm(pos) => {
-                self.confirm(pos, state, queue);
+            // Input
+            Confirm => {
+                let cursor = self.cursor.pos;
+                self.confirm(cursor, state, queue);
+            }
+            Cancel => {
+                let cursor = self.cursor.pos;
+                self.cancel(cursor);
             }
             LeftClickAt(x, y) => {
                 let pos = self.window_to_grid(x, y);
@@ -207,34 +227,52 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let pos = self.window_to_grid(x, y);
                 self.cancel(pos);
             }
-            RightReleasedAt(_, _) => {
-                self.cancel_release();
-            }
-            CursorCancel(pos) => {
-                self.cancel(pos);
-            }
+            RightReleasedAt(_, _) |
             CancelReleased => {
                 self.cancel_release();
             }
+            MoveCursorUp => {
+                self.cursor.move_up(self.grid.size());
+            }
+            MoveCursorDown => {
+                self.cursor.move_down(self.grid.size());
+            }
+            MoveCursorLeft => {
+                self.cursor.move_left(self.grid.size());
+            }
+            MoveCursorRight => {
+                self.cursor.move_right(self.grid.size());
+            }
+
+            // Modal messages
+            AttackSelected(pos, target) => {
+                // self.cursor.pos = target;
+                self.select_target(pos, target, state, queue);
+            }
+            WaitSelected => {
+                // self.cursor.pos = target;
+                self.deselect();
+                self.cursor.hidden = false;
+            }
+            CancelSelected(pos, target) => {
+                self.grid.move_unit(target, pos);
+                self.move_cursor_to(pos);
+                self.cursor.hidden = false;
+                self.select_unit(pos, state, queue);
+            }
+
+            // State changes
             UnitSpent(pos) => {
                 self.grid
                     .unit_mut(pos)
                     .expect("no unit to mark as spent")
                     .spent = true;
             }
+            Deselect => {
+                self.deselect();
+            }
             MoveUnit(from, to) => {
                 self.grid.move_unit(from, to);
-            }
-            SelectUnit(pos) => {
-                self.select_unit(pos, state, queue);
-            }
-            Deselect => {
-                assert!(self.selected.is_some(),
-                        "received deselect with no unit selected");
-                self.selected = None;
-            }
-            SelectTarget(origin, pos) => {
-                self.select_target(origin, pos, state, queue);
             }
             MoveUnitAndAct(origin, destination) => {
                 self.move_unit_and_act(origin, destination, state, queue);
@@ -265,6 +303,15 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 for unit in self.grid.units_mut() {
                     unit.spent = false;
                 }
+            }
+
+            MouseMovedTo(x, y) => {
+                assert!(x >= 0 && y >= 0);
+                let (tw, th) = self.tile_size;
+                let (_, h) = self.grid.size();
+                let x = x as u32 / tw;
+                let y = h - 1 - (y as u32) / th;
+                self.move_cursor_to((x, y));
             }
             _ => {}
         }
@@ -332,6 +379,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                     label.render(renderer, lx, ly);
                 }
+
+                if self.cursor.pos == (col, row) {
+                    self.cursor.render(rect, state, renderer);
+                }
             }
         }
 
@@ -357,10 +408,61 @@ impl<'a> Behavior<State<'a>> for GridManager {
 impl Debug for GridManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GridManager")
+            .field("grid", &(..))
             .field("tile_size", &self.tile_size)
             .field("selected", &self.selected)
             .field("showing_range_of", &self.showing_range_of)
+            .field("cursor", &self.cursor)
             .field("health_labels", &(..))
             .finish()
+    }
+}
+
+// TODO: This organization is awkward.
+
+#[derive(Clone, Debug)]
+struct CursorManager {
+    pos: (u32, u32),
+    hidden: bool,
+}
+
+impl CursorManager {
+    #[inline]
+    fn move_up(&mut self, size: (u32, u32)) {
+        if self.pos.1 < size.1 {
+            self.pos.1 += 1;
+        }
+    }
+
+    #[inline]
+    fn move_down(&mut self, size: (u32, u32)) {
+        if self.pos.1 > 0 {
+            self.pos.1 -= 1;
+        }
+    }
+
+    #[inline]
+    fn move_left(&mut self, size: (u32, u32)) {
+        if self.pos.0 > 0 {
+            self.pos.0 -= 1;
+        }
+    }
+
+    #[inline]
+    fn move_right(&mut self, size: (u32, u32)) {
+        if self.pos.0 < size.0 {
+            self.pos.0 += 1;
+        }
+    }
+
+    fn render<'a>(&self, rect: Rect, state: &State<'a>, renderer: &mut Renderer) {
+        if self.hidden {
+            return;
+        }
+        let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
+        sprite.render(renderer,
+                      rect.x(),
+                      rect.y(),
+                      Some((rect.width(), rect.height())));
     }
 }
