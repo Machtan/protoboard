@@ -206,7 +206,7 @@ impl GridManager {
     #[inline]
     fn move_cursor_up(&mut self, size: (u32, u32)) {
         let (x, y) = self.cursor;
-        if y < size.1 {
+        if y < size.1 - 1 {
             self.move_cursor_to((x, y + 1), size);
         }
     }
@@ -230,7 +230,7 @@ impl GridManager {
     #[inline]
     fn move_cursor_right(&mut self, size: (u32, u32)) {
         let (x, y) = self.cursor;
-        if x < size.0 {
+        if x < size.0 - 1 {
             self.move_cursor_to((x + 1, y), size);
         }
     }
