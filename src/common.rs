@@ -26,6 +26,7 @@ pub enum Message {
     RightClickAt(i32, i32),
     RightReleasedAt(i32, i32),
     MouseMovedTo(i32, i32),
+    MouseScroll(i32, i32),
 
     Deselect,
     UnitSpent((u32, u32)),

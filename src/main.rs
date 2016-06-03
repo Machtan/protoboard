@@ -232,6 +232,11 @@ pub fn main() {
         MouseMotion { x, y, .. },
         MouseMovedTo((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
+    // TODO: Does this work in high-DPI mode?
+    mapper.add(map_event!(
+        MouseWheel { x, y, .. },
+        MouseScroll(x, y)
+    ));
 
     // Run the main loop.
 

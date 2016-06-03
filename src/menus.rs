@@ -10,6 +10,8 @@ use sdl2_ttf::Font;
 use common::{Message, State};
 
 const PAD: u32 = 10;
+// TODO: Tune this for different platforms/hardware.
+const SCROLL_TRESHOLD: i32 = 8;
 
 pub struct ModalMenu<F>
     where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
@@ -21,6 +23,7 @@ pub struct ModalMenu<F>
     handler: F,
     selected: usize,
     confirm_areas: Vec<Rect>,
+    amount_scrolled: i32,
 }
 
 impl<F> ModalMenu<F>
@@ -67,6 +70,7 @@ impl<F> ModalMenu<F>
             options: labels,
             handler: handler,
             confirm_areas: confirm_areas,
+            amount_scrolled: 0,
         })
     }
 
@@ -100,6 +104,20 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
             }
             MoveCursorUp => {
                 self.selected = (self.selected + self.options.len() - 1) % self.options.len();
+            }
+            MouseScroll(_relx, rely) => {
+                // Reset on new direction
+                if rely > 0 && self.amount_scrolled < 0 || rely < 0 && self.amount_scrolled > 0 {
+                    self.amount_scrolled = 0;
+                }
+                self.amount_scrolled += rely;
+                if self.amount_scrolled >= SCROLL_TRESHOLD {
+                    self.selected = cmp::min(self.selected + 1, self.options.len() - 1);
+                    self.amount_scrolled = 0;
+                } else if self.amount_scrolled <= -SCROLL_TRESHOLD {
+                    self.selected = self.selected.saturating_sub(1);
+                    self.amount_scrolled = 0;
+                }
             }
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) => {
