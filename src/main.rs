@@ -18,6 +18,7 @@ use std::rc::Rc;
 use glorious::{BoxedInputMapper, Game, Renderer, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
+use sdl2::render::BlendMode;
 use sdl2_image::{INIT_JPG, INIT_PNG};
 
 use resources::{ARCHER_PATH, FIRA_SANS_PATH, PROTECTOR_PATH, RACCOON_PATH, WARRIOR_PATH};
@@ -99,6 +100,7 @@ pub fn main() {
     let (w, h) = window.size();
     let (pw, ph) = window.drawable_size();
     let mut renderer = window.renderer().build().unwrap();
+    renderer.set_blend_mode(BlendMode::Blend);
     let _ = renderer.set_logical_size(w, h);
 
     let renderer = Renderer::new(renderer);

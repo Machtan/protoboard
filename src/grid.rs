@@ -168,11 +168,6 @@ impl Grid {
         }
     }
 
-    /// Finds the tiles that the unit at the given position can attack.
-    pub fn tiles_in_range(&self, pos: (u32, u32)) -> TilesInRange {
-        self.unit(pos).expect("No unit for range check!").tiles_in_attack_range(pos, self.size)
-    }
-
     /// Finds tiles attackable by the given unit if moved to the given position.
     pub fn find_attackable<'a>(&'a self, unit: &'a Unit, pos: (u32, u32)) -> FindAttackable<'a> {
         FindAttackable {
@@ -182,7 +177,7 @@ impl Grid {
         }
     }
 
-    pub fn path_finder<'a>(&self, pos: (u32, u32)) -> PathFinder {
+    pub fn path_finder(&self, pos: (u32, u32)) -> PathFinder {
         let unit = self.unit(pos).expect("no unit to find path for");
         let mut to_be_searched = vec![(pos, 0u32)];
         let mut costs = BTreeMap::new();
@@ -276,6 +271,27 @@ impl PathFinder {
                 for (target, _) in grid.find_attackable(unit, pos) {
                     res.insert(target);
                 }
+            }
+            res
+        }
+    }
+
+    pub fn tiles_in_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
+        let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
+
+        // TODO: Alliances? Neutrals?
+        let filter = &|pos| grid.unit(pos).map_or(true, |u| u.faction != unit.faction);
+
+        if unit.unit_type().attack.is_ranged() {
+            unit.tiles_in_attack_range(self.origin, grid.size()).filter(|&p| filter(p)).collect()
+        } else {
+            // TODO: Somewhat ineffective algorithm.
+            let mut res = BTreeSet::new();
+            for &pos in self.costs.keys() {
+                if grid.unit(pos).is_some() {
+                    continue;
+                }
+                res.extend(unit.tiles_in_attack_range(pos, grid.size()).filter(|&p| filter(p)));
             }
             res
         }

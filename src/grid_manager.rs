@@ -5,7 +5,6 @@ use std::time::Duration;
 use glorious::{Behavior, Label, Renderer, Sprite};
 use lru_time_cache::LruCache;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
@@ -36,7 +35,6 @@ pub struct GridManager {
 }
 
 impl GridManager {
-    #[inline]
     pub fn new() -> GridManager {
         let expiry_duration = Duration::from_millis(100);
         GridManager {
@@ -160,10 +158,8 @@ impl GridManager {
         let target = self.cursor;
         if self.selected.is_some() {
             self.move_selected_unit_and_act(target, state, queue);
-        } else {
-            if state.grid.unit(target).is_some() {
-                self.select_unit(target, state, queue);
-            }
+        } else if state.grid.unit(target).is_some() {
+            self.select_unit(target, state, queue);
         }
     }
 
@@ -173,7 +169,7 @@ impl GridManager {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
             let path_finder = state.grid.path_finder(self.cursor);
-            let attackable = path_finder.find_all_attackable(&state.grid);
+            let attackable = path_finder.tiles_in_attack_range(&state.grid);
             self.showing_range_of = Some(ShowingRangeOf {
                 pos: self.cursor,
                 path_finder: path_finder,
@@ -374,8 +370,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
         let (cols, rows) = state.grid.size();
         for col in 0..cols {
             for row in 0..rows {
-                let rect = state.tile_rect((col, row));
-                let (unit, terrain) = state.grid.tile((col, row));
+                let pos = (col, row);
+
+                let rect = state.tile_rect(pos);
+                let (unit, terrain) = state.grid.tile(pos);
 
                 match *terrain {
                     Terrain::Grass => {
@@ -394,25 +392,37 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     }
                 }
 
-                if let Some(unit) = unit {
-                    let is_selected =
-                        self.selected.as_ref().map(|s| s.pos == (col, row)).unwrap_or(false);
-                    let color = if is_selected {
-                        Color::RGB(244, 237, 129)
-                    } else if unit.spent {
-                        match unit.faction {
-                            Faction::Red => Color::RGB(150, 43, 43),
-                            Faction::Blue => Color::RGB(65, 120, 140),
+                let color = self.selected
+                    .as_ref()
+                    .and_then(|s| {
+                        if s.pos == pos {
+                            Some(Color::RGBA(244, 237, 129, 191))
+                        } else {
+                            None
                         }
-                    } else {
-                        match unit.faction {
-                            Faction::Red => Color::RGB(220, 100, 100),
-                            Faction::Blue => Color::RGB(100, 180, 220),
-                        }
-                    };
+                    })
+                    .or_else(|| {
+                        unit.as_ref().and_then(|u| {
+                            if u.spent {
+                                match u.faction {
+                                    Faction::Red => Some(Color::RGBA(150, 65, 65, 191)),
+                                    Faction::Blue => Some(Color::RGBA(65, 120, 140, 191)),
+                                }
+                            } else {
+                                match u.faction {
+                                    Faction::Red => Some(Color::RGBA(255, 100, 100, 191)),
+                                    Faction::Blue => Some(Color::RGBA(100, 180, 220, 191)),
+                                }
+                            }
+                        })
+                    });
 
+                if let Some(color) = color {
                     renderer.set_draw_color(color);
                     renderer.fill_rect(rect).unwrap();
+                }
+
+                if let Some(unit) = unit {
                     let sprite = Sprite::new(unit.texture(), None);
                     sprite.render_rect(renderer, rect);
 
@@ -434,38 +444,15 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     label.render(renderer, lx, ly);
                 }
 
+                if let Some(ref showing_range_of) = self.showing_range_of {
+                    if showing_range_of.attackable.contains(&pos) {
+                        renderer.set_draw_color(Color::RGBA(255, 100, 100, 127));
+                        renderer.fill_rect(rect).unwrap();
+                    }
+                }
                 if self.cursor == (col, row) && !self.cursor_hidden {
                     let sprite = Sprite::new(state.resources.texture(MARKER_PATH), None);
                     sprite.render_rect(renderer, rect);
-                }
-            }
-        }
-
-        // TODO: Just pre-compute the units to be highlighted, and
-        // render it above, as yet another alternative background colour.
-        if let Some(ref showing_range_of) = self.showing_range_of {
-            let target_color = Color::RGB(252, 223, 80);
-            renderer.set_draw_color(target_color);
-            for in_range in state.grid.tiles_in_range(showing_range_of.pos) {
-                let rect = state.tile_rect(in_range);
-                renderer.fill_rect(rect).unwrap();
-
-                if let Some(unit) = state.grid.unit(in_range) {
-                    let sprite = Sprite::new(unit.texture(), None);
-                    sprite.render_rect(renderer, rect);
-                }
-            }
-            if state.config.debug_movement {
-                renderer.set_draw_color(Color::RGB(0, 255, 255));
-                let path_finder = &showing_range_of.path_finder;
-                for (&target, &cost) in &path_finder.costs {
-                    let rect = state.tile_rect(target);
-                    let rh = ((rect.height() - 5) as f32 * (cost as f32 / 10.0)) as u32;
-                    let rect = Rect::new(rect.x() + 5,
-                                         rect.y() + rect.height() as i32 - rh as i32,
-                                         rect.width() - 10,
-                                         rh);
-                    renderer.fill_rect(rect).unwrap();
                 }
             }
         }
