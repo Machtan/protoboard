@@ -152,7 +152,7 @@ pub fn main() {
     let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
         let dist = cmp::min(y, N_ROWS - 1 - y);
         match dist {
-            3 if x % 3 < 2 => Terrain::Mountain,
+            5 if x % 3 < 2 => Terrain::Mountain,
             _ => {
                 if rng.next_f32() < 0.2 {
                     Terrain::Woods
@@ -171,12 +171,12 @@ pub fn main() {
             let index = i as usize % unit_types.len();
             unit_types[index].clone()
         };
-        grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 1));
+        grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 3));
     }
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 0));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 1, 0));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 0));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 1, 0));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 4, 2));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 2));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 2));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 2, 2));
 
     let mut state = State::new(resources, grid, TILE_SIZE, NUMBER_OF_ACTIONS, config);
 

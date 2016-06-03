@@ -3,12 +3,15 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use glorious::{Behavior, Label, Renderer};
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use sdl2_ttf::Font;
 
 use common::{Message, State};
 use faction::Faction;
 
-const TEXT_COLOR: (u8, u8, u8, u8) = (0, 0, 0, 255);
+const BG_COLOR: (u8, u8, u8, u8) = (0, 0, 0, 0x77);
+const TEXT_COLOR: (u8, u8, u8, u8) = (0xff, 0xff, 0xff, 0xff);
 const POS: (i32, i32) = (400, 50);
 
 #[derive(Debug)]
@@ -112,7 +115,14 @@ impl<'a> Behavior<State<'a>> for TurnManager {
         // Render which faction's turn it is.
         // Render the amount of actions left somewhere.
         let (x, y) = POS;
+
         let right = x + self.faction_label.width() as i32;
+
+        let rect = Rect::new(x - 5, y, 200, 50);
+        let (r, g, b, a) = BG_COLOR;
+        renderer.set_draw_color(Color::RGBA(r, g, b, a));
+        renderer.fill_rect(rect).unwrap();
+
         self.faction_label.render(renderer, x, y);
         self.faction_labels
             .get_mut(&state.current_turn)

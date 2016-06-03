@@ -407,13 +407,13 @@ impl<'a> Behavior<State<'a>> for GridManager {
                         unit.as_ref().and_then(|u| {
                             if u.spent {
                                 match u.faction {
-                                    Faction::Red => Some(Color::RGBA(150, 65, 65, 191)),
-                                    Faction::Blue => Some(Color::RGBA(65, 120, 140, 191)),
+                                    Faction::Red => Some(Color::RGBA(150, 65, 65, 127)),
+                                    Faction::Blue => Some(Color::RGBA(65, 120, 140, 127)),
                                 }
                             } else {
                                 match u.faction {
-                                    Faction::Red => Some(Color::RGBA(255, 100, 100, 191)),
-                                    Faction::Blue => Some(Color::RGBA(100, 180, 220, 191)),
+                                    Faction::Red => Some(Color::RGBA(255, 100, 100, 127)),
+                                    Faction::Blue => Some(Color::RGBA(100, 180, 220, 127)),
                                 }
                             }
                         })
