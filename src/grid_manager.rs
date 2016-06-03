@@ -12,9 +12,10 @@ use grid::Terrain;
 use menus::ModalMenu;
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
+use unit::PathFinder;
 
 pub struct GridManager {
-    selected: Option<(u32, u32)>,
+    selected: Option<((u32, u32), PathFinder)>,
     showing_range_of: Option<(u32, u32)>,
     cursor: (u32, u32),
     cursor_hidden: bool,
@@ -42,6 +43,7 @@ impl GridManager {
                          state: &mut State<'a>,
                          queue: &mut Vec<Message>) {
         debug!("Selecting target...");
+        assert!(self.selected.is_some());
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
             state.grid
@@ -56,20 +58,28 @@ impl GridManager {
 
     /// Moves the selected unit from origin to target and opens up the action menu.
     /// If the menu is cancelled, the unit moves back.
-    fn move_unit_and_act<'a>(&mut self,
-                             origin: (u32, u32),
-                             target: (u32, u32),
-                             state: &mut State<'a>,
-                             queue: &mut Vec<Message>) {
+    fn move_selected_unit_and_act<'a>(&mut self,
+                                      target: (u32, u32),
+                                      state: &mut State<'a>,
+                                      queue: &mut Vec<Message>) {
         use common::Message::*;
 
-        assert!(self.selected == Some(origin),
-                "the moved unit is not selected");
+        let origin = {
+            let (origin, ref mut path_finder) =
+                *self.selected.as_mut().expect("no unit was selected");
 
-        if target != origin && state.grid.unit(target).is_some() {
-            // TODO: Beep!
-            return;
-        }
+            if target != origin && state.grid.unit(target).is_some() {
+                // TODO: Beep!
+                return;
+            }
+
+            if !path_finder.costs.contains_key(&target) {
+                info!("Cannot move outside movement range!");
+                // TODO: Beep!
+                return;
+            }
+            origin
+        };
 
         state.grid.move_unit(origin, target);
 
@@ -130,20 +140,17 @@ impl GridManager {
         let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
             debug!("Unit at {:?} selected!", pos);
-            self.selected = Some(pos);
+            self.selected = Some((pos, unit.path_finder(pos, state)));
         }
     }
 
     /// Handles a confirm press at the given target tile when a unit is selected.
     fn confirm(&mut self, target: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
-        match self.selected {
-            Some(origin) => {
-                self.move_unit_and_act(origin, target, state, queue);
-            }
-            None => {
-                if state.grid.unit(target).is_some() {
-                    self.select_unit(target, state, queue);
-                }
+        if self.selected.is_some() {
+            self.move_selected_unit_and_act(target, state, queue);
+        } else {
+            if state.grid.unit(target).is_some() {
+                self.select_unit(target, state, queue);
             }
         }
     }
@@ -285,6 +292,13 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.select_unit(pos, state, queue);
             }
 
+            TargetSelectorCanceled(pos) => {
+                let origin = self.selected.as_ref().expect("a unit must be selected here!").0;
+                // TODO: We cancel, just to move back.
+                state.grid.move_unit(pos, origin);
+                self.move_selected_unit_and_act(pos, state, queue);
+            }
+
             // State changes
             UnitSpent(pos) => {
                 state.grid
@@ -294,12 +308,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             Deselect => {
                 self.deselect();
-            }
-            MoveUnit(from, to) => {
-                state.grid.move_unit(from, to);
-            }
-            MoveUnitAndAct(origin, destination) => {
-                self.move_unit_and_act(origin, destination, state, queue);
             }
             AttackWithUnit(pos, target) => {
                 let destroyed = {
@@ -363,7 +371,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
 
                 if let Some(unit) = unit {
-                    let color = if self.selected == Some((col, row)) {
+                    let is_selected =
+                        self.selected.as_ref().map(|&(pos, _)| pos == (col, row)).unwrap_or(false);
+                    let color = if is_selected {
                         Color::RGB(244, 237, 129)
                     } else if unit.spent {
                         match unit.faction {

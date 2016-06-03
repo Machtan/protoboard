@@ -38,8 +38,7 @@ impl TargetSelector {
     fn cancel<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         use common::Message::*;
         state.break_modal(queue);
-        queue.push(MoveUnit(self.pos, self.origin));
-        queue.push(MoveUnitAndAct(self.origin, self.pos));
+        queue.push(TargetSelectorCanceled(self.pos));
     }
 }
 

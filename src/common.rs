@@ -29,8 +29,6 @@ pub enum Message {
 
     Deselect,
     UnitSpent((u32, u32)),
-    MoveUnit((u32, u32), (u32, u32)),
-    MoveUnitAndAct((u32, u32), (u32, u32)),
     AttackWithUnit((u32, u32), (u32, u32)),
 
     ApplyOneModal,
@@ -38,6 +36,8 @@ pub enum Message {
     AttackSelected((u32, u32), (u32, u32)),
     WaitSelected,
     CancelSelected((u32, u32), (u32, u32)),
+
+    TargetSelectorCanceled((u32, u32)),
 
     Exit,
 }
