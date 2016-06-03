@@ -202,34 +202,43 @@ impl GridManager {
 
     fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
         assert!(pos.0 < size.0 && pos.1 < size.1);
+        if let Some((_, ref mut path_finder)) = self.selected {
+            if !path_finder.costs.contains_key(&pos) {
+                return;
+            }
+        }
         self.cursor = pos;
     }
 
     #[inline]
     fn move_cursor_up(&mut self, size: (u32, u32)) {
-        if self.cursor.1 < size.1 {
-            self.cursor.1 += 1;
+        let (x, y) = self.cursor;
+        if y < size.1 {
+            self.move_cursor_to((x, y + 1), size);
         }
     }
 
     #[inline]
-    fn move_cursor_down(&mut self, _size: (u32, u32)) {
-        if self.cursor.1 > 0 {
-            self.cursor.1 -= 1;
+    fn move_cursor_down(&mut self, size: (u32, u32)) {
+        let (x, y) = self.cursor;
+        if y > 0 {
+            self.move_cursor_to((x, y - 1), size);
         }
     }
 
     #[inline]
-    fn move_cursor_left(&mut self, _size: (u32, u32)) {
-        if self.cursor.0 > 0 {
-            self.cursor.0 -= 1;
+    fn move_cursor_left(&mut self, size: (u32, u32)) {
+        let (x, y) = self.cursor;
+        if x > 0 {
+            self.move_cursor_to((x - 1, y), size);
         }
     }
 
     #[inline]
     fn move_cursor_right(&mut self, size: (u32, u32)) {
-        if self.cursor.0 < size.0 {
-            self.cursor.0 += 1;
+        let (x, y) = self.cursor;
+        if x < size.0 {
+            self.move_cursor_to((x + 1, y), size);
         }
     }
 }
