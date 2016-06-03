@@ -7,6 +7,7 @@ use unit::{TilesInRange, Unit};
 #[derive(Clone, Debug)]
 pub enum Terrain {
     Grass,
+    Woods,
     Mountain,
 }
 

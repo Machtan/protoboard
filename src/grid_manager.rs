@@ -375,21 +375,23 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let rect = state.tile_rect(pos);
                 let (unit, terrain) = state.grid.tile(pos);
 
-                match *terrain {
-                    Terrain::Grass => {
-                        if (col + row) % 2 == 0 {
-                            renderer.set_draw_color(Color::RGB(110, 210, 110));
-                        } else {
-                            renderer.set_draw_color(Color::RGB(155, 255, 155));
-                        }
-                        // TODO: When can `fill_rect` fail?
-                        renderer.fill_rect(rect).unwrap();
-                    }
-                    Terrain::Mountain => {
-                        let texture = state.resources.texture("assets/mountains.png");
-                        let sprite = Sprite::new(texture, None);
-                        sprite.render_rect(renderer, rect);
-                    }
+                if (col + row) % 2 == 0 {
+                    renderer.set_draw_color(Color::RGB(110, 210, 110));
+                } else {
+                    renderer.set_draw_color(Color::RGB(155, 255, 155));
+                }
+                // TODO: When can `fill_rect` fail?
+                renderer.fill_rect(rect).unwrap();
+
+                let texture_path = match *terrain {
+                    Terrain::Grass => None,
+                    Terrain::Mountain => Some("assets/mountains.png"),
+                    Terrain::Woods => Some("assets/woods.png"),
+                };
+                if let Some(path) = texture_path {
+                    let texture = state.resources.texture(path);
+                    let sprite = Sprite::new(texture, None);
+                    sprite.render_rect(renderer, rect);
                 }
 
                 let color = self.selected

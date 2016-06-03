@@ -4,6 +4,7 @@ extern crate env_logger;
 #[macro_use]
 extern crate log;
 extern crate lru_time_cache;
+extern crate rand;
 
 #[macro_use]
 extern crate glorious;
@@ -16,6 +17,7 @@ use std::env;
 use std::rc::Rc;
 
 use glorious::{BoxedInputMapper, Game, Renderer, ResourceManager};
+use rand::Rng;
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2::render::BlendMode;
@@ -145,12 +147,19 @@ pub fn main() {
     // Set up game state.
 
     let config = Config { debug_movement: debug_movement };
+    let mut rng = rand::thread_rng();
 
     let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
         let dist = cmp::min(y, N_ROWS - 1 - y);
         match dist {
             3 if x % 3 < 2 => Terrain::Mountain,
-            _ => Terrain::Grass,
+            _ => {
+                if rng.next_f32() < 0.2 {
+                    Terrain::Woods
+                } else {
+                    Terrain::Grass
+                }
+            }
         }
     });
 
