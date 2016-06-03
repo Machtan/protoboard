@@ -109,11 +109,15 @@ impl GridManager {
             options
         };
 
+        // Clicking the unit confirms too :)
+        let extra_confirm_areas = vec![state.tile_rect(target)];
+
         let menu = ModalMenu::new(options.iter().map(|&s| s.to_owned()),
                                   0,
                                   (50, 50),
                                   state.resources.font(FIRA_SANS_PATH, 16),
                                   state,
+                                  extra_confirm_areas,
                                   move |option, state, queue| {
             match option {
                 Some("Attack") => {

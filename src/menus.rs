@@ -20,6 +20,7 @@ pub struct ModalMenu<F>
     options: Vec<Label>,
     handler: F,
     selected: usize,
+    confirm_areas: Vec<Rect>,
 }
 
 impl<F> ModalMenu<F>
@@ -30,6 +31,7 @@ impl<F> ModalMenu<F>
                   pos: (i32, i32),
                   font: Rc<Font>,
                   state: &State,
+                  confirm_areas: Vec<Rect>,
                   handler: F)
                   -> Result<ModalMenu<F>, String>
         where I: IntoIterator<Item = String>
@@ -64,6 +66,7 @@ impl<F> ModalMenu<F>
             selected: selected,
             options: labels,
             handler: handler,
+            confirm_areas: confirm_areas,
         })
     }
 
@@ -117,11 +120,17 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
                     }
                 }
 
-                if let LeftClickAt(..) = message {
+                if let LeftClickAt(x, y) = message {
                     if is_in_range {
                         self.confirm(state, queue);
                     } else {
-                        self.cancel(state, queue);
+                        let valid =
+                            self.confirm_areas.iter().find(|a| a.contains((x, y))).is_some();
+                        if valid {
+                            self.confirm(state, queue);
+                        } else {
+                            self.cancel(state, queue);
+                        }
                     }
                 }
             }
