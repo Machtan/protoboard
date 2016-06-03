@@ -280,11 +280,8 @@ impl PathFinder {
     pub fn tiles_in_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
         let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
 
-        // TODO: Alliances? Neutrals?
-        let filter = &|pos| grid.unit(pos).map_or(true, |u| u.faction != unit.faction);
-
         if unit.unit_type().attack.is_ranged() {
-            unit.tiles_in_attack_range(self.origin, grid.size()).filter(|&p| filter(p)).collect()
+            unit.tiles_in_attack_range(self.origin, grid.size()).collect()
         } else {
             // TODO: Somewhat ineffective algorithm.
             let mut res = BTreeSet::new();
@@ -292,7 +289,7 @@ impl PathFinder {
                 if pos != self.origin && grid.unit(pos).is_some() {
                     continue;
                 }
-                res.extend(unit.tiles_in_attack_range(pos, grid.size()).filter(|&p| filter(p)));
+                res.extend(unit.tiles_in_attack_range(pos, grid.size()));
             }
             res
         }
