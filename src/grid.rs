@@ -289,7 +289,7 @@ impl PathFinder {
             // TODO: Somewhat ineffective algorithm.
             let mut res = BTreeSet::new();
             for &pos in self.costs.keys() {
-                if grid.unit(pos).is_some() {
+                if pos != self.origin && grid.unit(pos).is_some() {
                     continue;
                 }
                 res.extend(unit.tiles_in_attack_range(pos, grid.size()).filter(|&p| filter(p)));
