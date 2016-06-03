@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 use std::time::Duration;
 
@@ -8,15 +9,27 @@ use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
-use grid::Terrain;
+use grid::{PathFinder, Terrain};
 use menus::ModalMenu;
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
-use unit::PathFinder;
+
+#[derive(Debug)]
+struct Selected {
+    pos: (u32, u32),
+    path_finder: PathFinder,
+}
+
+#[derive(Debug)]
+struct ShowingRangeOf {
+    pos: (u32, u32),
+    path_finder: PathFinder,
+    attackable: BTreeSet<(u32, u32)>,
+}
 
 pub struct GridManager {
-    selected: Option<((u32, u32), PathFinder)>,
-    showing_range_of: Option<(u32, u32)>,
+    selected: Option<Selected>,
+    showing_range_of: Option<ShowingRangeOf>,
     cursor: (u32, u32),
     cursor_hidden: bool,
     health_labels: LruCache<u32, Label>,
@@ -65,15 +78,14 @@ impl GridManager {
         use common::Message::*;
 
         let origin = {
-            let (origin, ref path_finder) = *self.selected.as_ref().expect("no unit was selected");
+            let selected = self.selected.as_ref().expect("no unit was selected");
 
-            if target != origin && state.grid.unit(target).is_some() {
+            if target != selected.pos && state.grid.unit(target).is_some() {
                 // TODO: Beep!
                 return;
             }
-
-            assert!(path_finder.costs.contains_key(&target));
-            origin
+            assert!(selected.path_finder.costs.contains_key(&target));
+            selected.pos
         };
 
         state.grid.move_unit(origin, target);
@@ -135,7 +147,11 @@ impl GridManager {
         let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
             debug!("Unit at {:?} selected!", pos);
-            self.selected = Some((pos, unit.path_finder(pos, state)));
+            let path_finder = state.grid.path_finder(pos);
+            self.selected = Some(Selected {
+                pos: pos,
+                path_finder: path_finder,
+            });
         }
     }
 
@@ -156,15 +172,19 @@ impl GridManager {
         if self.selected.is_some() {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
-            self.showing_range_of = Some(self.cursor);
+            let path_finder = state.grid.path_finder(self.cursor);
+            let attackable = path_finder.find_all_attackable(&state.grid);
+            self.showing_range_of = Some(ShowingRangeOf {
+                pos: self.cursor,
+                path_finder: path_finder,
+                attackable: attackable,
+            });
         }
     }
 
     /// Handles the release of the cancel button.
     fn cancel_release(&mut self) {
-        if self.showing_range_of.is_some() {
-            self.showing_range_of = None;
-        }
+        self.showing_range_of = None;
     }
 
     /// Destroys the unit on the given tile.
@@ -195,8 +215,8 @@ impl GridManager {
 
     fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
         assert!(pos.0 < size.0 && pos.1 < size.1);
-        if let Some((_, ref mut path_finder)) = self.selected {
-            if !path_finder.costs.contains_key(&pos) {
+        if let Some(ref selected) = self.selected {
+            if !selected.path_finder.costs.contains_key(&pos) {
                 return;
             }
         }
@@ -285,7 +305,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
 
             TargetSelectorCanceled(pos) => {
-                let origin = self.selected.as_ref().expect("a unit must be selected here!").0;
+                let origin = self.selected.as_ref().expect("a unit must be selected here!").pos;
                 // TODO: We cancel, just to move back.
                 state.grid.move_unit(pos, origin);
                 self.move_selected_unit_and_act(pos, state, queue);
@@ -376,7 +396,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                 if let Some(unit) = unit {
                     let is_selected =
-                        self.selected.as_ref().map(|&(pos, _)| pos == (col, row)).unwrap_or(false);
+                        self.selected.as_ref().map(|s| s.pos == (col, row)).unwrap_or(false);
                     let color = if is_selected {
                         Color::RGB(244, 237, 129)
                     } else if unit.spent {
@@ -423,10 +443,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
         // TODO: Just pre-compute the units to be highlighted, and
         // render it above, as yet another alternative background colour.
-        if let Some(pos) = self.showing_range_of {
+        if let Some(ref showing_range_of) = self.showing_range_of {
             let target_color = Color::RGB(252, 223, 80);
             renderer.set_draw_color(target_color);
-            for in_range in state.grid.tiles_in_range(pos) {
+            for in_range in state.grid.tiles_in_range(showing_range_of.pos) {
                 let rect = state.tile_rect(in_range);
                 renderer.fill_rect(rect).unwrap();
 
@@ -437,11 +457,8 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             if state.config.debug_movement {
                 renderer.set_draw_color(Color::RGB(0, 255, 255));
-                let path_finder = state.grid
-                    .unit(pos)
-                    .expect("no unit to show range for")
-                    .path_finder(pos, state);
-                for (target, cost) in path_finder.costs {
+                let path_finder = &showing_range_of.path_finder;
+                for (&target, &cost) in &path_finder.costs {
                     let rect = state.tile_rect(target);
                     let rh = ((rect.height() - 5) as f32 * (cost as f32 / 10.0)) as u32;
                     let rect = Rect::new(rect.x() + 5,

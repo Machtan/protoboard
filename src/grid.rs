@@ -1,3 +1,4 @@
+use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::{self, Debug};
 use std::mem;
 
@@ -181,12 +182,103 @@ impl Grid {
         }
     }
 
+    pub fn path_finder<'a>(&self, pos: (u32, u32)) -> PathFinder {
+        let unit = self.unit(pos).expect("no unit to find path for");
+        let mut to_be_searched = vec![(pos, 0u32)];
+        let mut costs = BTreeMap::new();
+        let (w, h) = self.size();
+
+        while let Some(((x, y), cost)) = to_be_searched.pop() {
+            let mut dir = 0;
+            loop {
+                let (dx, dy) = match dir {
+                    0 => (1, 0),
+                    1 => (0, 1),
+                    2 => (-1, 0),
+                    3 => (0, -1),
+                    _ => break,
+                };
+                dir += 1;
+
+                let nx = x as i32 + dx;
+                let ny = y as i32 + dy;
+
+                if nx < 0 || w as i32 <= nx || ny < 0 || h as i32 <= ny {
+                    continue;
+                }
+
+                let npos = (nx as u32, ny as u32);
+
+                let (other, terrain) = self.tile(npos);
+
+                // TODO: Alliances? Neutrals?
+                if let Some(other) = other {
+                    if other.faction != unit.faction {
+                        continue;
+                    }
+                }
+
+                let ncost = cost.saturating_add(unit.terrain_cost(terrain));
+
+                if ncost > unit.unit_type().movement {
+                    continue;
+                }
+
+                match costs.entry(npos) {
+                    btree_map::Entry::Vacant(entry) => {
+                        entry.insert(ncost);
+                    }
+                    btree_map::Entry::Occupied(mut entry) => {
+                        if *entry.get() > ncost {
+                            entry.insert(ncost);
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+                to_be_searched.push((npos, ncost));
+            }
+        }
+        PathFinder {
+            origin: pos,
+            costs: costs,
+        }
+    }
+
     #[inline]
     fn index(&self, pos: (u32, u32)) -> usize {
         let (x, y) = pos;
         let (w, h) = self.size;
         assert!(x < w && y < h);
         y as usize * w as usize + x as usize
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PathFinder {
+    origin: (u32, u32),
+    // TODO: Should probably be private.
+    pub costs: BTreeMap<(u32, u32), u32>,
+}
+
+impl PathFinder {
+    pub fn find_all_attackable(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
+        let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
+        if unit.unit_type().attack.is_ranged() {
+            grid.find_attackable(unit, self.origin).map(|(p, _)| p).collect()
+        } else {
+            // TODO: Somewhat ineffective algorithm.
+            let mut res = BTreeSet::new();
+            for &pos in self.costs.keys() {
+                if grid.unit(pos).is_some() {
+                    continue;
+                }
+                for (target, _) in grid.find_attackable(unit, pos) {
+                    res.insert(target);
+                }
+            }
+            res
+        }
     }
 }
 

@@ -1,10 +1,8 @@
-use std::collections::{btree_map, BTreeMap};
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 use sdl2::render::Texture;
 
-use common::State;
 use faction::Faction;
 use grid::Terrain;
 
@@ -28,6 +26,11 @@ impl Unit {
         }
     }
 
+    #[inline]
+    pub fn unit_type(&self) -> &UnitType {
+        &self.unit_type
+    }
+
     /// Returns the tiles in the attack range of this unit.
     pub fn tiles_in_attack_range(&self, pos: (u32, u32), grid_size: (u32, u32)) -> TilesInRange {
         self.unit_type.attack.tiles_in_range(pos, grid_size)
@@ -41,77 +44,12 @@ impl Unit {
         self.unit_type.attack.is_ranged()
     }
 
-    fn terrain_cost(&self, terrain: &Terrain) -> u32 {
+    pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
         match *terrain {
             Terrain::Grass => 1,
             Terrain::Mountain => 3,
         }
     }
-
-    pub fn path_finder<'a>(&self, pos: (u32, u32), state: &State<'a>) -> PathFinder {
-        let mut to_be_searched = vec![(pos, 0u32)];
-        let mut costs = BTreeMap::new();
-        let (w, h) = state.grid.size();
-
-        while let Some(((x, y), cost)) = to_be_searched.pop() {
-            let mut dir = 0;
-            loop {
-                let (dx, dy) = match dir {
-                    0 => (1, 0),
-                    1 => (0, 1),
-                    2 => (-1, 0),
-                    3 => (0, -1),
-                    _ => break,
-                };
-                dir += 1;
-
-                let nx = x as i32 + dx;
-                let ny = y as i32 + dy;
-
-                if nx < 0 || w as i32 <= nx || ny < 0 || h as i32 <= ny {
-                    continue;
-                }
-
-                let npos = (nx as u32, ny as u32);
-
-                let (unit, terrain) = state.grid.tile(npos);
-
-                // TODO: Alliances? Neutrals?
-                if let Some(unit) = unit {
-                    if unit.faction != self.faction {
-                        continue;
-                    }
-                }
-
-                let ncost = cost.saturating_add(self.terrain_cost(terrain));
-
-                if ncost > self.unit_type.movement {
-                    continue;
-                }
-
-                match costs.entry(npos) {
-                    btree_map::Entry::Vacant(entry) => {
-                        entry.insert(ncost);
-                    }
-                    btree_map::Entry::Occupied(mut entry) => {
-                        if *entry.get() > ncost {
-                            entry.insert(ncost);
-                        } else {
-                            continue;
-                        }
-                    }
-                }
-                to_be_searched.push((npos, ncost));
-            }
-        }
-        PathFinder { costs: costs }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct PathFinder {
-    // TODO: Should be private.
-    pub costs: BTreeMap<(u32, u32), u32>,
 }
 
 #[derive(Clone)]
