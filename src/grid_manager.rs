@@ -399,6 +399,8 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .and_then(|s| {
                         if s.pos == pos {
                             Some(Color::RGBA(244, 237, 129, 191))
+                        } else if s.path_finder.costs.contains_key(&pos) {
+                            Some(Color::RGBA(0, 255, 255, 127))
                         } else {
                             None
                         }
