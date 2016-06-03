@@ -50,7 +50,7 @@ pub enum ModalMessage<'a> {
 }
 
 pub struct State<'a> {
-    pub debug_config: DebugConfig,
+    pub config: Config,
     pub resources: ResourceManager<'a>,
     pub current_turn: Faction,
     pub actions_left: u32,
@@ -65,10 +65,10 @@ impl<'a> State<'a> {
                grid: Grid,
                tile_size: (u32, u32),
                actions_left: u32,
-               debug_config: DebugConfig)
+               config: Config)
                -> State<'a> {
         State {
-            debug_config: debug_config,
+            config: config,
             resources: resources,
             current_turn: Faction::Red,
             actions_left: actions_left,
@@ -131,8 +131,8 @@ impl<'a> State<'a> {
     }
 }
 
-pub struct DebugConfig {
-    pub movement: bool,
+pub struct Config {
+    pub debug_movement: bool,
 }
 
 pub trait BehaviorDebug<S>: Behavior<S> + Debug {}

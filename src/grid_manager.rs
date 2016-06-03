@@ -421,7 +421,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     sprite.render_rect(renderer, rect);
                 }
             }
-            if state.debug_config.movement {
+            if state.config.debug_movement {
                 renderer.set_draw_color(Color::RGB(0, 255, 255));
                 let path_finder = state.grid
                     .unit(pos)
