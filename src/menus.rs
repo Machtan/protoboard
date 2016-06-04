@@ -19,7 +19,7 @@ pub struct ModalMenu<F>
     pos: (i32, i32),
     width: u32,
     line_spacing: u32,
-    options: Vec<Label>,
+    options: Vec<(Label, String)>,
     handler: F,
     selected: usize,
     confirm_areas: Vec<Rect>,
@@ -47,13 +47,10 @@ impl<F> ModalMenu<F>
         let mut max_width = 0;
         let labels = options.into_iter()
             .map(|option| {
-                let label = Label::new(font.clone(),
-                                       option,
-                                       (0, 0, 0, 0),
-                                       state.resources.renderer());
+                let label = Label::new(&font, &option, (0, 0, 0, 0), &state.resources.renderer());
                 let (w, _) = label.size();
                 max_width = cmp::max(max_width, w);
-                label
+                (label, option)
             })
             .collect::<Vec<_>>();
 
@@ -75,12 +72,34 @@ impl<F> ModalMenu<F>
     }
 
     fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
-        let option = &self.options[self.selected];
-        (self.handler)(Some(option.text()), state, queue);
+        let (_, ref option) = self.options[self.selected];
+        (self.handler)(Some(option), state, queue);
     }
 
     fn cancel(&mut self, state: &mut State, queue: &mut Vec<Message>) {
         (self.handler)(None, state, queue);
+    }
+
+    fn render_options(&self, renderer: &mut Renderer) {
+        // This is just here to demonstrate, that mutable access to self
+        // is not needed.
+
+        let (sx, sy) = self.pos;
+        let height = PAD * 2 + self.line_spacing * self.options.len() as u32;
+
+        renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
+        renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
+        let mut y = sy + PAD as i32;
+        let x = sx + PAD as i32;
+        for (i, &(ref label, _)) in self.options.iter().enumerate() {
+            if i == self.selected {
+                renderer.set_draw_color(Color::RGB(255, 150, 0));
+                let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, self.line_spacing);
+                renderer.fill_rect(rect).unwrap();
+            }
+            label.render(renderer, x, y);
+            y += self.line_spacing as i32;
+        }
     }
 }
 
@@ -158,22 +177,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
 
     /// Renders the object.
     fn render(&mut self, _state: &State, renderer: &mut Renderer) {
-        let (sx, sy) = self.pos;
-        let height = PAD * 2 + self.line_spacing * self.options.len() as u32;
-
-        renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
-        renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
-        let mut y = sy + PAD as i32;
-        let x = sx + PAD as i32;
-        for (i, label) in self.options.iter_mut().enumerate() {
-            if i == self.selected {
-                renderer.set_draw_color(Color::RGB(255, 150, 0));
-                let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, self.line_spacing);
-                renderer.fill_rect(rect).unwrap();
-            }
-            label.render(renderer, x, y);
-            y += self.line_spacing as i32;
-        }
+        self.render_options(renderer);
     }
 }
 

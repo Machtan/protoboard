@@ -42,7 +42,7 @@ dependencies = [
 [[package]]
 name = "glorious"
 version = "0.2.0"
-source = "git+https://github.com/Machtan/glorious#5f022f3dddfc03865faa7f45957a200d47959349"
+source = "git+https://github.com/Machtan/glorious#5e2e4cf3b3a96e5b631cdfc593475cdcfa843234"
 dependencies = [
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2_image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",

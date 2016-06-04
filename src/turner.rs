@@ -35,30 +35,31 @@ impl TurnManager {
         let (_, scale_y) = state.resources.renderer().scale();
         let line_spacing = font.recommended_line_spacing();
         let line_spacing = (line_spacing as f32 / scale_y) as u32;
-        let faction_label = Label::new(font.clone(),
+        let faction_label = Label::new(&font,
                                        "Current faction:   ",
                                        TEXT_COLOR,
-                                       state.resources.renderer());
-        let actions_label = Label::new(font.clone(),
+                                       &state.resources.renderer());
+        let actions_label = Label::new(&font,
                                        "Actions left:",
                                        TEXT_COLOR,
-                                       state.resources.renderer());
+                                       &state.resources.renderer());
         let mut faction_labels = HashMap::new();
         for &faction in &factions {
-            let label = Label::new(font.clone(),
-                                   format!("{:?}", faction),
+            let label = Label::new(&font,
+                                   &format!("{:?}", faction),
                                    TEXT_COLOR,
-                                   state.resources.renderer());
+                                   &state.resources.renderer());
             faction_labels.insert(faction, label);
         }
         let mut number_labels = Vec::new();
         let mut max_width = 0;
         for number in 0..action_limit + 1 {
-            let label = Label::new(font.clone(),
-                                   format!("{}", number),
+            let label = Label::new(&font,
+                                   &format!("{}", number),
                                    TEXT_COLOR,
-                                   state.resources.renderer());
-            max_width = cmp::max(max_width, label.width());
+                                   &state.resources.renderer());
+            let (width, _) = label.size();
+            max_width = cmp::max(max_width, width);
             number_labels.push(label);
         }
         TurnManager {
@@ -115,8 +116,8 @@ impl<'a> Behavior<State<'a>> for TurnManager {
         // Render which faction's turn it is.
         // Render the amount of actions left somewhere.
         let (x, y) = POS;
-
-        let right = x + self.faction_label.width() as i32;
+        let (w, _) = self.faction_label.size();
+        let right = x + w as i32;
 
         let rect = Rect::new(x - 5, y, 200, 50);
         let (r, g, b, a) = BG_COLOR;

@@ -442,7 +442,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                     let label = self.health_labels.entry(unit.health).or_insert_with(|| {
                         let string = format!("{}", unit.health);
-                        Label::new(font, string, (255, 255, 255, 255), renderer.clone())
+                        Label::new(&font, &string, (255, 255, 255, 255), &renderer)
                     });
                     let (w, _) = label.size();
 
