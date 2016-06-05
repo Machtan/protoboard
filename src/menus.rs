@@ -161,8 +161,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
                     if is_in_range {
                         self.confirm(state, queue);
                     } else {
-                        let valid =
-                            self.confirm_areas.iter().find(|a| a.contains((x, y))).is_some();
+                        let valid = self.confirm_areas.iter().any(|a| a.contains((x, y)));
                         if valid {
                             self.confirm(state, queue);
                         } else {

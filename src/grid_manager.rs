@@ -35,12 +35,12 @@ pub struct GridManager {
 }
 
 impl GridManager {
-    pub fn new() -> GridManager {
+    pub fn new(cursor: (u32, u32)) -> GridManager {
         let expiry_duration = Duration::from_millis(100);
         GridManager {
             selected: None,
             showing_range_of: None,
-            cursor: (0, 0),
+            cursor: cursor,
             cursor_hidden: false,
             health_labels: LruCache::with_expiry_duration(expiry_duration),
         }

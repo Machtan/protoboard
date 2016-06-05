@@ -184,7 +184,7 @@ pub fn main() {
 
     let mut scene = Scene::new();
 
-    scene.add(Box::new(GridManager::new()));
+    scene.add(Box::new(GridManager::new((0, 0))));
 
     let turner = TurnManager::new(NUMBER_OF_ACTIONS,
                                   vec![Faction::Red, Faction::Blue],
