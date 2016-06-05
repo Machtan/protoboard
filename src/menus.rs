@@ -115,7 +115,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
             Confirm => {
                 self.confirm(state, queue);
             }
-            Cancel => {
+            Cancel | RightClickAt(_, _) => {
                 self.cancel(state, queue);
             }
             MoveCursorDown => {
