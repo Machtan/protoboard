@@ -5,6 +5,7 @@ use resources::CROSSHAIR_PATH;
 
 #[derive(Debug)]
 pub struct TargetSelector {
+    closed: bool,
     pos: (u32, u32),
     origin: (u32, u32),
     selected: usize,
@@ -15,6 +16,7 @@ impl TargetSelector {
     pub fn new(pos: (u32, u32), origin: (u32, u32), targets: Vec<(u32, u32)>) -> TargetSelector {
         assert!(!targets.is_empty(), "No targets given to selector");
         TargetSelector {
+            closed: false,
             pos: pos,
             origin: origin,
             selected: 0,
@@ -22,21 +24,28 @@ impl TargetSelector {
         }
     }
 
-    fn confirm<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
-        use common::Message::*;
-        let selected = self.targets[self.selected];
-        debug!("Attacking target at {:?}", selected);
+    fn close_and_break(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        self.closed = true;
         // TODO: It might be better to have a cleaner model for
         // breaking out of a given number of modals. We might
         // want to have non-menu modals not be broken here?
         state.break_modal(queue);
+    }
+
+    fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+        use common::Message::*;
+
+        let selected = self.targets[self.selected];
+        debug!("Attacking target at {:?}", selected);
+        self.close_and_break(state, queue);
         queue.push(AttackWithUnit(self.pos, selected));
         queue.push(UnitSpent(self.pos));
     }
 
-    fn cancel<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+    fn cancel(&mut self, state: &mut State, queue: &mut Vec<Message>) {
         use common::Message::*;
-        state.break_modal(queue);
+
+        self.close_and_break(state, queue);
         queue.push(TargetSelectorCanceled(self.origin, self.pos));
     }
 }
@@ -46,6 +55,11 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
 
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
+
+        if self.closed {
+            return;
+        }
+
         match message {
             Confirm => {
                 self.confirm(state, queue);
