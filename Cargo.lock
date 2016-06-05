@@ -42,7 +42,7 @@ dependencies = [
 [[package]]
 name = "glorious"
 version = "0.2.0"
-source = "git+https://github.com/Machtan/glorious?branch=device#dfea61229e6ddec8e0c75172849a7d6e33e1e718"
+source = "git+https://github.com/Machtan/glorious?branch=device#0ef92a3127008118ec9b2d43fb7739e7da72a084"
 dependencies = [
  "ref_filter_map 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",

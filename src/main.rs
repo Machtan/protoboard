@@ -15,7 +15,7 @@ extern crate sdl2_ttf;
 use std::cmp;
 use std::env;
 
-use glorious::{init_renderer, BoxedInputMapper, Game, ResourceManager};
+use glorious::{BoxedInputMapper, Device, Game, ResourceManager};
 use rand::Rng;
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
@@ -104,7 +104,8 @@ pub fn main() {
     renderer.set_blend_mode(BlendMode::Blend);
     let _ = renderer.set_logical_size(w, h);
 
-    let (device, renderer) = init_renderer(renderer);
+    let device = Device::new(renderer);
+    let renderer = device.create_renderer();
     let resources = ResourceManager::new(&device, &font_context);
 
     // Load units

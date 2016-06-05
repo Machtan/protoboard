@@ -435,14 +435,14 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     sprite.render_rect(renderer, rect);
 
                     let font = state.resources.font(FIRA_SANS_BOLD_PATH, 16);
-                    let (_, sy) = renderer.scale();
+                    let (_, sy) = renderer.device().scale();
                     // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
                     let descent = (font.descent() as f32 / sy) as i32;
                     let height = (font.height() as f32 / sy) as i32;
 
                     let label = self.health_labels.entry(unit.health).or_insert_with(|| {
                         let string = format!("{}", unit.health);
-                        Label::new(&font, &string, (255, 255, 255, 255), &renderer)
+                        Label::new(&font, &string, (255, 255, 255, 255), renderer.device())
                     });
                     let (w, _) = label.size();
 
