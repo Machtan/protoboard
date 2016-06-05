@@ -47,7 +47,7 @@ mod unit_mover;
 // TODO: It might be, that the renderer argument for `Behavior::render`
 // should in fact be `&mut Renderer<'a>`, rather than `&mut Renderer`.
 
-pub fn main() {
+fn main() {
     use sdl2::event::Event::*;
     use common::Message::*;
 
