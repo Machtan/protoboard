@@ -301,11 +301,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.select_unit(pos, state, queue);
             }
             TargetSelectorCanceled(origin, pos) => {
-                // TODO: We cancel, just to move back.
-                state.grid.move_unit(pos, origin);
-                self.select_unit(origin, state, queue);
-                // FIXME: We reanimate after cancelling!!!
-                self.move_selected_unit_and_act(pos, state, queue);
+                self.handle_unit_moved(origin, pos, state, queue);
             }
 
             // State changes
