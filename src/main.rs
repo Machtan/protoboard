@@ -22,7 +22,8 @@ use sdl2::mouse::Mouse;
 use sdl2::render::BlendMode;
 use sdl2_image::{INIT_JPG, INIT_PNG};
 
-use resources::{ARCHER_PATH, FIRA_SANS_PATH, PROTECTOR_PATH, RACCOON_PATH, WARRIOR_PATH};
+use resources::{ARCHER_PATH, FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, PROTECTOR_PATH, RACCOON_PATH,
+                WARRIOR_PATH};
 use common::{Config, State};
 use faction::Faction;
 use grid::{Grid, Terrain};
@@ -41,6 +42,7 @@ mod scene;
 mod target_selector;
 mod turner;
 mod unit;
+mod unit_mover;
 
 // TODO: It might be, that the renderer argument for `Behavior::render`
 // should in fact be `&mut Renderer<'a>`, rather than `&mut Renderer`.
@@ -172,7 +174,14 @@ pub fn main() {
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 2));
     grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 2, 2));
 
-    let mut state = State::new(resources, grid, TILE_SIZE, NUMBER_OF_ACTIONS, config);
+    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 16);
+
+    let mut state = State::new(resources,
+                               grid,
+                               TILE_SIZE,
+                               NUMBER_OF_ACTIONS,
+                               &health_label_font,
+                               config);
 
     // Prepare the scene
 

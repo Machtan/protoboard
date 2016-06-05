@@ -1,17 +1,18 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
-use std::time::Duration;
 
-use glorious::{Behavior, Label, Renderer, Sprite};
-use lru_time_cache::LruCache;
+use glorious::{Behavior, Renderer, Sprite};
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
 use grid::{PathFinder, Terrain};
 use menus::ModalMenu;
-use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, MARKER_PATH};
+use resources::{FIRA_SANS_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
+use unit::Unit;
+use unit_mover::UnitMover;
 
 #[derive(Debug)]
 struct Selected {
@@ -31,18 +32,15 @@ pub struct GridManager {
     showing_range_of: Option<ShowingRangeOf>,
     cursor: (u32, u32),
     cursor_hidden: bool,
-    health_labels: LruCache<u32, Label>,
 }
 
 impl GridManager {
     pub fn new(cursor: (u32, u32)) -> GridManager {
-        let expiry_duration = Duration::from_millis(100);
         GridManager {
             selected: None,
             showing_range_of: None,
             cursor: cursor,
             cursor_hidden: false,
-            health_labels: LruCache::with_expiry_duration(expiry_duration),
         }
     }
 
@@ -73,8 +71,6 @@ impl GridManager {
                                       target: (u32, u32),
                                       state: &mut State<'a>,
                                       queue: &mut Vec<Message>) {
-        use common::Message::*;
-
         let origin = {
             let selected = self.selected.as_ref().expect("no unit was selected");
 
@@ -86,62 +82,10 @@ impl GridManager {
             selected.pos
         };
 
-        state.grid.move_unit(origin, target);
+        let unit = state.grid.remove_unit(origin);
 
-        debug!("Moved unit from {:?} to {:?}", origin, target);
-
-        self.move_cursor_to(target, state.grid.size());
-        self.cursor_hidden = true;
-
-        let options = {
-            let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
-
-            let mut options = Vec::with_capacity(2);
-            let can_attack = if unit.is_ranged() {
-                origin == target
-            } else {
-                true
-            };
-            if can_attack && state.grid.find_attackable(unit, target).next().is_some() {
-                options.push("Attack");
-            }
-            options.push("Wait");
-            options
-        };
-
-        // Clicking the unit confirms too :)
-        let extra_confirm_areas = vec![state.tile_rect(target)];
-
-        let menu = ModalMenu::new(options.iter().map(|&s| s.to_owned()),
-                                  0,
-                                  (50, 50),
-                                  state.resources.font(FIRA_SANS_PATH, 16),
-                                  state,
-                                  extra_confirm_areas,
-                                  move |option, state, queue| {
-            match option {
-                Some("Attack") => {
-                    debug!("Attack!");
-                    state.pop_modal(queue);
-                    queue.push(AttackSelected(origin, target));
-                }
-                Some("Wait") => {
-                    debug!("Wait!");
-                    state.pop_modal(queue);
-                    // TODO
-                    queue.push(UnitSpent(target));
-                    queue.push(WaitSelected);
-                }
-                None => {
-                    debug!("Cancel!");
-                    state.pop_modal(queue);
-                    queue.push(CancelSelected(origin, target));
-                }
-                _ => unreachable!(),
-            }
-        })
-            .expect("could not create menu");
-        state.push_modal(Box::new(menu), queue);
+        let mover = UnitMover::new(unit, origin, target);
+        state.push_modal(Box::new(mover), queue);
     }
 
     /// Handles the selection of a unit.
@@ -254,6 +198,68 @@ impl GridManager {
             self.move_cursor_to((x + 1, y), size);
         }
     }
+
+    fn handle_unit_moved(&mut self,
+                         origin: (u32, u32),
+                         target: (u32, u32),
+                         state: &mut State,
+                         queue: &mut Vec<Message>) {
+        use common::Message::*;
+        debug!("Moved unit from {:?} to {:?}", origin, target);
+
+        self.move_cursor_to(target, state.grid.size());
+        self.cursor_hidden = true;
+
+        let options = {
+            let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
+
+            let mut options = Vec::with_capacity(2);
+            let can_attack = if unit.is_ranged() {
+                origin == target
+            } else {
+                true
+            };
+            if can_attack && state.grid.find_attackable(unit, target).next().is_some() {
+                options.push("Attack");
+            }
+            options.push("Wait");
+            options
+        };
+
+        // Clicking the unit confirms too :)
+        let extra_confirm_areas = vec![state.tile_rect(target)];
+
+        let menu = ModalMenu::new(options.iter().map(|&s| s.to_owned()),
+                                  0,
+                                  (50, 50),
+                                  state.resources.font(FIRA_SANS_PATH, 16),
+                                  state,
+                                  extra_confirm_areas,
+                                  move |option, state, queue| {
+            match option {
+                Some("Attack") => {
+                    debug!("Attack!");
+                    state.pop_modal(queue);
+                    queue.push(AttackSelected(origin, target));
+                }
+                Some("Wait") => {
+                    debug!("Wait!");
+                    state.pop_modal(queue);
+                    // TODO
+                    queue.push(UnitSpent(target));
+                    queue.push(WaitSelected);
+                }
+                None => {
+                    debug!("Cancel!");
+                    state.pop_modal(queue);
+                    queue.push(CancelSelected(origin, target));
+                }
+                _ => unreachable!(),
+            }
+        })
+            .expect("could not create menu");
+        state.push_modal(Box::new(menu), queue);
+    }
 }
 
 impl<'a> Behavior<State<'a>> for GridManager {
@@ -317,6 +323,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .unit_mut(pos)
                     .expect("no unit to mark as spent")
                     .spent = true;
+            }
+            UnitMoved(from, to) => {
+                self.handle_unit_moved(from, to, state, queue);
             }
             Deselect => {
                 self.deselect();
@@ -407,21 +416,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
                         } else {
                             None
                         }
-                    })
-                    .or_else(|| {
-                        unit.as_ref().and_then(|u| {
-                            if u.spent {
-                                match u.faction {
-                                    Faction::Red => Some(Color::RGBA(150, 65, 65, 127)),
-                                    Faction::Blue => Some(Color::RGBA(65, 120, 140, 127)),
-                                }
-                            } else {
-                                match u.faction {
-                                    Faction::Red => Some(Color::RGBA(255, 100, 100, 127)),
-                                    Faction::Blue => Some(Color::RGBA(100, 180, 220, 127)),
-                                }
-                            }
-                        })
                     });
 
                 if let Some(color) = color {
@@ -430,25 +424,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
 
                 if let Some(unit) = unit {
-                    let sprite = Sprite::new(unit.texture(), None);
-                    sprite.render_rect(renderer, rect);
-
-                    let font = state.resources.font(FIRA_SANS_BOLD_PATH, 16);
-                    let (_, sy) = renderer.device().scale();
-                    // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
-                    let descent = (font.descent() as f32 / sy) as i32;
-                    let height = (font.height() as f32 / sy) as i32;
-
-                    let label = self.health_labels.entry(unit.health).or_insert_with(|| {
-                        let string = format!("{}", unit.health);
-                        Label::new(&font, &string, (255, 255, 255, 255), renderer.device())
-                    });
-                    let (w, _) = label.size();
-
-                    let lx = rect.x() + rect.width() as i32 - 3 - w as i32;
-                    let ly = rect.y() + rect.height() as i32 - 3 - height - descent;
-
-                    label.render(renderer, lx, ly);
+                    render_unit(unit, rect, color.is_none(), state, renderer);
                 }
 
                 if let Some(ref showing_range_of) = self.showing_range_of {
@@ -466,6 +442,40 @@ impl<'a> Behavior<State<'a>> for GridManager {
     }
 }
 
+pub fn render_unit(unit: &Unit, rect: Rect, bg: bool, state: &State, renderer: &mut Renderer) {
+    if bg {
+        let color = if unit.spent {
+            match unit.faction {
+                Faction::Red => Color::RGBA(150, 65, 65, 127),
+                Faction::Blue => Color::RGBA(65, 120, 140, 127),
+            }
+        } else {
+            match unit.faction {
+                Faction::Red => Color::RGBA(255, 100, 100, 127),
+                Faction::Blue => Color::RGBA(100, 180, 220, 127),
+            }
+        };
+        renderer.set_draw_color(color);
+        renderer.fill_rect(rect).unwrap();
+    }
+    let sprite = Sprite::new(unit.texture(), None);
+    sprite.render_rect(renderer, rect);
+
+    let font = &state.health_label_font;
+    let (_, sy) = renderer.device().scale();
+    // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
+    let descent = (font.descent() as f32 / sy) as i32;
+    let height = (font.height() as f32 / sy) as i32;
+
+    let label = state.health_label(unit.health);
+    let (w, _) = label.size();
+
+    let lx = rect.x() + rect.width() as i32 - 3 - w as i32;
+    let ly = rect.y() + rect.height() as i32 - 3 - height - descent;
+
+    label.render(renderer, lx, ly);
+}
+
 impl Debug for GridManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GridManager")
@@ -473,7 +483,6 @@ impl Debug for GridManager {
             .field("showing_range_of", &self.showing_range_of)
             .field("cursor", &self.cursor)
             .field("cursor_hidden", &self.cursor)
-            .field("health_labels", &(..))
             .finish()
     }
 }

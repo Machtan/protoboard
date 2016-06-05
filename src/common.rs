@@ -1,7 +1,12 @@
+use std::cell::RefCell;
 use std::fmt::Debug;
+use std::rc::Rc;
+use std::time::Duration;
 
-use glorious::{Behavior, ResourceManager};
+use glorious::{Behavior, Label, ResourceManager};
+use lru_time_cache::LruCache;
 use sdl2::rect::Rect;
+use sdl2_ttf::Font;
 
 use faction::Faction;
 use grid::Grid;
@@ -30,6 +35,7 @@ pub enum Message {
 
     Deselect,
     UnitSpent((u32, u32)),
+    UnitMoved((u32, u32), (u32, u32)),
     AttackWithUnit((u32, u32), (u32, u32)),
 
     ApplyOneModal,
@@ -57,7 +63,9 @@ pub struct State<'a> {
     pub actions_left: u32,
     pub grid: Grid,
     pub tile_size: (u32, u32),
+    pub health_label_font: &'a Font,
     modal_stack: Vec<ModalMessage<'a>>,
+    health_labels: RefCell<LruCache<u32, Rc<Label>>>,
 }
 
 impl<'a> State<'a> {
@@ -66,8 +74,10 @@ impl<'a> State<'a> {
                grid: Grid,
                tile_size: (u32, u32),
                actions_left: u32,
+               health_label_font: &'a Font,
                config: Config)
                -> State<'a> {
+        let expiry_duration = Duration::from_millis(100);
         State {
             config: config,
             resources: resources,
@@ -75,6 +85,8 @@ impl<'a> State<'a> {
             actions_left: actions_left,
             grid: grid,
             tile_size: tile_size,
+            health_label_font: health_label_font,
+            health_labels: RefCell::new(LruCache::with_expiry_duration(expiry_duration)),
             modal_stack: Vec::new(),
         }
     }
@@ -129,6 +141,20 @@ impl<'a> State<'a> {
         let x = pos.0 * tw;
         let y = h * th - th - (pos.1 * th);
         Rect::new(x as i32, y as i32, tw, th)
+    }
+
+    pub fn health_label(&self, health: u32) -> Rc<Label> {
+        self.health_labels
+            .borrow_mut()
+            .entry(health)
+            .or_insert_with(|| {
+                let string = format!("{}", health);
+                Rc::new(Label::new(&self.health_label_font,
+                                   &string,
+                                   (255, 255, 255, 255),
+                                   self.resources.device()))
+            })
+            .clone()
     }
 }
 
