@@ -326,9 +326,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
             UnitMoved(from, to) => {
                 self.handle_unit_moved(from, to, state, queue);
             }
-            Deselect => {
-                self.deselect();
-            }
             AttackWithUnit(pos, target) => {
                 self.cursor_hidden = false;
                 let destroyed = {
