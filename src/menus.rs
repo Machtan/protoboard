@@ -13,21 +13,9 @@ const PAD: u32 = 10;
 // TODO: Tune this for different platforms/hardware.
 const SCROLL_TRESHOLD: i32 = 8;
 
-pub struct MenuHandle<'a> {
-    closed: &'a mut bool,
-}
-
-impl<'a> MenuHandle<'a> {
-    pub fn close(&mut self, state: &mut State, queue: &mut Vec<Message>) {
-        *self.closed = true;
-        state.pop_modal(queue);
-    }
-}
-
 pub struct ModalMenu<F>
-    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>, &mut MenuHandle)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
-    closed: bool,
     pos: (i32, i32),
     width: u32,
     line_spacing: u32,
@@ -39,7 +27,7 @@ pub struct ModalMenu<F>
 }
 
 impl<F> ModalMenu<F>
-    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>, &mut MenuHandle)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     pub fn new<I>(options: I,
                   selected: usize,
@@ -72,7 +60,6 @@ impl<F> ModalMenu<F>
                 labels.len());
 
         Ok(ModalMenu {
-            closed: false,
             pos: pos,
             width: 2 * PAD + max_width,
             line_spacing: line_spacing,
@@ -87,8 +74,7 @@ impl<F> ModalMenu<F>
     fn handle(&mut self, selected: Option<usize>, state: &mut State, queue: &mut Vec<Message>) {
         let options = &self.options;
         let option = selected.map(|i| &options[i].1[..]);
-        let mut handle = MenuHandle { closed: &mut self.closed };
-        (self.handler)(option, state, queue, &mut handle);
+        (self.handler)(option, state, queue);
     }
 
     fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
@@ -124,17 +110,13 @@ impl<F> ModalMenu<F>
 }
 
 impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
-    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>, &mut MenuHandle)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     type Message = Message;
 
     /// Handles new messages since the last frame.
     fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
-
-        if self.closed {
-            return;
-        }
 
         match message {
             Confirm => {
@@ -207,7 +189,7 @@ impl<'a, F> Behavior<State<'a>> for ModalMenu<F>
 }
 
 impl<F> Debug for ModalMenu<F>
-    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>, &mut MenuHandle)
+    where F: FnMut(Option<&str>, &mut State, &mut Vec<Message>)
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("ModalMenu { .. }")

@@ -227,23 +227,23 @@ impl GridManager {
                                   state.resources.font(FIRA_SANS_PATH, 16),
                                   state,
                                   extra_confirm_areas,
-                                  move |option, state, queue, menu| {
+                                  move |option, state, queue| {
             match option {
                 Some("Attack") => {
                     debug!("Attack!");
-                    menu.close(state, queue);
+                    state.pop_modal(queue);
                     queue.push(AttackSelected(origin, target));
                 }
                 Some("Wait") => {
                     debug!("Wait!");
-                    menu.close(state, queue);
+                    state.pop_modal(queue);
                     // TODO
                     queue.push(UnitSpent(target));
                     queue.push(WaitSelected);
                 }
                 None => {
                     debug!("Cancel!");
-                    menu.close(state, queue);
+                    state.pop_modal(queue);
                     queue.push(CancelSelected(origin, target));
                 }
                 _ => unreachable!(),

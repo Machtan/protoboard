@@ -67,6 +67,7 @@ pub struct State<'a> {
     pub grid: Grid,
     pub tile_size: (u32, u32),
     pub health_label_font: &'a Font,
+    pub will_pop_modals: usize,
     modal_stack: Vec<ModalMessage<'a>>,
     health_labels: RefCell<LruCache<u32, Rc<Label>>>,
 }
@@ -89,6 +90,7 @@ impl<'a> State<'a> {
             grid: grid,
             tile_size: tile_size,
             health_label_font: health_label_font,
+            will_pop_modals: 0,
             health_labels: RefCell::new(LruCache::with_expiry_duration(expiry_duration)),
             modal_stack: Vec::new(),
         }
@@ -102,11 +104,13 @@ impl<'a> State<'a> {
     pub fn pop_modal(&mut self, queue: &mut Vec<Message>) {
         self.modal_stack.push(ModalMessage::Pop);
         queue.push(Message::ApplyOneModal);
+        self.will_pop_modals += 1;
     }
 
     pub fn break_modal(&mut self, queue: &mut Vec<Message>) {
         self.modal_stack.push(ModalMessage::Break);
         queue.push(Message::ApplyOneModal);
+        self.will_pop_modals += 1;
     }
 
     pub fn apply_one_modal(&mut self, dst: &mut Vec<GameObject<'a>>) {
@@ -122,9 +126,11 @@ impl<'a> State<'a> {
             Pop => {
                 let old = dst.pop().expect("cannot pop modal from empty queue");
                 trace!("Popped modal state: {:?}", old);
+                self.will_pop_modals -= 1;
             }
             Break => {
                 dst.clear();
+                self.will_pop_modals -= 1;
             }
         }
     }

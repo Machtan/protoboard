@@ -49,6 +49,9 @@ impl<'a> Behavior<State<'a>> for Scene<'a> {
             state.apply_one_modal(&mut self.modal_stack);
             return;
         }
+        if state.will_pop_modals > 0 {
+            return;
+        }
         match self.modal_stack.last_mut() {
             None => {
                 for object in &mut self.objects {
