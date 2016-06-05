@@ -76,12 +76,6 @@ pub fn main() {
     }
     builder.init().unwrap();
 
-    // Load debugging configuration from environment variables.
-
-    let debug_movement = env::var("PROTOBOARD_DEBUG_MOVEMENT")
-        .map(|s| s == "1")
-        .unwrap_or(false);
-
     // Set up SDL2.
 
     let sdl_context = sdl2::init().expect("could not initialize SDL2");
@@ -146,7 +140,7 @@ pub fn main() {
 
     // Set up game state.
 
-    let config = Config { debug_movement: debug_movement };
+    let config = Config {};
     let mut rng = rand::thread_rng();
 
     let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {

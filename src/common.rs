@@ -132,9 +132,7 @@ impl<'a> State<'a> {
     }
 }
 
-pub struct Config {
-    pub debug_movement: bool,
-}
+pub struct Config {}
 
 pub trait BehaviorDebug<S>: Behavior<S> + Debug {}
 
