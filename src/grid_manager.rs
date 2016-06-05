@@ -23,7 +23,7 @@ struct Selected {
 struct ShowingRangeOf {
     pos: (u32, u32),
     path_finder: PathFinder,
-    attackable: BTreeSet<(u32, u32)>,
+    attack_range: BTreeSet<(u32, u32)>,
 }
 
 pub struct GridManager {
@@ -53,10 +53,15 @@ impl GridManager {
         debug!("Selecting target...");
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
-            state.grid
-                .find_attackable(unit, pos)
-                .map(|(pos, _)| pos)
-                .collect()
+            if pos == origin {
+                state.grid
+                    .find_attackable_before_moving(unit, pos)
+                    .collect()
+            } else {
+                state.grid
+                    .find_attackable_after_moving(unit, pos)
+                    .collect()
+            }
         };
         let selector = TargetSelector::new(pos, origin, targets);
         self.cursor_hidden = true;
@@ -118,11 +123,11 @@ impl GridManager {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
             let path_finder = state.grid.path_finder(self.cursor);
-            let attackable = path_finder.tiles_in_attack_range(&state.grid);
+            let attack_range = path_finder.total_attack_range(&state.grid);
             self.showing_range_of = Some(ShowingRangeOf {
                 pos: self.cursor,
                 path_finder: path_finder,
-                attackable: attackable,
+                attack_range: attack_range,
             });
         }
     }
@@ -205,12 +210,12 @@ impl GridManager {
             let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
 
             let mut options = Vec::with_capacity(2);
-            let can_attack = if unit.is_ranged() {
-                origin == target
+            let mut find_attackable = if origin == target {
+                state.grid.find_attackable_before_moving(unit, target)
             } else {
-                true
+                state.grid.find_attackable_after_moving(unit, target)
             };
-            if can_attack && state.grid.find_attackable(unit, target).next().is_some() {
+            if find_attackable.next().is_some() {
                 options.push("Attack");
             }
             options.push("Wait");
@@ -415,8 +420,8 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     render_unit(unit, rect, color.is_none(), state, renderer);
                 }
 
-                if let Some(ref showing_range_of) = self.showing_range_of {
-                    if showing_range_of.attackable.contains(&pos) {
+                if let Some(ref sro) = self.showing_range_of {
+                    if sro.pos != pos && sro.attack_range.contains(&pos) {
                         renderer.set_draw_color(Color(255, 100, 100, 127));
                         renderer.fill_rect(rect).unwrap();
                     }

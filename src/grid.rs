@@ -4,7 +4,7 @@ use std::mem;
 
 use rand::{thread_rng, Rng};
 
-use unit::{TilesInRange, Unit};
+use unit::{AttackType, Unit};
 
 #[derive(Clone, Debug)]
 pub enum Terrain {
@@ -141,12 +141,25 @@ impl Grid {
         *dst = unit;
     }
 
-    /// Finds tiles attackable by the given unit if moved to the given position.
-    pub fn find_attackable<'a>(&'a self, unit: &'a Unit, pos: (u32, u32)) -> FindAttackable<'a> {
+    pub fn find_attackable_before_moving<'a>(&'a self,
+                                             unit: &'a Unit,
+                                             pos: (u32, u32))
+                                             -> FindAttackable<'a> {
         FindAttackable {
             unit: unit,
             grid: self,
-            tiles: unit.tiles_in_attack_range(pos, self.size),
+            range: self.attack_range_before_moving(unit, pos),
+        }
+    }
+
+    pub fn find_attackable_after_moving<'a>(&'a self,
+                                            unit: &'a Unit,
+                                            pos: (u32, u32))
+                                            -> FindAttackable<'a> {
+        FindAttackable {
+            unit: unit,
+            grid: self,
+            range: self.attack_range_after_moving(unit, pos),
         }
     }
 
@@ -223,6 +236,28 @@ impl Grid {
         assert!(x < w && y < h);
         y as usize * w as usize + x as usize
     }
+
+    pub fn attack_range_before_moving<'a>(&'a self,
+                                          unit: &'a Unit,
+                                          pos: (u32, u32))
+                                          -> AttackRange<'a> {
+        match unit.unit_type().attack {
+            AttackType::Melee => AttackRange::melee(self, pos),
+            AttackType::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
+            AttackType::Spear { .. } => unimplemented!(),
+        }
+    }
+
+    pub fn attack_range_after_moving<'a>(&'a self,
+                                         unit: &'a Unit,
+                                         pos: (u32, u32))
+                                         -> AttackRange<'a> {
+        match unit.unit_type().attack {
+            AttackType::Melee |
+            AttackType::Spear { .. } => AttackRange::melee(self, pos),
+            AttackType::Ranged { .. } => AttackRange::empty(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -233,40 +268,21 @@ pub struct PathFinder {
 }
 
 impl PathFinder {
-    pub fn find_all_attackable(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
+    pub fn total_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
         let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
-        if unit.unit_type().attack.is_ranged() {
-            grid.find_attackable(unit, self.origin).map(|(p, _)| p).collect()
-        } else {
-            // TODO: Somewhat ineffective algorithm.
-            let mut res = BTreeSet::new();
-            for &pos in self.costs.keys() {
-                if grid.unit(pos).is_some() {
-                    continue;
-                }
-                for (target, _) in grid.find_attackable(unit, pos) {
-                    res.insert(target);
-                }
-            }
-            res
-        }
-    }
 
-    pub fn tiles_in_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
-        let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
-        if unit.unit_type().attack.is_ranged() {
-            unit.tiles_in_attack_range(self.origin, grid.size()).collect()
-        } else {
-            // TODO: Somewhat ineffective algorithm.
-            let mut res = BTreeSet::new();
-            for &pos in self.costs.keys() {
-                if pos != self.origin && grid.unit(pos).is_some() {
-                    continue;
-                }
-                res.extend(unit.tiles_in_attack_range(pos, grid.size()));
+        let mut set = BTreeSet::new();
+
+        set.extend(grid.attack_range_before_moving(unit, self.origin));
+
+        // This is probably a somewhat ineffecient algorithm.
+        for &pos in self.costs.keys() {
+            if grid.unit(pos).is_some() {
+                continue;
             }
-            res
+            set.extend(grid.attack_range_after_moving(unit, pos));
         }
+        set
     }
 
     #[inline]
@@ -275,6 +291,16 @@ impl PathFinder {
             path_finder: self,
             pos: target,
         }
+    }
+}
+
+impl Debug for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Grid")
+            .field("size", &self.size)
+            .field("units", &(..))
+            .field("tiles", &(..))
+            .finish()
     }
 }
 
@@ -321,31 +347,120 @@ impl<'a> Iterator for RandomPathRev<'a> {
     }
 }
 
-impl Debug for Grid {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Grid")
-            .field("size", &self.size)
-            .field("units", &(..))
-            .field("tiles", &(..))
-            .finish()
+#[derive(Clone, Debug)]
+pub enum AttackRange<'a> {
+    Empty,
+    Melee {
+        grid: &'a Grid,
+        pos: (u32, u32),
+        state: u8,
+    },
+    Ranged {
+        grid: &'a Grid,
+        pos: (u32, u32),
+        cur: (i32, i32),
+        min: u32,
+    },
+}
+
+impl<'a> AttackRange<'a> {
+    #[inline]
+    pub fn empty() -> AttackRange<'a> {
+        AttackRange::Empty
+    }
+
+    #[inline]
+    pub fn melee(grid: &'a Grid, pos: (u32, u32)) -> AttackRange<'a> {
+        AttackRange::Melee {
+            grid: grid,
+            pos: pos,
+            state: 0,
+        }
+    }
+
+    #[inline]
+    pub fn ranged(grid: &'a Grid, pos: (u32, u32), min: u32, max: u32) -> AttackRange<'a> {
+        AttackRange::Ranged {
+            grid: grid,
+            pos: pos,
+            cur: (0, max as i32),
+            min: min,
+        }
+    }
+}
+
+impl<'a> Iterator for AttackRange<'a> {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<(u32, u32)> {
+        match *self {
+            AttackRange::Empty => None,
+            AttackRange::Melee { grid, pos, ref mut state } => {
+                let (x, y) = pos;
+                let (w, h) = grid.size();
+                loop {
+                    let (nx, ny) = match *state {
+                        0 => (x as i32, y as i32 + 1),
+                        1 => (x as i32 + 1, y as i32),
+                        2 => (x as i32, y as i32 - 1),
+                        3 => (x as i32 - 1, y as i32),
+                        _ => return None,
+                    };
+                    *state += 1;
+                    if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
+                        return Some((nx as u32, ny as u32));
+                    }
+                }
+            }
+            AttackRange::Ranged { grid, pos, ref mut cur, min } => {
+                let (x, y) = pos;
+                let (w, h) = grid.size();
+                while *cur != (0, min as i32 - 1) {
+                    let (dx, dy) = *cur;
+
+                    let nx = x as i32 + dx;
+                    let ny = y as i32 + dy;
+
+                    *cur = match (dx.signum(), dy.signum()) {
+                        (0, 1) | (1, 1) => (dx + 1, dy - 1), // N-E
+                        (1, 0) | (1, -1) => (dx - 1, dy - 1), // E-S
+                        (0, -1) | (-1, -1) => (dx - 1, dy + 1), // S-W
+                        (-1, 0) | (-1, 1) => {
+                            // W-N
+                            if dx == -1 {
+                                (dx + 1, dy)
+                            } else {
+                                (dx + 1, dy + 1)
+                            }
+                        }
+                        _ => unreachable!(),
+                    };
+
+                    if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
+                        return Some((nx as u32, ny as u32));
+                    }
+                }
+                None
+            }
+        }
     }
 }
 
 pub struct FindAttackable<'a> {
     unit: &'a Unit,
     grid: &'a Grid,
-    tiles: TilesInRange,
+    range: AttackRange<'a>,
 }
 
 impl<'a> Iterator for FindAttackable<'a> {
-    type Item = ((u32, u32), &'a Unit);
+    type Item = (u32, u32);
 
-    fn next(&mut self) -> Option<((u32, u32), &'a Unit)> {
-        for pos in &mut self.tiles {
+    fn next(&mut self) -> Option<(u32, u32)> {
+        for pos in &mut self.range {
             if let Some(ref other) = self.grid.unit(pos) {
                 // TODO: Alliances? Neutrals?
                 if other.faction != self.unit.faction {
-                    return Some((pos, other));
+                    return Some(pos);
                 }
             }
         }
