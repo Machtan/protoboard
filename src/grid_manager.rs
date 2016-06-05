@@ -323,9 +323,12 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             AttackWithUnit(pos, target) => {
                 let destroyed = {
-                    // TODO: Have target not borrow attacker.
-                    let (attacker, target_unit) =
-                        state.grid.unit_pair_mut(pos, target).expect("a unit cannot attack itself");
+                    // TODO: Instead of cloning here, hoist the unit
+                    // from the grid when moving, meaning they are not
+                    // in the grid at this time. (Re-insert afterward.)
+                    let attacker = state.grid.unit(pos).expect("no attacking unit").clone();
+                    let (target_unit, terrain) = state.grid.tile_mut(target);
+                    let target_unit = target_unit.expect("no unit to attack");
 
                     debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
                            pos,
@@ -333,11 +336,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                            target,
                            target_unit);
 
-                    let attacker = attacker.expect("no attacking unit");
-                    let target_unit = target_unit.expect("no unit to attack");
-
-                    // TODO: This call would need terrain information.
-                    target_unit.receive_attack(attacker)
+                    target_unit.receive_attack(terrain, &attacker)
                 };
                 if destroyed {
                     self.destroy_unit(target, state, queue);
@@ -389,7 +388,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                 let texture_path = match *terrain {
                     Terrain::Grass => None,
-                    Terrain::Mountain => Some("assets/mountains.png"),
+                    Terrain::Mountains => Some("assets/mountains.png"),
                     Terrain::Woods => Some("assets/woods.png"),
                 };
                 if let Some(path) = texture_path {

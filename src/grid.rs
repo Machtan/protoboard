@@ -8,7 +8,7 @@ use unit::{TilesInRange, Unit};
 pub enum Terrain {
     Grass,
     Woods,
-    Mountain,
+    Mountains,
 }
 
 #[derive(Clone)]
@@ -127,10 +127,9 @@ impl Grid {
         *slot = Some(unit);
     }
 
-    pub fn remove_unit(&mut self, pos: (u32, u32)) {
+    pub fn remove_unit(&mut self, pos: (u32, u32)) -> Unit {
         let slot = &mut self.units[self.index(pos)];
-        assert!(slot.is_some());
-        *slot = None;
+        mem::replace(slot, None).expect("no unit to remove")
     }
 
     pub fn move_unit(&mut self, from: (u32, u32), to: (u32, u32)) {
@@ -138,35 +137,6 @@ impl Grid {
         let dst = &mut self.units[self.index(to)];
         assert!(dst.is_none());
         *dst = unit;
-    }
-
-    pub fn unit_pair_mut(&mut self,
-                         a: (u32, u32),
-                         b: (u32, u32))
-                         -> Option<(Option<&mut Unit>, Option<&mut Unit>)> {
-        if a == b {
-            return None;
-        }
-
-        let i = self.index(a);
-        let j = self.index(b);
-
-        let (i, j, swapped) = if i < j {
-            (i, j, false)
-        } else {
-            (j, i, true)
-        };
-
-        if let Some((last, rest)) = self.units[..j + 1].split_last_mut() {
-            let first = &mut rest[i];
-            if swapped {
-                Some((last.as_mut(), first.as_mut()))
-            } else {
-                Some((first.as_mut(), last.as_mut()))
-            }
-        } else {
-            unreachable!();
-        }
     }
 
     /// Finds tiles attackable by the given unit if moved to the given position.

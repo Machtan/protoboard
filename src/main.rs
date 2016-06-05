@@ -152,7 +152,7 @@ pub fn main() {
     let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
         let dist = cmp::min(y, N_ROWS - 1 - y);
         match dist {
-            5 if x % 3 < 2 => Terrain::Mountain,
+            5 if x % 3 < 2 => Terrain::Mountains,
             _ => {
                 if rng.next_f32() < 0.2 {
                     Terrain::Woods

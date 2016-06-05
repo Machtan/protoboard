@@ -16,14 +16,15 @@ pub struct Unit {
 
 impl Unit {
     /// Attacks this unit and returns whether it gets destroyed.
-    pub fn receive_attack(&mut self, attacker: &Unit) -> bool {
-        if attacker.unit_type.damage >= self.health {
-            self.health = 0;
-            true
-        } else {
-            self.health -= attacker.unit_type.damage;
-            false
-        }
+    pub fn receive_attack(&mut self, terrain: &Terrain, attacker: &Unit) -> bool {
+        let terrain_bonus = match *terrain {
+            Terrain::Grass => 0,
+            Terrain::Woods => 2,
+            Terrain::Mountains => 3,
+        };
+        let damage = attacker.unit_type.damage.saturating_sub(terrain_bonus);
+        self.health = self.health.saturating_sub(damage);
+        self.health == 0
     }
 
     #[inline]
@@ -47,7 +48,7 @@ impl Unit {
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
         match *terrain {
             Terrain::Grass => 1,
-            Terrain::Mountain => 4,
+            Terrain::Mountains => 4,
             Terrain::Woods => 2,
         }
     }
