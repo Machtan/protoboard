@@ -135,7 +135,7 @@ fn main() {
     let raccoon = UnitType {
         texture: raccoon_texture,
         health: 21,
-        attack: AttackType::Melee,
+        attack: AttackType::Spear { range: 3 },
         damage: 5,
         movement: 4,
     };

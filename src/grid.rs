@@ -244,7 +244,7 @@ impl Grid {
         match unit.unit_type().attack {
             AttackType::Melee => AttackRange::melee(self, pos),
             AttackType::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
-            AttackType::Spear { .. } => unimplemented!(),
+            AttackType::Spear { range } => AttackRange::spear(self, unit, pos, range),
         }
     }
 
@@ -358,8 +358,16 @@ pub enum AttackRange<'a> {
     Ranged {
         grid: &'a Grid,
         pos: (u32, u32),
-        cur: (i32, i32),
         min: u32,
+        cur: (i32, i32),
+    },
+    Spear {
+        grid: &'a Grid,
+        unit: &'a Unit,
+        pos: (u32, u32),
+        max: u32,
+        state: u8,
+        dist: u32,
     },
 }
 
@@ -383,8 +391,20 @@ impl<'a> AttackRange<'a> {
         AttackRange::Ranged {
             grid: grid,
             pos: pos,
-            cur: (0, max as i32),
             min: min,
+            cur: (0, max as i32),
+        }
+    }
+
+    #[inline]
+    pub fn spear(grid: &'a Grid, unit: &'a Unit, pos: (u32, u32), max: u32) -> AttackRange<'a> {
+        AttackRange::Spear {
+            grid: grid,
+            unit: unit,
+            pos: pos,
+            max: max,
+            state: 0,
+            dist: 0,
         }
     }
 }
@@ -399,20 +419,24 @@ impl<'a> Iterator for AttackRange<'a> {
                 let (x, y) = pos;
                 let (w, h) = grid.size();
                 loop {
-                    let (nx, ny) = match *state {
-                        0 => (x as i32, y as i32 + 1),
-                        1 => (x as i32 + 1, y as i32),
-                        2 => (x as i32, y as i32 - 1),
-                        3 => (x as i32 - 1, y as i32),
+                    let (dx, dy) = match *state {
+                        0 => (0, 1),
+                        1 => (1, 0),
+                        2 => (0, -1),
+                        3 => (-1, 0),
                         _ => return None,
                     };
                     *state += 1;
+
+                    let nx = x as i32 + dx;
+                    let ny = y as i32 + dy;
+
                     if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
                         return Some((nx as u32, ny as u32));
                     }
                 }
             }
-            AttackRange::Ranged { grid, pos, ref mut cur, min } => {
+            AttackRange::Ranged { grid, pos, min, ref mut cur } => {
                 let (x, y) = pos;
                 let (w, h) = grid.size();
                 while *cur != (0, min as i32 - 1) {
@@ -441,6 +465,43 @@ impl<'a> Iterator for AttackRange<'a> {
                     }
                 }
                 None
+            }
+            AttackRange::Spear { grid, unit, pos, max, ref mut state, ref mut dist } => {
+                let (x, y) = pos;
+                let (w, h) = grid.size();
+                loop {
+                    let (dx, dy) = match *state {
+                        0 => (0, 1),
+                        1 => (1, 0),
+                        2 => (0, -1),
+                        3 => (-1, 0),
+                        _ => return None,
+                    };
+                    if *dist >= max {
+                        *state += 1;
+                        *dist = 0;
+                        continue;
+                    }
+
+                    *dist += 1;
+
+                    let nx = x as i32 + dx * *dist as i32;
+                    let ny = y as i32 + dy * *dist as i32;
+
+                    if !(0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32) {
+                        continue;
+                    }
+                    let res = (nx as u32, ny as u32);
+
+                    if let Some(other) = grid.unit(res) {
+                        // TODO: Alliances? Neutrals?
+                        if other.faction != unit.faction {
+                            *state += 1;
+                            *dist = 0;
+                        }
+                    }
+                    return Some(res);
+                }
             }
         }
     }
