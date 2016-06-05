@@ -14,9 +14,8 @@ extern crate sdl2_ttf;
 
 use std::cmp;
 use std::env;
-use std::rc::Rc;
 
-use glorious::{BoxedInputMapper, Game, Renderer, ResourceManager};
+use glorious::{init_renderer, BoxedInputMapper, Game, ResourceManager};
 use rand::Rng;
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
@@ -43,7 +42,7 @@ mod target_selector;
 mod turner;
 mod unit;
 
-// TODO: It might be, that the renderer argument for Behavior::render
+// TODO: It might be, that the renderer argument for `Behavior::render`
 // should in fact be `&mut Renderer<'a>`, rather than `&mut Renderer`.
 
 pub fn main() {
@@ -105,8 +104,8 @@ pub fn main() {
     renderer.set_blend_mode(BlendMode::Blend);
     let _ = renderer.set_logical_size(w, h);
 
-    let renderer = Renderer::new(renderer);
-    let resources = ResourceManager::new(renderer.clone(), Rc::new(font_context));
+    let (device, renderer) = init_renderer(renderer);
+    let resources = ResourceManager::new(&device, &font_context);
 
     // Load units
 

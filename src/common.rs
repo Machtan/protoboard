@@ -52,7 +52,7 @@ pub enum ModalMessage<'a> {
 
 pub struct State<'a> {
     pub config: Config,
-    pub resources: ResourceManager<'a>,
+    pub resources: ResourceManager<'a, 'static>,
     pub current_turn: Faction,
     pub actions_left: u32,
     pub grid: Grid,
@@ -62,7 +62,7 @@ pub struct State<'a> {
 
 impl<'a> State<'a> {
     #[inline]
-    pub fn new(resources: ResourceManager<'a>,
+    pub fn new(resources: ResourceManager<'a, 'static>,
                grid: Grid,
                tile_size: (u32, u32),
                actions_left: u32,

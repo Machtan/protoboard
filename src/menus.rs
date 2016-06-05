@@ -40,14 +40,14 @@ impl<F> ModalMenu<F>
         where I: IntoIterator<Item = String>
     {
         // TODO: Having to remember to scale ourselves is a bit annoying.
-        let (_, scale_y) = state.resources.renderer().scale();
+        let (_, scale_y) = state.resources.device().scale();
         let line_spacing = font.recommended_line_spacing();
         let line_spacing = (line_spacing as f32 / scale_y) as u32;
 
         let mut max_width = 0;
         let labels = options.into_iter()
             .map(|option| {
-                let label = Label::new(&font, &option, (0, 0, 0, 0), &state.resources.renderer());
+                let label = Label::new(&font, &option, (0, 0, 0, 0), state.resources.device());
                 let (w, _) = label.size();
                 max_width = cmp::max(max_width, w);
                 (label, option)

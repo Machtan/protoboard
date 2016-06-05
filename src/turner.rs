@@ -32,23 +32,21 @@ impl TurnManager {
                font: Rc<Font>,
                state: &State)
                -> TurnManager {
-        let (_, scale_y) = state.resources.renderer().scale();
+        let (_, scale_y) = state.resources.device().scale();
         let line_spacing = font.recommended_line_spacing();
         let line_spacing = (line_spacing as f32 / scale_y) as u32;
         let faction_label = Label::new(&font,
                                        "Current faction:   ",
                                        TEXT_COLOR,
-                                       &state.resources.renderer());
-        let actions_label = Label::new(&font,
-                                       "Actions left:",
-                                       TEXT_COLOR,
-                                       &state.resources.renderer());
+                                       state.resources.device());
+        let actions_label =
+            Label::new(&font, "Actions left:", TEXT_COLOR, state.resources.device());
         let mut faction_labels = HashMap::new();
         for &faction in &factions {
             let label = Label::new(&font,
                                    &format!("{:?}", faction),
                                    TEXT_COLOR,
-                                   &state.resources.renderer());
+                                   state.resources.device());
             faction_labels.insert(faction, label);
         }
         let mut number_labels = Vec::new();
@@ -57,7 +55,7 @@ impl TurnManager {
             let label = Label::new(&font,
                                    &format!("{}", number),
                                    TEXT_COLOR,
-                                   &state.resources.renderer());
+                                   state.resources.device());
             let (width, _) = label.size();
             max_width = cmp::max(max_width, width);
             number_labels.push(label);
