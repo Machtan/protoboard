@@ -7,7 +7,7 @@ use common::{Message, State};
 use unit::Unit;
 use grid_manager::render_unit;
 
-const MOVE_TILE_MS: u64 = 50;
+const MOVE_TILE_MS: u64 = 30;
 
 #[derive(Debug)]
 pub struct UnitMover {

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::time::Duration;
 
-use glorious::{Behavior, Label, ResourceManager};
+use glorious::{Behavior, Color, Label, ResourceManager};
 use lru_time_cache::LruCache;
 use sdl2::rect::Rect;
 use sdl2_ttf::Font;
@@ -160,7 +160,7 @@ impl<'a> State<'a> {
                 let string = format!("{}", health);
                 Rc::new(Label::new(self.health_label_font,
                                    &string,
-                                   (255, 255, 255, 255),
+                                   Color(255, 255, 255, 255),
                                    self.resources.device()))
             })
             .clone()

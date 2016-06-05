@@ -2,16 +2,15 @@ use std::cmp;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use glorious::{Behavior, Label, Renderer};
-use sdl2::pixels::Color;
+use glorious::{Behavior, Color, Label, Renderer};
 use sdl2::rect::Rect;
 use sdl2_ttf::Font;
 
 use common::{Message, State};
 use faction::Faction;
 
-const BG_COLOR: (u8, u8, u8, u8) = (0, 0, 0, 0x77);
-const TEXT_COLOR: (u8, u8, u8, u8) = (0xff, 0xff, 0xff, 0xff);
+const BG_COLOR: Color = Color(0, 0, 0, 0x77);
+const TEXT_COLOR: Color = Color(0xff, 0xff, 0xff, 0xff);
 const POS: (i32, i32) = (400, 50);
 
 #[derive(Debug)]
@@ -118,8 +117,7 @@ impl<'a> Behavior<State<'a>> for TurnManager {
         let right = x + w as i32;
 
         let rect = Rect::new(x - 5, y, 200, 50);
-        let (r, g, b, a) = BG_COLOR;
-        renderer.set_draw_color(Color::RGBA(r, g, b, a));
+        renderer.set_draw_color(BG_COLOR);
         renderer.fill_rect(rect).unwrap();
 
         self.faction_label.render(renderer, x, y);

@@ -1,8 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use glorious::{Behavior, Renderer, Sprite};
-use sdl2::pixels::Color;
+use glorious::{Behavior, Color, Renderer, Sprite};
 use sdl2::rect::Rect;
 
 use common::{State, Message};
@@ -373,9 +372,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let (unit, terrain) = state.grid.tile(pos);
 
                 if (col + row) % 2 == 0 {
-                    renderer.set_draw_color(Color::RGB(110, 210, 110));
+                    renderer.set_draw_color(Color(110, 210, 110, 255));
                 } else {
-                    renderer.set_draw_color(Color::RGB(155, 255, 155));
+                    renderer.set_draw_color(Color(155, 255, 155, 255));
                 }
                 // TODO: When can `fill_rect` fail?
                 renderer.fill_rect(rect).unwrap();
@@ -395,10 +394,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .as_ref()
                     .and_then(|s| {
                         if s.pos == pos {
-                            Some(Color::RGBA(244, 237, 129, 191))
+                            Some(Color(244, 237, 129, 191))
                         } else if s.path_finder.costs.contains_key(&pos) {
                             if unit.is_none() {
-                                Some(Color::RGBA(0, 255, 255, 127))
+                                Some(Color(0, 255, 255, 127))
                             } else {
                                 None
                             }
@@ -418,7 +417,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                 if let Some(ref showing_range_of) = self.showing_range_of {
                     if showing_range_of.attackable.contains(&pos) {
-                        renderer.set_draw_color(Color::RGBA(255, 100, 100, 127));
+                        renderer.set_draw_color(Color(255, 100, 100, 127));
                         renderer.fill_rect(rect).unwrap();
                     }
                 }
@@ -435,13 +434,13 @@ pub fn render_unit(unit: &Unit, rect: Rect, bg: bool, state: &State, renderer: &
     if bg {
         let color = if unit.spent {
             match unit.faction {
-                Faction::Red => Color::RGBA(150, 65, 65, 127),
-                Faction::Blue => Color::RGBA(65, 120, 140, 127),
+                Faction::Red => Color(150, 65, 65, 127),
+                Faction::Blue => Color(65, 120, 140, 127),
             }
         } else {
             match unit.faction {
-                Faction::Red => Color::RGBA(255, 100, 100, 127),
-                Faction::Blue => Color::RGBA(100, 180, 220, 127),
+                Faction::Red => Color(255, 100, 100, 127),
+                Faction::Blue => Color(100, 180, 220, 127),
             }
         };
         renderer.set_draw_color(color);

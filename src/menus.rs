@@ -2,8 +2,7 @@ use std::cmp;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
-use glorious::{Behavior, Label, Renderer};
-use sdl2::pixels::Color;
+use glorious::{Behavior, Color, Label, Renderer};
 use sdl2::rect::Rect;
 use sdl2_ttf::Font;
 
@@ -47,7 +46,7 @@ impl<F> ModalMenu<F>
         let mut max_width = 0;
         let labels = options.into_iter()
             .map(|option| {
-                let label = Label::new(&font, &option, (0, 0, 0, 0), state.resources.device());
+                let label = Label::new(&font, &option, Color(0, 0, 0, 0), state.resources.device());
                 let (w, _) = label.size();
                 max_width = cmp::max(max_width, w);
                 (label, option)
@@ -93,13 +92,13 @@ impl<F> ModalMenu<F>
         let (sx, sy) = self.pos;
         let height = PAD * 2 + self.line_spacing * self.options.len() as u32;
 
-        renderer.set_draw_color(Color::RGBA(200, 200, 255, 150));
+        renderer.set_draw_color(Color(200, 200, 255, 150));
         renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
         let mut y = sy + PAD as i32;
         let x = sx + PAD as i32;
         for (i, &(ref label, _)) in self.options.iter().enumerate() {
             if i == self.selected {
-                renderer.set_draw_color(Color::RGB(255, 150, 0));
+                renderer.set_draw_color(Color(255, 150, 0, 255));
                 let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, self.line_spacing);
                 renderer.fill_rect(rect).unwrap();
             }
