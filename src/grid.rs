@@ -95,7 +95,7 @@ impl Grid {
     }
 
     #[inline]
-    pub fn tile_mut(&mut self, pos: (u32, u32)) -> (Option<&mut Unit>, &mut Terrain) {
+    pub fn tile_mut(&mut self, pos: (u32, u32)) -> (Option<&mut Unit>, &Terrain) {
         let i = self.index(pos);
         (self.units[i].as_mut(), &mut self.terrain[i])
     }
