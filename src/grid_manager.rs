@@ -227,23 +227,23 @@ impl GridManager {
                                   state.resources.font(FIRA_SANS_PATH, 16),
                                   state,
                                   extra_confirm_areas,
-                                  move |option, state, queue| {
+                                  move |option, state, queue, menu| {
             match option {
                 Some("Attack") => {
                     debug!("Attack!");
-                    state.pop_modal(queue);
+                    menu.close(state, queue);
                     queue.push(AttackSelected(origin, target));
                 }
                 Some("Wait") => {
                     debug!("Wait!");
-                    state.pop_modal(queue);
+                    menu.close(state, queue);
                     // TODO
                     queue.push(UnitSpent(target));
                     queue.push(WaitSelected);
                 }
                 None => {
                     debug!("Cancel!");
-                    state.pop_modal(queue);
+                    menu.close(state, queue);
                     queue.push(CancelSelected(origin, target));
                 }
                 _ => unreachable!(),
@@ -300,11 +300,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.cursor_hidden = false;
                 self.select_unit(pos, state, queue);
             }
-
-            TargetSelectorCanceled(pos) => {
-                let origin = self.selected.as_ref().expect("a unit must be selected here!").pos;
+            TargetSelectorCanceled(origin, pos) => {
                 // TODO: We cancel, just to move back.
                 state.grid.move_unit(pos, origin);
+                self.select_unit(origin, state, queue);
+                // FIXME: We reanimate after cancelling!!!
                 self.move_selected_unit_and_act(pos, state, queue);
             }
 

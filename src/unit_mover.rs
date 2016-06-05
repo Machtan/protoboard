@@ -18,7 +18,7 @@ pub struct UnitMover {
 }
 
 fn as_millis(dur: Duration) -> u64 {
-    dur.as_secs() * 1000 + (dur.subsec_nanos() / 1_000_000) as u64
+    dur.as_secs() * 1_000 + (dur.subsec_nanos() / 1_000_000) as u64
 }
 
 impl UnitMover {
