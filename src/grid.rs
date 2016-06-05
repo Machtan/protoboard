@@ -2,6 +2,8 @@ use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::{self, Debug};
 use std::mem;
 
+use rand::{thread_rng, Rng};
+
 use unit::{TilesInRange, Unit};
 
 #[derive(Clone, Debug)]
@@ -154,7 +156,20 @@ impl Grid {
         let mut costs = BTreeMap::new();
         let (w, h) = self.size();
 
-        while let Some(((x, y), cost)) = to_be_searched.pop() {
+        while let Some((pos, cost)) = to_be_searched.pop() {
+            match costs.entry(pos) {
+                btree_map::Entry::Vacant(entry) => {
+                    entry.insert(cost);
+                }
+                btree_map::Entry::Occupied(mut entry) => {
+                    if *entry.get() > cost {
+                        entry.insert(cost);
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
             let mut dir = 0;
             loop {
                 let (dx, dy) = match dir {
@@ -166,8 +181,8 @@ impl Grid {
                 };
                 dir += 1;
 
-                let nx = x as i32 + dx;
-                let ny = y as i32 + dy;
+                let nx = pos.0 as i32 + dx;
+                let ny = pos.1 as i32 + dy;
 
                 if nx < 0 || w as i32 <= nx || ny < 0 || h as i32 <= ny {
                     continue;
@@ -184,25 +199,15 @@ impl Grid {
                     }
                 }
 
-                let ncost = cost.saturating_add(unit.terrain_cost(terrain));
-
-                if ncost > unit.unit_type().movement {
-                    continue;
+                let tcost = unit.terrain_cost(terrain);
+                if tcost == 0 {
+                    unimplemented!();
                 }
+                let ncost = cost.saturating_add(tcost);
 
-                match costs.entry(npos) {
-                    btree_map::Entry::Vacant(entry) => {
-                        entry.insert(ncost);
-                    }
-                    btree_map::Entry::Occupied(mut entry) => {
-                        if *entry.get() > ncost {
-                            entry.insert(ncost);
-                        } else {
-                            continue;
-                        }
-                    }
+                if ncost <= unit.unit_type().movement {
+                    to_be_searched.push((npos, ncost));
                 }
-                to_be_searched.push((npos, ncost));
             }
         }
         PathFinder {
@@ -249,7 +254,6 @@ impl PathFinder {
 
     pub fn tiles_in_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
         let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
-
         if unit.unit_type().attack.is_ranged() {
             unit.tiles_in_attack_range(self.origin, grid.size()).collect()
         } else {
@@ -263,6 +267,57 @@ impl PathFinder {
             }
             res
         }
+    }
+
+    #[inline]
+    pub fn random_path_rev(&self, target: (u32, u32)) -> RandomPathRev {
+        RandomPathRev {
+            path_finder: self,
+            pos: target,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RandomPathRev<'a> {
+    path_finder: &'a PathFinder,
+    pos: (u32, u32),
+}
+
+impl<'a> Iterator for RandomPathRev<'a> {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<(u32, u32)> {
+        if self.pos == self.path_finder.origin {
+            return None;
+        }
+
+        let cost = *self.path_finder.costs.get(&self.pos).expect("invalid position");
+
+        let mut rng = thread_rng();
+        let mut adjacent = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+        rng.shuffle(&mut adjacent);
+
+        let mut res = None;
+        let mut cost = cost;
+        for &(dx, dy) in &adjacent {
+            let x = self.pos.0 as i32 + dx;
+            let y = self.pos.1 as i32 + dy;
+
+            if x < 0 || y < 0 {
+                continue;
+            }
+            let npos = (x as u32, y as u32);
+            if let Some(&ncost) = self.path_finder.costs.get(&npos) {
+                if ncost < cost {
+                    res = Some(npos);
+                    cost = ncost;
+                }
+            }
+        }
+        let item = self.pos;
+        self.pos = res.expect("path finder somehow produced a local minimum!");
+        Some(item)
     }
 }
 

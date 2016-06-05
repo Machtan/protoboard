@@ -70,24 +70,23 @@ impl GridManager {
                                       target: (u32, u32),
                                       state: &mut State<'a>,
                                       queue: &mut Vec<Message>) {
-        let origin = {
-            let selected = self.selected.as_ref().expect("no unit was selected");
-
-            if target != selected.pos && state.grid.unit(target).is_some() {
-                // TODO: Beep!
-                return;
-            }
-            assert!(selected.path_finder.costs.contains_key(&target));
-            selected.pos
-        };
-        self.selected = None;
+        let selected = self.selected.take().expect("no unit was selected");
+        let origin = selected.pos;
+        if target != origin && state.grid.unit(target).is_some() {
+            // TODO: Beep!
+            self.selected = Some(selected);
+            return;
+        }
+        assert!(selected.path_finder.costs.contains_key(&target));
 
         self.move_cursor_to(target, state.grid.size());
         self.cursor_hidden = true;
 
         let unit = state.grid.remove_unit(origin);
+        let mut path = selected.path_finder.random_path_rev(target).collect::<Vec<_>>();
+        path.reverse();
 
-        let mover = UnitMover::new(unit, origin, target);
+        let mover = UnitMover::new(unit, origin, path);
         state.push_modal(Box::new(mover), queue);
     }
 
@@ -402,7 +401,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
                         if s.pos == pos {
                             Some(Color::RGBA(244, 237, 129, 191))
                         } else if s.path_finder.costs.contains_key(&pos) {
-                            Some(Color::RGBA(0, 255, 255, 127))
+                            if unit.is_none() {
+                                Some(Color::RGBA(0, 255, 255, 127))
+                            } else {
+                                None
+                            }
                         } else {
                             None
                         }

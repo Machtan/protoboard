@@ -11,9 +11,10 @@ const MOVE_TILE_MS: u64 = 50;
 #[derive(Debug)]
 pub struct UnitMover {
     unit: Option<Unit>,
-    from: (u32, u32),
-    to: (u32, u32),
-    timing: Option<(Instant, Instant)>,
+    origin: (u32, u32),
+    path: Vec<(u32, u32)>,
+    index: usize,
+    start: Option<Instant>,
 }
 
 fn as_millis(dur: Duration) -> u64 {
@@ -22,31 +23,14 @@ fn as_millis(dur: Duration) -> u64 {
 
 impl UnitMover {
     #[inline]
-    pub fn new(unit: Unit, from: (u32, u32), to: (u32, u32)) -> UnitMover {
+    pub fn new(unit: Unit, origin: (u32, u32), path: Vec<(u32, u32)>) -> UnitMover {
         UnitMover {
             unit: Some(unit),
-            from: from,
-            to: to,
-            timing: None,
+            origin: origin,
+            path: path,
+            index: 0,
+            start: None,
         }
-    }
-
-    fn distance(&self) -> f32 {
-        let dx = self.from.0 as f32 - self.to.0 as f32;
-        let dy = self.from.1 as f32 - self.to.1 as f32;
-        dx.hypot(dy)
-    }
-
-    fn lerp(&self) -> (u32, u32) {
-        let (start, now) = self.timing.expect("lerp called before update");
-        let elapsed = now.duration_since(start);
-        let ems = as_millis(elapsed) as f32;
-        let tms = MOVE_TILE_MS as f32 * self.distance();
-        let t = ems / tms;
-
-        let x = self.from.0 as f32 + (self.to.0 as f32 - self.from.0 as f32) * t;
-        let y = self.from.1 as f32 + (self.to.1 as f32 - self.from.1 as f32) * t;
-        (x.round() as u32, y.round() as u32)
     }
 }
 
@@ -55,28 +39,30 @@ impl<'a> Behavior<State<'a>> for UnitMover {
 
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         let now = Instant::now();
-        let start = match self.timing {
+        let start = match self.start {
             None => {
-                self.timing = Some((now, now));
-                return;
+                self.start = Some(now);
+                now
             }
-            Some((start, ref mut timing_now)) => {
-                *timing_now = now;
-                start
-            }
+            Some(start) => start,
         };
         let elapsed = now.duration_since(start);
-        if as_millis(elapsed) >= (MOVE_TILE_MS as f32 * self.distance()) as u64 {
+        let i = as_millis(elapsed) / MOVE_TILE_MS;
+
+        if i >= self.path.len() as u64 {
             let unit = self.unit.take().expect("missing unit");
-            state.grid.add_unit(unit, self.to);
+            let to = *self.path.last().unwrap_or(&self.origin);
+            state.grid.add_unit(unit, to);
             state.pop_modal(queue);
-            queue.push(Message::UnitMoved(self.from, self.to));
+            queue.push(Message::UnitMoved(self.origin, to));
+        } else {
+            self.index = i as usize;
         }
     }
 
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         if let Some(ref unit) = self.unit {
-            let pos = self.lerp();
+            let pos = self.path[self.index];
             let rect = state.tile_rect(pos);
             render_unit(unit, rect, true, state, renderer);
         }
