@@ -32,7 +32,6 @@ impl TargetSelector {
         state.break_modal(queue);
         queue.push(AttackWithUnit(self.pos, selected));
         queue.push(UnitSpent(self.pos));
-        queue.push(Deselect);
     }
 
     fn cancel<'a>(&self, state: &mut State<'a>, queue: &mut Vec<Message>) {

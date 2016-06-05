@@ -33,7 +33,6 @@ pub enum Message {
     MouseMovedTo(i32, i32),
     MouseScroll(i32, i32),
 
-    Deselect,
     UnitSpent((u32, u32)),
     UnitMoved((u32, u32), (u32, u32)),
     AttackWithUnit((u32, u32), (u32, u32)),

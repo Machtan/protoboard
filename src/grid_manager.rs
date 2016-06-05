@@ -52,7 +52,6 @@ impl GridManager {
                          state: &mut State<'a>,
                          queue: &mut Vec<Message>) {
         debug!("Selecting target...");
-        assert!(self.selected.is_some());
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
             state.grid
@@ -81,6 +80,10 @@ impl GridManager {
             assert!(selected.path_finder.costs.contains_key(&target));
             selected.pos
         };
+        self.selected = None;
+
+        self.move_cursor_to(target, state.grid.size());
+        self.cursor_hidden = true;
 
         let unit = state.grid.remove_unit(origin);
 
@@ -207,9 +210,6 @@ impl GridManager {
         use common::Message::*;
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
-        self.move_cursor_to(target, state.grid.size());
-        self.cursor_hidden = true;
-
         let options = {
             let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
 
@@ -300,7 +300,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             WaitSelected => {
                 // self.cursor.pos = target;
-                self.deselect();
                 self.cursor_hidden = false;
             }
             CancelSelected(pos, target) => {
@@ -331,6 +330,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.deselect();
             }
             AttackWithUnit(pos, target) => {
+                self.cursor_hidden = false;
                 let destroyed = {
                     // TODO: Instead of cloning here, hoist the unit
                     // from the grid when moving, meaning they are not

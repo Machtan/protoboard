@@ -13,7 +13,7 @@ pub struct UnitMover {
     unit: Option<Unit>,
     from: (u32, u32),
     to: (u32, u32),
-    start: Option<Instant>,
+    timing: Option<(Instant, Instant)>,
 }
 
 fn as_millis(dur: Duration) -> u64 {
@@ -27,7 +27,7 @@ impl UnitMover {
             unit: Some(unit),
             from: from,
             to: to,
-            start: None,
+            timing: None,
         }
     }
 
@@ -38,7 +38,8 @@ impl UnitMover {
     }
 
     fn lerp(&self) -> (u32, u32) {
-        let elapsed = self.start.expect("render called before update").elapsed();
+        let (start, now) = self.timing.expect("lerp called before update");
+        let elapsed = now.duration_since(start);
         let ems = as_millis(elapsed) as f32;
         let tms = MOVE_TILE_MS as f32 * self.distance();
         let t = ems / tms;
@@ -53,19 +54,23 @@ impl<'a> Behavior<State<'a>> for UnitMover {
     type Message = Message;
 
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
-        match self.start {
+        let now = Instant::now();
+        let start = match self.timing {
             None => {
-                self.start = Some(Instant::now());
+                self.timing = Some((now, now));
+                return;
             }
-            Some(start) => {
-                let elapsed = start.elapsed();
-                if as_millis(elapsed) >= (MOVE_TILE_MS as f32 * self.distance()) as u64 {
-                    let unit = self.unit.take().expect("missing unit");
-                    state.grid.add_unit(unit, self.to);
-                    state.pop_modal(queue);
-                    queue.push(Message::UnitMoved(self.from, self.to));
-                }
+            Some((start, ref mut timing_now)) => {
+                *timing_now = now;
+                start
             }
+        };
+        let elapsed = now.duration_since(start);
+        if as_millis(elapsed) >= (MOVE_TILE_MS as f32 * self.distance()) as u64 {
+            let unit = self.unit.take().expect("missing unit");
+            state.grid.add_unit(unit, self.to);
+            state.pop_modal(queue);
+            queue.push(Message::UnitMoved(self.from, self.to));
         }
     }
 
