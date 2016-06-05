@@ -20,52 +20,6 @@ pub struct Grid {
     terrain: Box<[Terrain]>,
 }
 
-pub struct Units<'a> {
-    units: &'a [Option<Unit>],
-}
-
-impl<'a> Iterator for Units<'a> {
-    type Item = &'a Unit;
-
-    fn next(&mut self) -> Option<&'a Unit> {
-        loop {
-            match self.units.split_first() {
-                Some((first, rest)) => {
-                    self.units = rest;
-                    if let Some(ref unit) = *first {
-                        return Some(unit);
-                    }
-                }
-                None => return None,
-            }
-        }
-    }
-}
-
-pub struct UnitsMut<'a> {
-    units: &'a mut [Option<Unit>],
-}
-
-impl<'a> Iterator for UnitsMut<'a> {
-    type Item = &'a mut Unit;
-
-    fn next(&mut self) -> Option<&'a mut Unit> {
-        loop {
-            let slice = mem::replace(&mut self.units, &mut []);
-            match slice.split_first_mut() {
-                Some((first, rest)) => {
-                    self.units = rest;
-                    if let Some(ref mut unit) = *first {
-                        return Some(unit);
-                    }
-                }
-                None => return None,
-            }
-        }
-    }
-}
-
-
 impl Grid {
     pub fn new<F>(size: (u32, u32), mut func: F) -> Grid
         where F: FnMut((u32, u32)) -> Terrain
@@ -260,6 +214,62 @@ impl Grid {
     }
 }
 
+impl Debug for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Grid")
+            .field("size", &self.size)
+            .field("units", &(..))
+            .field("tiles", &(..))
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct Units<'a> {
+    units: &'a [Option<Unit>],
+}
+
+impl<'a> Iterator for Units<'a> {
+    type Item = &'a Unit;
+
+    fn next(&mut self) -> Option<&'a Unit> {
+        loop {
+            match self.units.split_first() {
+                Some((first, rest)) => {
+                    self.units = rest;
+                    if let Some(ref unit) = *first {
+                        return Some(unit);
+                    }
+                }
+                None => return None,
+            }
+        }
+    }
+}
+
+pub struct UnitsMut<'a> {
+    units: &'a mut [Option<Unit>],
+}
+
+impl<'a> Iterator for UnitsMut<'a> {
+    type Item = &'a mut Unit;
+
+    fn next(&mut self) -> Option<&'a mut Unit> {
+        loop {
+            let slice = mem::replace(&mut self.units, &mut []);
+            match slice.split_first_mut() {
+                Some((first, rest)) => {
+                    self.units = rest;
+                    if let Some(ref mut unit) = *first {
+                        return Some(unit);
+                    }
+                }
+                None => return None,
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PathFinder {
     origin: (u32, u32),
@@ -294,17 +304,7 @@ impl PathFinder {
     }
 }
 
-impl Debug for Grid {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Grid")
-            .field("size", &self.size)
-            .field("units", &(..))
-            .field("tiles", &(..))
-            .finish()
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct RandomPathRev<'a> {
     path_finder: &'a PathFinder,
     pos: (u32, u32),
@@ -347,7 +347,7 @@ impl<'a> Iterator for RandomPathRev<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum AttackRange<'a> {
     Empty,
     Melee {
@@ -407,6 +407,107 @@ impl<'a> AttackRange<'a> {
             dist: 0,
         }
     }
+
+    fn melee_next(grid: &Grid, pos: (u32, u32), state: &mut u8) -> Option<(u32, u32)> {
+        let (x, y) = pos;
+        let (w, h) = grid.size();
+        loop {
+            let (dx, dy) = match *state {
+                0 => (0, 1),
+                1 => (1, 0),
+                2 => (0, -1),
+                3 => (-1, 0),
+                _ => return None,
+            };
+            *state += 1;
+
+            let nx = x as i32 + dx;
+            let ny = y as i32 + dy;
+
+            if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
+                return Some((nx as u32, ny as u32));
+            }
+        }
+    }
+
+    fn ranged_next(grid: &Grid,
+                   pos: (u32, u32),
+                   min: u32,
+                   cur: &mut (i32, i32))
+                   -> Option<(u32, u32)> {
+        let (x, y) = pos;
+        let (w, h) = grid.size();
+        while *cur != (0, min as i32 - 1) {
+            let (dx, dy) = *cur;
+
+            let nx = x as i32 + dx;
+            let ny = y as i32 + dy;
+
+            *cur = match (dx.signum(), dy.signum()) {
+                (0, 1) | (1, 1) => (dx + 1, dy - 1), // N-E
+                (1, 0) | (1, -1) => (dx - 1, dy - 1), // E-S
+                (0, -1) | (-1, -1) => (dx - 1, dy + 1), // S-W
+                (-1, 0) | (-1, 1) => {
+                    // W-N
+                    if dx == -1 {
+                        (dx + 1, dy)
+                    } else {
+                        (dx + 1, dy + 1)
+                    }
+                }
+                _ => unreachable!(),
+            };
+
+            if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
+                return Some((nx as u32, ny as u32));
+            }
+        }
+        None
+    }
+
+    fn spear_next(grid: &Grid,
+                  unit: &Unit,
+                  pos: (u32, u32),
+                  max: u32,
+                  state: &mut u8,
+                  dist: &mut u32)
+                  -> Option<(u32, u32)> {
+        let (x, y) = pos;
+        let (w, h) = grid.size();
+        loop {
+            let (dx, dy) = match *state {
+                0 => (0, 1),
+                1 => (1, 0),
+                2 => (0, -1),
+                3 => (-1, 0),
+                _ => return None,
+            };
+            if *dist >= max {
+                *state += 1;
+                *dist = 0;
+                continue;
+            }
+
+            *dist += 1;
+
+            let nx = x as i32 + dx * *dist as i32;
+            let ny = y as i32 + dy * *dist as i32;
+
+            if !(0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32) {
+                continue;
+            }
+            let res = (nx as u32, ny as u32);
+
+            if let Some(other) = grid.unit(res) {
+                // TODO: Alliances? Neutrals?
+                if other.faction != unit.faction {
+                    *state += 1;
+                    *dist = 0;
+                }
+            }
+            return Some(res);
+        }
+    }
 }
 
 impl<'a> Iterator for AttackRange<'a> {
@@ -416,92 +517,13 @@ impl<'a> Iterator for AttackRange<'a> {
         match *self {
             AttackRange::Empty => None,
             AttackRange::Melee { grid, pos, ref mut state } => {
-                let (x, y) = pos;
-                let (w, h) = grid.size();
-                loop {
-                    let (dx, dy) = match *state {
-                        0 => (0, 1),
-                        1 => (1, 0),
-                        2 => (0, -1),
-                        3 => (-1, 0),
-                        _ => return None,
-                    };
-                    *state += 1;
-
-                    let nx = x as i32 + dx;
-                    let ny = y as i32 + dy;
-
-                    if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
-                        return Some((nx as u32, ny as u32));
-                    }
-                }
+                AttackRange::melee_next(grid, pos, state)
             }
             AttackRange::Ranged { grid, pos, min, ref mut cur } => {
-                let (x, y) = pos;
-                let (w, h) = grid.size();
-                while *cur != (0, min as i32 - 1) {
-                    let (dx, dy) = *cur;
-
-                    let nx = x as i32 + dx;
-                    let ny = y as i32 + dy;
-
-                    *cur = match (dx.signum(), dy.signum()) {
-                        (0, 1) | (1, 1) => (dx + 1, dy - 1), // N-E
-                        (1, 0) | (1, -1) => (dx - 1, dy - 1), // E-S
-                        (0, -1) | (-1, -1) => (dx - 1, dy + 1), // S-W
-                        (-1, 0) | (-1, 1) => {
-                            // W-N
-                            if dx == -1 {
-                                (dx + 1, dy)
-                            } else {
-                                (dx + 1, dy + 1)
-                            }
-                        }
-                        _ => unreachable!(),
-                    };
-
-                    if 0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32 {
-                        return Some((nx as u32, ny as u32));
-                    }
-                }
-                None
+                AttackRange::ranged_next(grid, pos, min, cur)
             }
             AttackRange::Spear { grid, unit, pos, max, ref mut state, ref mut dist } => {
-                let (x, y) = pos;
-                let (w, h) = grid.size();
-                loop {
-                    let (dx, dy) = match *state {
-                        0 => (0, 1),
-                        1 => (1, 0),
-                        2 => (0, -1),
-                        3 => (-1, 0),
-                        _ => return None,
-                    };
-                    if *dist >= max {
-                        *state += 1;
-                        *dist = 0;
-                        continue;
-                    }
-
-                    *dist += 1;
-
-                    let nx = x as i32 + dx * *dist as i32;
-                    let ny = y as i32 + dy * *dist as i32;
-
-                    if !(0 <= nx && nx < w as i32 && 0 <= ny && ny < h as i32) {
-                        continue;
-                    }
-                    let res = (nx as u32, ny as u32);
-
-                    if let Some(other) = grid.unit(res) {
-                        // TODO: Alliances? Neutrals?
-                        if other.faction != unit.faction {
-                            *state += 1;
-                            *dist = 0;
-                        }
-                    }
-                    return Some(res);
-                }
+                AttackRange::spear_next(grid, unit, pos, max, state, dist)
             }
         }
     }

@@ -96,7 +96,7 @@ fn main() {
 
     let (w, h) = window.size();
     let (pw, ph) = window.drawable_size();
-    let mut renderer = window.renderer().build().unwrap();
+    let mut renderer = window.renderer().present_vsync().build().unwrap();
     renderer.set_blend_mode(BlendMode::Blend);
     let _ = renderer.set_logical_size(w, h);
 
