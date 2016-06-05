@@ -153,13 +153,6 @@ impl GridManager {
         }
     }
 
-    fn deselect(&mut self) {
-        assert!(self.selected.is_some(),
-                "received deselect with no unit selected");
-        self.selected = None;
-        self.cursor_hidden = false;
-    }
-
     fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
         assert!(pos.0 < size.0 && pos.1 < size.1);
         if let Some(ref selected) = self.selected {

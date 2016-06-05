@@ -148,7 +148,7 @@ impl<'a> State<'a> {
             .entry(health)
             .or_insert_with(|| {
                 let string = format!("{}", health);
-                Rc::new(Label::new(&self.health_label_font,
+                Rc::new(Label::new(self.health_label_font,
                                    &string,
                                    (255, 255, 255, 255),
                                    self.resources.device()))
