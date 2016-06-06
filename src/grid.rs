@@ -5,14 +5,8 @@ use std::mem;
 use rand::{thread_rng, Rng};
 
 use attack_range::AttackRange;
+use terrain::Terrain;
 use unit::{AttackType, Unit};
-
-#[derive(Clone, Debug)]
-pub enum Terrain {
-    Grass,
-    Woods,
-    Mountains,
-}
 
 #[derive(Clone)]
 pub struct Grid {

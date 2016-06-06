@@ -4,7 +4,7 @@ use std::rc::Rc;
 use sdl2::render::Texture;
 
 use faction::Faction;
-use grid::Terrain;
+use terrain::Terrain;
 
 #[derive(Clone, Debug)]
 pub struct Unit {

@@ -6,10 +6,11 @@ use sdl2::rect::Rect;
 
 use common::{State, Message};
 use faction::Faction;
-use grid::{PathFinder, Terrain};
+use grid::PathFinder;
 use menus::ModalMenu;
 use resources::{FIRA_SANS_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
+use terrain::Terrain;
 use unit::Unit;
 use unit_mover::UnitMover;
 

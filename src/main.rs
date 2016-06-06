@@ -26,10 +26,11 @@ use resources::{ARCHER_PATH, FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, PROTECTOR_PATH
                 WARRIOR_PATH};
 use common::{Config, State};
 use faction::Faction;
-use grid::{Grid, Terrain};
+use grid::Grid;
 use grid_manager::GridManager;
 use scene::Scene;
 use turner::TurnManager;
+use terrain::Terrain;
 use unit::{AttackType, UnitType};
 
 mod attack_range;
@@ -41,6 +42,7 @@ mod menus;
 mod resources;
 mod scene;
 mod target_selector;
+mod terrain;
 mod turner;
 mod unit;
 mod unit_mover;
