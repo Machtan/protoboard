@@ -22,14 +22,14 @@ use sdl2::mouse::Mouse;
 use sdl2::render::BlendMode;
 use sdl2_image::{INIT_JPG, INIT_PNG};
 
-use resources::{ARCHER_PATH, FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, PROTECTOR_PATH, RACCOON_PATH,
-                WARRIOR_PATH};
 use common::{Config, State};
 use faction::Faction;
 use grid::Grid;
 use grid_manager::GridManager;
+use info_box::InfoBox;
+use resources::{ARCHER_PATH, FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, PROTECTOR_PATH, RACCOON_PATH,
+                WARRIOR_PATH};
 use scene::Scene;
-use turner::TurnManager;
 use terrain::Terrain;
 use unit::{AttackType, UnitType};
 
@@ -38,12 +38,12 @@ mod common;
 mod faction;
 mod grid;
 mod grid_manager;
+mod info_box;
 mod menus;
 mod resources;
 mod scene;
 mod target_selector;
 mod terrain;
-mod turner;
 mod unit;
 mod unit_mover;
 
@@ -179,6 +179,7 @@ fn main() {
     let mut state = State::new(resources,
                                grid,
                                TILE_SIZE,
+                               vec![Faction::Red, Faction::Blue],
                                NUMBER_OF_ACTIONS,
                                &health_label_font,
                                config);
@@ -189,10 +190,7 @@ fn main() {
 
     scene.add(Box::new(GridManager::new((0, 0))));
 
-    let turner = TurnManager::new(NUMBER_OF_ACTIONS,
-                                  vec![Faction::Red, Faction::Blue],
-                                  state.resources.font(FIRA_SANS_PATH, 16),
-                                  &state);
+    let turner = InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state);
     scene.add(Box::new(turner));
 
     // Set up input handling.

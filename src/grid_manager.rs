@@ -35,6 +35,7 @@ pub struct GridManager {
 }
 
 impl GridManager {
+    #[inline]
     pub fn new(cursor: (u32, u32)) -> GridManager {
         GridManager {
             selected: None,
@@ -98,7 +99,7 @@ impl GridManager {
     /// Handles the selection of a unit.
     fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
         let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
-        if state.actions_left > 0 && unit.faction == state.current_turn && !unit.spent {
+        if state.turn_info.can_act(unit) {
             debug!("Unit at {:?} selected!", pos);
             let path_finder = state.grid.path_finder(pos);
             self.selected = Some(Selected {
@@ -315,6 +316,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .unit_mut(pos)
                     .expect("no unit to mark as spent")
                     .spent = true;
+                state.turn_info.spend_action();
             }
             UnitMoved(from, to) => {
                 self.handle_unit_moved(from, to, state, queue);
@@ -342,9 +344,12 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
             }
             FinishTurn => {
+                self.selected = None;
                 for unit in state.grid.units_mut() {
                     unit.spent = false;
                 }
+                state.turn_info.end_turn();
+                // TODO: Display a turn change animation here
             }
 
             MouseMovedTo(x, y) |
@@ -363,6 +368,18 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     _ => unreachable!(),
                 }
             }
+
+            FactionDefeated(faction) => {
+                info!("Faction defeated! {:?}", faction);
+                state.turn_info.remove_faction(faction);
+
+                let faction = state.turn_info.factions[0];
+                // TODO: Alliances? Neutrals?
+                if state.turn_info.factions[1..].iter().all(|&f| f == faction) {
+                    queue.push(FactionWins(faction));
+                }
+            }
+
             _ => {}
         }
     }

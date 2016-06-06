@@ -10,6 +10,7 @@ use sdl2_ttf::Font;
 
 use faction::Faction;
 use grid::Grid;
+use unit::Unit;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
@@ -58,8 +59,7 @@ pub enum ModalMessage<'a> {
 pub struct State<'a> {
     pub config: Config,
     pub resources: ResourceManager<'a, 'static>,
-    pub current_turn: Faction,
-    pub actions_left: u32,
+    pub turn_info: TurnInfo,
     pub grid: Grid,
     pub tile_size: (u32, u32),
     pub health_label_font: &'a Font,
@@ -73,6 +73,7 @@ impl<'a> State<'a> {
     pub fn new(resources: ResourceManager<'a, 'static>,
                grid: Grid,
                tile_size: (u32, u32),
+               factions: Vec<Faction>,
                actions_left: u32,
                health_label_font: &'a Font,
                config: Config)
@@ -81,8 +82,12 @@ impl<'a> State<'a> {
         State {
             config: config,
             resources: resources,
-            current_turn: Faction::Red,
-            actions_left: actions_left,
+            turn_info: TurnInfo {
+                factions: factions,
+                current: 0,
+                max_actions_left: actions_left,
+                actions_left: actions_left,
+            },
             grid: grid,
             tile_size: tile_size,
             health_label_font: health_label_font,
@@ -160,6 +165,50 @@ impl<'a> State<'a> {
                                    self.resources.device()))
             })
             .clone()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TurnInfo {
+    pub factions: Vec<Faction>,
+    pub current: usize,
+    pub actions_left: u32,
+    pub max_actions_left: u32,
+}
+
+impl TurnInfo {
+    #[inline]
+    pub fn end_turn(&mut self) {
+        self.actions_left = self.max_actions_left;
+        self.current = (self.current + 1) % self.factions.len();
+    }
+
+    #[inline]
+    pub fn actions_left(&self) -> u32 {
+        self.actions_left
+    }
+
+    #[inline]
+    pub fn spend_action(&mut self) {
+        assert!(self.actions_left > 0);
+        self.actions_left = self.actions_left.saturating_sub(1);
+    }
+
+    #[inline]
+    pub fn current_faction(&self) -> Faction {
+        self.factions[self.current]
+    }
+
+    #[inline]
+    pub fn remove_faction(&mut self, faction: Faction) {
+        while let Some(i) = self.factions.iter().rposition(|&f| f == faction) {
+            self.factions.remove(i);
+        }
+    }
+
+    #[inline]
+    pub fn can_act(&self, unit: &Unit) -> bool {
+        unit.faction == self.current_faction() && self.actions_left > 0 && !unit.spent
     }
 }
 
