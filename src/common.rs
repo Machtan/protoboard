@@ -168,12 +168,13 @@ impl<'a> State<'a> {
 
     pub fn window_to_grid(&self, x: i32, y: i32) -> Option<(u32, u32)> {
         let (tw, th) = self.tile_size;
-        let (w, h) = self.grid.size();
+        let h = self.window_size.1;
 
         let x = x.div_floor(tw as i32) + self.camera_offset.0;
-        let y = (h * th) as i32 - y;
-        let y = -(-y).div_floor(th as i32) + self.camera_offset.1;
+        let y = h as i32 - y;
+        let y = y.div_floor(th as i32) + self.camera_offset.1;
 
+        let (w, h) = self.grid.size();
         if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
             Some((x as u32, y as u32))
         } else {
@@ -183,13 +184,13 @@ impl<'a> State<'a> {
 
     pub fn tile_rect(&self, pos: (u32, u32)) -> Rect {
         let (tw, th) = self.tile_size;
-        let (_, h) = self.grid.size();
+        let h = self.window_size.1;
 
         let x = (pos.0 as i32 - self.camera_offset.0) * tw as i32;
         let y = (pos.1 as i32 - self.camera_offset.1) * th as i32;
-        let y = (h * th) as i32 - y;
+        let y = h as i32 - y;
 
-        Rect::new(x, y, tw, th)
+        Rect::new(x, y - th as i32, tw, th)
     }
 
     pub fn ensure_in_range(&mut self, pos: (u32, u32)) {
