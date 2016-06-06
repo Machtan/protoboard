@@ -388,9 +388,12 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 info!("Faction defeated! {:?}", faction);
                 state.turn_info.remove_faction(faction);
 
-                let faction = state.turn_info.factions()[0];
+                let (&faction, rest) = state.turn_info
+                    .factions()
+                    .split_first()
+                    .expect("there must be at least one faction left");
                 // TODO: Alliances? Neutrals?
-                if state.turn_info.factions()[1..].iter().all(|&f| f == faction) {
+                if rest.iter().all(|&f| f == faction) {
                     queue.push(FactionWins(faction));
                 }
             }

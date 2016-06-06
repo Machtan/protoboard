@@ -15,15 +15,31 @@ pub struct Unit {
 }
 
 impl Unit {
+    // TODO: Optimally we should not use floats here, but rather get a
+    // better idea of the units for the quantities.
+
+    pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
+        match *terrain {
+            Terrain::Grass => 0.1,
+            Terrain::Woods => 0.3,
+            Terrain::Mountains => 0.5,
+        }
+    }
+
+    pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
+        let def = other.defense_bonus(terrain);
+        let atk = self.unit_type.damage as f64;
+        let atk_hp = self.health as f64 / self.unit_type.health as f64;
+        let def_hp = other.health as f64 / other.unit_type.health as f64;
+        atk * atk_hp * (1.0 - def * def_hp)
+    }
+
     /// Attacks this unit and returns whether it gets destroyed.
     pub fn receive_attack(&mut self, terrain: &Terrain, attacker: &Unit) -> bool {
-        let terrain_bonus = match *terrain {
-            Terrain::Grass => 0,
-            Terrain::Woods => 2,
-            Terrain::Mountains => 3,
-        };
-        let damage = attacker.unit_type.damage.saturating_sub(terrain_bonus);
-        self.health = self.health.saturating_sub(damage);
+        let damage = attacker.attack_damage(self, terrain);
+        assert!(damage >= 0.0, "damage calculation should never be negative");
+        // TODO: Maybe truncate instead of rounding?
+        self.health = self.health.saturating_sub(damage.round() as u32);
         self.health == 0
     }
 
@@ -47,9 +63,8 @@ impl Unit {
     }
 
     #[inline]
-    pub fn can_spear_through(&self, other: &Unit) -> bool {
-        // TODO: Alliances? Neutrals?
-        self.faction == other.faction
+    pub fn can_spear_through(&self, _other: &Unit) -> bool {
+        false
     }
 
     #[inline]
