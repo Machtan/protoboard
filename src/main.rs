@@ -1,10 +1,16 @@
+#![feature(custom_derive)]
+#![feature(plugin)]
 #![feature(question_mark)]
+
+#![plugin(serde_macros)]
 
 extern crate env_logger;
 #[macro_use]
 extern crate log;
 extern crate lru_time_cache;
 extern crate rand;
+extern crate serde;
+extern crate serde_json as json;
 
 #[macro_use]
 extern crate glorious;
@@ -12,11 +18,9 @@ extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
 
-use std::cmp;
 use std::env;
 
 use glorious::{BoxedInputMapper, Device, Game, ResourceManager};
-use rand::Rng;
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2::render::BlendMode;
@@ -24,14 +28,11 @@ use sdl2_image::{INIT_JPG, INIT_PNG};
 
 use common::{Config, State};
 use faction::Faction;
-use grid::Grid;
 use grid_manager::GridManager;
 use info_box::InfoBox;
-use resources::{ARCHER_PATH, FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH, PROTECTOR_PATH, RACCOON_PATH,
-                WARRIOR_PATH};
+use level::Level;
+use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
 use scene::Scene;
-use terrain::Terrain;
-use unit::{AttackType, UnitType};
 
 mod attack_range;
 mod common;
@@ -39,6 +40,7 @@ mod faction;
 mod grid;
 mod grid_manager;
 mod info_box;
+mod level;
 mod menus;
 mod resources;
 mod scene;
@@ -54,8 +56,6 @@ fn main() {
     // Load settings
 
     const WINDOW_TITLE: &'static str = "Raccoon Squad";
-    const N_COLS: u32 = 16;
-    const N_ROWS: u32 = 11;
     const TILE_SIZE: (u32, u32) = (64, 64);
     const MAX_FPS: u32 = 60;
     const NUMBER_OF_ACTIONS: u32 = 4;
@@ -77,6 +77,10 @@ fn main() {
         builder.parse(&var);
     }
     builder.init().unwrap();
+
+    // Load level
+
+    let level = Level::load("level.json").expect("could not load level");
 
     // Set up SDL2.
 
@@ -104,78 +108,12 @@ fn main() {
     let renderer = device.create_renderer();
     let resources = ResourceManager::new(&device, &font_context);
 
-    // Load units
-
-    let warrior_texture = resources.texture(WARRIOR_PATH);
-    let archer_texture = resources.texture(ARCHER_PATH);
-    let protector_texture = resources.texture(PROTECTOR_PATH);
-    let raccoon_texture = resources.texture(RACCOON_PATH);
-
-    let warrior = UnitType {
-        texture: warrior_texture,
-        health: 5,
-        attack: AttackType::Melee,
-        damage: 2,
-        movement: 6,
-    };
-    let archer = UnitType {
-        texture: archer_texture,
-        health: 4,
-        attack: AttackType::Ranged { min: 2, max: 3 },
-        damage: 3,
-        movement: 4,
-    };
-    let protector = UnitType {
-        texture: protector_texture,
-        health: 8,
-        attack: AttackType::Melee,
-        damage: 2,
-        movement: 5,
-    };
-    let raccoon = UnitType {
-        texture: raccoon_texture,
-        health: 21,
-        attack: AttackType::Spear { range: 3 },
-        damage: 5,
-        movement: 4,
-    };
-
     // Set up game state.
 
     let config = Config {};
-    let mut rng = rand::thread_rng();
-
-    let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
-        let dist = cmp::min(y, N_ROWS - 1 - y);
-        match dist {
-            3 if x % 3 < 2 => Terrain::Mountains,
-            _ => {
-                if rng.next_f32() < 0.2 {
-                    Terrain::Woods
-                } else {
-                    Terrain::Grass
-                }
-            }
-        }
-    });
-
-    let unit_types = &[warrior, archer, protector];
-    for i in 0..N_COLS {
-        let unit_type = if i == N_COLS / 2 - 1 {
-            raccoon.clone()
-        } else {
-            let index = i as usize % unit_types.len();
-            unit_types[index].clone()
-        };
-        grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 2));
-    }
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 4, 1));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 1));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 1));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 2, 1));
+    let grid = level.create_grid(&resources);
 
     let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
-
     let mut state = State::new(resources,
                                grid,
                                TILE_SIZE,

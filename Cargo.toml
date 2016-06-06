@@ -8,6 +8,9 @@ env_logger = "0.3"
 log = "0.3"
 lru_time_cache = "0.4"
 rand = "0.3"
+serde = "0.7"
+serde_macros = "0.7"
+serde_json = "0.7"
 
 glorious = { git = "https://github.com/Machtan/glorious" }
 sdl2 = "0.19"
