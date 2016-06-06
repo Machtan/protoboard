@@ -112,6 +112,7 @@ fn main() {
 
     let config = Config {};
     let grid = level.create_grid(&resources);
+    let (w, h) = grid.size();
 
     let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
     let mut state = State::new(resources,
@@ -126,7 +127,7 @@ fn main() {
 
     let mut scene = Scene::new();
 
-    scene.add(Box::new(GridManager::new((0, 0))));
+    scene.add(Box::new(GridManager::new((w / 2, h / 2))));
 
     let turner = InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state);
     scene.add(Box::new(turner));
