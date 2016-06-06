@@ -170,6 +170,7 @@ impl<'a> State<'a> {
         let (tw, th) = self.tile_size;
         let h = self.window_size.1;
 
+        let mouse = (x, y);
         let x = x.div_floor(tw as i32) + self.camera_offset.0;
         let y = h as i32 - y;
         let y = y.div_floor(th as i32) + self.camera_offset.1;

@@ -20,7 +20,7 @@ extern crate sdl2_ttf;
 
 use std::env;
 
-use glorious::{BoxedInputMapper, Device, Game, ResourceManager};
+use glorious::{BoxedInputMapper, Color, Device, Game, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
 use sdl2::mouse::Mouse;
 use sdl2::render::BlendMode;
@@ -112,7 +112,7 @@ fn main() {
 
     let config = Config {};
     let grid = level.create_grid(&resources);
-    let (w, h) = grid.size();
+    let (gw, gh) = grid.size();
 
     let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
     let mut state = State::new(resources,
@@ -127,7 +127,7 @@ fn main() {
 
     let mut scene = Scene::new();
 
-    scene.add(Box::new(GridManager::new((w / 2, h / 2))));
+    scene.add(Box::new(GridManager::new((gw / 2, gh / 2))));
 
     let turner = InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state);
     scene.add(Box::new(turner));
@@ -180,7 +180,8 @@ fn main() {
     // Run the main loop.
 
     let event_pump = sdl_context.event_pump().unwrap();
-    let mut game = Game::new(MAX_FPS, renderer, event_pump);
+    let mut game =
+        Game::with_clear_color(Color(0x00, 0x00, 0x00, 0xff), MAX_FPS, renderer, event_pump);
 
     game.run(&mut state, &mapper, &mut scene, |m| *m == Exit);
 }
