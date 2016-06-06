@@ -3,7 +3,7 @@ use std::time::Instant;
 use glorious::{Behavior, Renderer};
 use sdl2::rect::Rect;
 
-use common::{as_millis, Message, State};
+use common::{DurationExt, Message, State};
 use unit::Unit;
 use grid_manager::render_unit;
 
@@ -56,8 +56,7 @@ impl<'a> Behavior<State<'a>> for UnitMover {
             }
             Some(start) => start,
         };
-        let elapsed = now.duration_since(start);
-        let ms = as_millis(elapsed);
+        let ms = now.duration_since(start).as_millis();
         let i = ms / MOVE_TILE_MS;
 
         if i >= self.path.len() as u64 {

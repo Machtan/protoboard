@@ -280,7 +280,7 @@ impl GridManager {
 impl<'a> Behavior<State<'a>> for GridManager {
     type Message = Message;
 
-    fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+    fn update(&mut self, state: &mut State<'a>, _queue: &mut Vec<Message>) {
         state.ensure_in_range(self.cursor);
         if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
             self.move_cursor_to(pos, state);
@@ -541,8 +541,8 @@ pub fn render_unit(unit: &Unit, rect: Rect, bg: bool, state: &State, renderer: &
     let font = &state.health_label_font;
     let (_, sy) = renderer.device().scale();
     // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
-    let descent = (font.descent() as f32 / sy) as i32;
-    let height = (font.height() as f32 / sy) as i32;
+    let descent = (font.descent() as f32 / sy).round() as i32;
+    let height = (font.height() as f32 / sy).round() as i32;
 
     let label = state.health_label(unit.health);
     let (w, _) = label.size();

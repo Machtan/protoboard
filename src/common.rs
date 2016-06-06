@@ -15,11 +15,11 @@ use unit::Unit;
 const COLOR_HEALTH_LABEL: Color = Color(0xff, 0xff, 0xff, 0xff);
 const SCROLL_TIMEOUT_MS: u64 = 100;
 
-pub trait DivFloor {
+pub trait IntegerExt {
     fn div_floor(self, other: Self) -> Self;
 }
 
-impl DivFloor for i32 {
+impl IntegerExt for i32 {
     #[inline]
     fn div_floor(self, other: i32) -> i32 {
         match (self / other, self % other) {
@@ -29,9 +29,15 @@ impl DivFloor for i32 {
     }
 }
 
-#[inline]
-pub fn as_millis(dur: Duration) -> u64 {
-    dur.as_secs() * 1_000 + (dur.subsec_nanos() / 1_000_000) as u64
+pub trait DurationExt {
+    fn as_millis(self) -> u64;
+}
+
+impl DurationExt for Duration {
+    #[inline]
+    fn as_millis(self) -> u64 {
+        self.as_secs() * 1_000 + (self.subsec_nanos() / 1_000_000) as u64
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -209,7 +215,8 @@ impl<'a> State<'a> {
         let y = pos.1 as i32 - self.camera_offset.1;
 
         let now = Instant::now();
-        let delta = if as_millis(now.duration_since(self.prev_scroll_time)) >= SCROLL_TIMEOUT_MS {
+        let elapsed = now.duration_since(self.prev_scroll_time).as_millis();
+        let delta = if elapsed >= SCROLL_TIMEOUT_MS {
             1
         } else {
             0

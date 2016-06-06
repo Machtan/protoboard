@@ -27,7 +27,7 @@ impl InfoBox {
     pub fn new(font: &Font, state: &State) -> InfoBox {
         let (_, scale_y) = state.resources.device().scale();
         let line_spacing = font.recommended_line_spacing();
-        let line_spacing = (line_spacing as f32 / scale_y) as u32;
+        let line_spacing = (line_spacing as f32 / scale_y).round() as u32;
         let faction_label = Label::new(font,
                                        "Current faction:   ",
                                        TEXT_COLOR,

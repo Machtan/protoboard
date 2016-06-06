@@ -45,7 +45,7 @@ impl<F> ModalMenu<F>
         // TODO: Having to remember to scale ourselves is a bit annoying.
         let (_, scale_y) = state.resources.device().scale();
         let line_spacing = font.recommended_line_spacing();
-        let line_spacing = (line_spacing as f32 / scale_y) as u32;
+        let line_spacing = (line_spacing as f32 / scale_y).round() as u32;
 
         let mut max_width = 0;
         let labels = options.into_iter()
