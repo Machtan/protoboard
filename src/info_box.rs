@@ -32,8 +32,7 @@ impl InfoBox {
                                        "Current faction:   ",
                                        TEXT_COLOR,
                                        state.resources.device());
-        let actions_label =
-            Label::new(&font, "Actions left:", TEXT_COLOR, state.resources.device());
+        let actions_label = Label::new(font, "Actions left:", TEXT_COLOR, state.resources.device());
         let mut faction_labels = HashMap::new();
         for &faction in state.turn_info.factions() {
             let label = Label::new(font,
