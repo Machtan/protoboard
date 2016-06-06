@@ -11,7 +11,7 @@ use common::{Message, State};
 const PAD: u32 = 10;
 const COLOR_BG: Color = Color(0xcc, 0xcc, 0xff, 0x99);
 const COLOR_TEXT: Color = Color(0x00, 0x00, 0x00, 0x00);
-const COLOR_SELECTED: Color = Color(0xff, 0x99, 0xff, 0xff);
+const COLOR_SELECTED: Color = Color(0xff, 0x99, 0x00, 0xff);
 
 // TODO: Tune this for different platforms/hardware.
 const SCROLL_TRESHOLD: i32 = 8;
