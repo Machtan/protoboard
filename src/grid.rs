@@ -60,6 +60,12 @@ impl Grid {
     }
 
     #[inline]
+    pub fn terrain(&self, pos: (u32, u32)) -> &Terrain {
+        let i = self.index(pos);
+        &self.terrain[i]
+    }
+
+    #[inline]
     pub fn unit(&self, pos: (u32, u32)) -> Option<&Unit> {
         self.tile(pos).0
     }
@@ -118,6 +124,13 @@ impl Grid {
             AttackType::Spear { .. } => AttackRange::melee(self, pos),
             AttackType::Ranged { .. } => AttackRange::empty(),
         }
+    }
+
+    pub fn attack_range_when_retaliating<'a>(&'a self,
+                                             unit: &'a Unit,
+                                             pos: (u32, u32))
+                                             -> AttackRange<'a> {
+        self.attack_range_before_moving(unit, pos)
     }
 
     pub fn find_attackable_before_moving<'a>(&'a self,

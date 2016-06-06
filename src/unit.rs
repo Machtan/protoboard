@@ -20,9 +20,9 @@ impl Unit {
 
     pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
         match *terrain {
-            Terrain::Grass => 0.1,
-            Terrain::Woods => 0.3,
-            Terrain::Mountains => 0.5,
+            Terrain::Grass => 0.05,
+            Terrain::Woods => 0.1,
+            Terrain::Mountains => 0.3,
         }
     }
 
@@ -34,11 +34,12 @@ impl Unit {
         atk * atk_hp * (1.0 - def * def_hp)
     }
 
-    /// Attacks this unit and returns whether it gets destroyed.
-    pub fn receive_attack(&mut self, terrain: &Terrain, attacker: &Unit) -> bool {
-        let damage = attacker.attack_damage(self, terrain);
+    pub fn retaliation_damage(&self, _damage_taken: f64, other: &Unit, terrain: &Terrain) -> f64 {
+        self.attack_damage(other, terrain)
+    }
+
+    pub fn receive_damage(&mut self, damage: f64) -> bool {
         assert!(damage >= 0.0, "damage calculation should never be negative");
-        // TODO: Maybe truncate instead of rounding?
         self.health = self.health.saturating_sub(damage.round() as u32);
         self.health == 0
     }

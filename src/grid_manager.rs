@@ -156,17 +156,18 @@ impl GridManager {
                         pos: (u32, u32),
                         state: &mut State<'a>,
                         queue: &mut Vec<Message>) {
-        let faction = {
-            let faction = {
-                let unit = state.grid.unit(pos).expect("no unit to destroy");
-                debug!("Unit at {:?} destroyed! ({:?})", pos, unit);
-                unit.faction
-            };
-            state.grid.remove_unit(pos);
-            faction
-        };
-        if state.grid.units().all(|u| u.faction != faction) {
-            queue.push(Message::FactionDefeated(faction));
+        let unit = state.grid.remove_unit(pos);
+        self.unit_destroyed(pos, &unit, state, queue);
+    }
+
+    fn unit_destroyed(&mut self,
+                      pos: (u32, u32),
+                      unit: &Unit,
+                      state: &State,
+                      queue: &mut Vec<Message>) {
+        debug!("Unit at {:?} destroyed! ({:?})", pos, unit);
+        if state.grid.units().all(|u| u.faction != unit.faction) {
+            queue.push(Message::FactionDefeated(unit.faction));
         }
     }
 
@@ -325,10 +326,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
             // State changes
             UnitSpent(pos) => {
-                state.grid
-                    .unit_mut(pos)
-                    .expect("no unit to mark as spent")
-                    .spent = true;
+                if let Some(unit) = state.grid.unit_mut(pos) {
+                    unit.spent = true;
+                }
                 state.turn_info.spend_action();
             }
             UnitMoved(from, to) => {
@@ -338,12 +338,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             AttackWithUnit(pos, target) => {
                 self.cursor_hidden = false;
-                let destroyed = {
-                    // TODO: Instead of cloning here, hoist the unit
-                    // from the grid when moving, meaning they are not
-                    // in the grid at this time. (Re-insert afterward.)
-                    let attacker = state.grid.unit(pos).expect("no attacking unit").clone();
-                    let (target_unit, terrain) = state.grid.tile_mut(target);
+
+                let mut attacker = state.grid.remove_unit(pos);
+
+                let damage = {
+                    let (target_unit, terrain) = state.grid.tile(target);
                     let target_unit = target_unit.expect("no unit to attack");
 
                     debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
@@ -352,10 +351,32 @@ impl<'a> Behavior<State<'a>> for GridManager {
                            target,
                            target_unit);
 
-                    target_unit.receive_attack(terrain, &attacker)
+                    attacker.attack_damage(target_unit, terrain)
                 };
-                if destroyed {
+
+                let target_destroyed =
+                    state.grid.unit_mut(target).expect("no unit to attack").receive_damage(damage);
+                let attacker_destroyed = if target_destroyed {
                     self.destroy_unit(target, state, queue);
+                    false
+                } else {
+                    let defender = state.grid.unit(target).expect("no unit for counter-attack");
+                    let in_range = state.grid
+                        .attack_range_when_retaliating(defender, target)
+                        .any(|p| p == pos);
+                    if in_range {
+                        let terrain = state.grid.terrain(pos);
+                        let damage = defender.retaliation_damage(damage, &attacker, terrain);
+                        attacker.receive_damage(damage)
+                    } else {
+                        false
+                    }
+                };
+
+                if attacker_destroyed {
+                    self.unit_destroyed(pos, &attacker, state, queue);
+                } else {
+                    state.grid.add_unit(attacker, pos);
                 }
             }
             FinishTurn => {
