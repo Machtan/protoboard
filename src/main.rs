@@ -32,6 +32,7 @@ use scene::Scene;
 use turner::TurnManager;
 use unit::{AttackType, UnitType};
 
+mod attack_range;
 mod common;
 mod faction;
 mod grid;

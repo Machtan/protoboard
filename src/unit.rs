@@ -32,16 +32,24 @@ impl Unit {
         &self.unit_type
     }
 
+    #[inline]
     pub fn texture(&self) -> Rc<Texture> {
         self.unit_type.texture.clone()
     }
 
+    #[inline]
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
         match *terrain {
             Terrain::Grass => 1,
             Terrain::Mountains => 4,
             Terrain::Woods => 2,
         }
+    }
+
+    #[inline]
+    pub fn can_spear_through(&self, other: &Unit) -> bool {
+        // TODO: Alliances? Neutrals?
+        self.faction == other.faction
     }
 }
 
