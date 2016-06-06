@@ -10,7 +10,7 @@ use faction::Faction;
 
 const BG_COLOR: Color = Color(0x00, 0x00, 0x00, 0x77);
 const TEXT_COLOR: Color = Color(0xff, 0xff, 0xff, 0xff);
-const POS: (i32, i32) = (400, 50);
+const POS: (i32, i32) = (774, 50);
 const SIZE: (u32, u32) = (200, 50);
 
 #[derive(Debug)]
