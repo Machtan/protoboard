@@ -87,8 +87,8 @@ impl Level {
             }
         }
 
-        let w = (max_x - min_x) as u32;
-        let h = (max_y - min_y) as u32;
+        let w = (max_x - min_x + 1) as u32;
+        let h = (max_y - min_y + 1) as u32;
 
         let mut grid = match self.layers.get("terrain") {
             Some(terrain) => {
