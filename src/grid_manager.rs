@@ -97,7 +97,7 @@ impl GridManager {
         }
         assert!(selected.path_finder.can_move_to(target));
 
-        self.move_cursor_to(target, state.grid.size());
+        self.move_cursor_to(target, state);
         self.cursor_hidden = true;
 
         let unit = state.grid.remove_unit(origin);
@@ -171,8 +171,8 @@ impl GridManager {
         }
     }
 
-    fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
-        assert!(pos.0 < size.0 && pos.1 < size.1);
+    fn move_cursor_to(&mut self, pos: (u32, u32), state: &mut State) {
+        assert!(pos.0 < state.grid.size().0 && pos.1 < state.grid.size().1);
         if let Some(ref selected) = self.selected {
             // TODO: You can move cursor to friendly unit (no crash, though).
             if !selected.path_finder.can_move_to(pos) {
@@ -180,37 +180,38 @@ impl GridManager {
             }
         }
         self.cursor = pos;
+        state.ensure_in_range(pos);
     }
 
     #[inline]
-    fn move_cursor_up(&mut self, size: (u32, u32)) {
+    fn move_cursor_up(&mut self, state: &mut State) {
         let (x, y) = self.cursor;
-        if y < size.1 - 1 {
-            self.move_cursor_to((x, y + 1), size);
+        if y < state.grid.size().1 - 1 {
+            self.move_cursor_to((x, y + 1), state);
         }
     }
 
     #[inline]
-    fn move_cursor_down(&mut self, size: (u32, u32)) {
+    fn move_cursor_down(&mut self, state: &mut State) {
         let (x, y) = self.cursor;
         if y > 0 {
-            self.move_cursor_to((x, y - 1), size);
+            self.move_cursor_to((x, y - 1), state);
         }
     }
 
     #[inline]
-    fn move_cursor_left(&mut self, size: (u32, u32)) {
+    fn move_cursor_left(&mut self, state: &mut State) {
         let (x, y) = self.cursor;
         if x > 0 {
-            self.move_cursor_to((x - 1, y), size);
+            self.move_cursor_to((x - 1, y), state);
         }
     }
 
     #[inline]
-    fn move_cursor_right(&mut self, size: (u32, u32)) {
+    fn move_cursor_right(&mut self, state: &mut State) {
         let (x, y) = self.cursor;
-        if x < size.0 - 1 {
-            self.move_cursor_to((x + 1, y), size);
+        if x < state.grid.size().0 - 1 {
+            self.move_cursor_to((x + 1, y), state);
         }
     }
 
@@ -293,16 +294,16 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.cancel_release();
             }
             MoveCursorUp => {
-                self.move_cursor_up(state.grid.size());
+                self.move_cursor_up(state);
             }
             MoveCursorDown => {
-                self.move_cursor_down(state.grid.size());
+                self.move_cursor_down(state);
             }
             MoveCursorLeft => {
-                self.move_cursor_left(state.grid.size());
+                self.move_cursor_left(state);
             }
             MoveCursorRight => {
-                self.move_cursor_right(state.grid.size());
+                self.move_cursor_right(state);
             }
 
             // Modal messages
@@ -316,7 +317,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
             }
             CancelSelected(pos, target) => {
                 state.grid.move_unit(target, pos);
-                self.move_cursor_to(pos, state.grid.size());
+                self.move_cursor_to(pos, state);
                 self.cursor_hidden = false;
                 self.select_unit(pos, state, queue);
             }
@@ -391,8 +392,11 @@ impl<'a> Behavior<State<'a>> for GridManager {
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) |
             RightClickAt(x, y) => {
-                let pos = state.window_to_grid(x, y);
-                self.move_cursor_to(pos, state.grid.size());
+                let pos = match state.window_to_grid(x, y) {
+                    Some(pos) => pos,
+                    None => return,
+                };
+                self.move_cursor_to(pos, state);
                 match message {
                     MouseMovedTo(..) => {}
                     LeftClickAt(..) => {
@@ -417,6 +421,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 if rest.iter().all(|&f| f == faction) {
                     queue.push(FactionWins(faction));
                 }
+            }
+            FactionWins(faction) => {
+                info!("Faction won! ({:?})", faction);
             }
 
             _ => {}

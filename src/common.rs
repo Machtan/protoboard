@@ -14,6 +14,20 @@ use unit::Unit;
 
 const COLOR_HEALTH_LABEL: Color = Color(0xff, 0xff, 0xff, 0xff);
 
+pub trait DivFloor {
+    fn div_floor(self, other: Self) -> Self;
+}
+
+impl DivFloor for i32 {
+    #[inline]
+    fn div_floor(self, other: i32) -> i32 {
+        match (self / other, self % other) {
+            (d, r) if (r < 0) != (other < 0) => d - 1,
+            (d, _) => d,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     MoveCursorUp,
@@ -64,8 +78,10 @@ pub struct State<'a> {
 
     pub turn_info: TurnInfo,
     pub grid: Grid,
+    pub window_size: (u32, u32),
     pub tile_size: (u32, u32),
     pub active_unit: Option<((u32, u32), Unit)>,
+    pub camera_offset: (i32, i32),
 
     pub will_pop_modals: usize,
     modal_stack: Vec<ModalMessage<'a>>,
@@ -85,6 +101,11 @@ impl<'a> State<'a> {
                config: Config)
                -> State<'a> {
         let expiry_duration = Duration::from_millis(100);
+        let window_size = resources.device().logical_size();
+        let w = (window_size.0 / tile_size.0) as i32;
+        let h = (window_size.1 / tile_size.1) as i32;
+        let dx = (grid.size().0 as i32 - w).div_floor(2);
+        let dy = (grid.size().1 as i32 - h).div_floor(2);
         State {
             config: config,
             resources: resources,
@@ -95,8 +116,10 @@ impl<'a> State<'a> {
                 actions_left: actions_left,
             },
             grid: grid,
+            window_size: window_size,
             tile_size: tile_size,
             active_unit: None,
+            camera_offset: (dx, dy),
             health_label_font: health_label_font,
             will_pop_modals: 0,
             health_labels: RefCell::new(LruCache::with_expiry_duration(expiry_duration)),
@@ -143,21 +166,50 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn window_to_grid(&self, x: i32, y: i32) -> (u32, u32) {
-        assert!(x >= 0 && y >= 0);
+    pub fn window_to_grid(&self, x: i32, y: i32) -> Option<(u32, u32)> {
         let (tw, th) = self.tile_size;
-        let (_, h) = self.grid.size();
-        let x = x as u32 / tw;
-        let y = h - 1 - (y as u32) / th;
-        (x, y)
+        let (w, h) = self.grid.size();
+
+        let x = x.div_floor(tw as i32) + self.camera_offset.0;
+        let y = (h * th) as i32 - y;
+        let y = -(-y).div_floor(th as i32) + self.camera_offset.1;
+
+        if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
+            Some((x as u32, y as u32))
+        } else {
+            None
+        }
     }
 
     pub fn tile_rect(&self, pos: (u32, u32)) -> Rect {
         let (tw, th) = self.tile_size;
         let (_, h) = self.grid.size();
-        let x = pos.0 * tw;
-        let y = h * th - th - (pos.1 * th);
-        Rect::new(x as i32, y as i32, tw, th)
+
+        let x = (pos.0 as i32 - self.camera_offset.0) * tw as i32;
+        let y = (pos.1 as i32 - self.camera_offset.1) * th as i32;
+        let y = (h * th) as i32 - y;
+
+        Rect::new(x, y, tw, th)
+    }
+
+    pub fn ensure_in_range(&mut self, pos: (u32, u32)) {
+        let w = (self.window_size.0 / self.tile_size.0) as i32;
+        let h = (self.window_size.1 / self.tile_size.1) as i32;
+        let x = pos.0 as i32 - self.camera_offset.0;
+        let y = pos.1 as i32 - self.camera_offset.1;
+
+        if x < 1 {
+            self.camera_offset.0 += x - 1;
+        }
+        if x > (w - 2) {
+            self.camera_offset.0 += x - (w - 2);
+        }
+        if y < 1 {
+            self.camera_offset.1 += y - 1;
+        }
+        if y > (h - 2) {
+            self.camera_offset.1 += y - (h - 2);
+        }
     }
 
     pub fn health_label(&self, health: u32) -> Rc<Label> {
@@ -211,7 +263,7 @@ impl TurnInfo {
         while let Some(i) = self.factions.iter().rposition(|&f| f == faction) {
             self.factions.remove(i);
             if self.current <= i {
-                self.current -= 1;
+                self.current = (self.current + self.factions.len() - 1) % self.factions.len();
             }
         }
     }

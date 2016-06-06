@@ -61,7 +61,10 @@ impl<'a> Behavior<State<'a>> for TargetSelector {
             }
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) => {
-                let pos = state.window_to_grid(x, y);
+                let pos = match state.window_to_grid(x, y) {
+                    Some(pos) => pos,
+                    None => return,
+                };
 
                 let mut is_valid_target = false;
                 for (i, &target) in self.targets.iter().enumerate() {

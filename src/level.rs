@@ -90,10 +90,6 @@ impl Level {
         let w = (max_x - min_x) as u32;
         let h = (max_y - min_y) as u32;
 
-        // TODO: We do not want to do this.
-        let w = cmp::max(w, 16);
-        let h = cmp::max(h, 11);
-
         let mut grid = match self.layers.get("terrain") {
             Some(terrain) => {
                 Grid::new((w, h), |(x, y)| {
