@@ -61,12 +61,16 @@ pub enum ModalMessage<'a> {
 pub struct State<'a> {
     pub config: Config,
     pub resources: ResourceManager<'a, 'static>,
+
     pub turn_info: TurnInfo,
     pub grid: Grid,
     pub tile_size: (u32, u32),
-    pub health_label_font: &'a Font,
+    pub active_unit: Option<((u32, u32), Unit)>,
+
     pub will_pop_modals: usize,
     modal_stack: Vec<ModalMessage<'a>>,
+
+    pub health_label_font: &'a Font,
     health_labels: RefCell<LruCache<u32, Rc<Label>>>,
 }
 
@@ -92,6 +96,7 @@ impl<'a> State<'a> {
             },
             grid: grid,
             tile_size: tile_size,
+            active_unit: None,
             health_label_font: health_label_font,
             will_pop_modals: 0,
             health_labels: RefCell::new(LruCache::with_expiry_duration(expiry_duration)),

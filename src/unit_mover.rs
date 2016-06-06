@@ -68,7 +68,7 @@ impl<'a> Behavior<State<'a>> for UnitMover {
         if i >= self.path.len() as u64 {
             let unit = self.unit.take().expect("missing unit");
             let to = *self.path.last().unwrap_or(&self.origin);
-            state.grid.add_unit(unit, to);
+            state.active_unit = Some((to, unit));
             state.pop_modal(queue);
             queue.push(Message::UnitMoved(self.origin, to));
         } else {

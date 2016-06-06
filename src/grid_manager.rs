@@ -173,6 +173,7 @@ impl GridManager {
     fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
         assert!(pos.0 < size.0 && pos.1 < size.1);
         if let Some(ref selected) = self.selected {
+            // TODO: You can move cursor to friendly unit (no crash, though).
             if !selected.path_finder.can_move_to(pos) {
                 return;
             }
@@ -331,6 +332,8 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 state.turn_info.spend_action();
             }
             UnitMoved(from, to) => {
+                let (_, unit) = state.active_unit.take().expect("no active unit after move");
+                state.grid.add_unit(unit, to);
                 self.handle_unit_moved(from, to, state, queue);
             }
             AttackWithUnit(pos, target) => {
@@ -447,6 +450,12 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                 if let Some(unit) = unit {
                     render_unit(unit, rect, color.is_none(), state, renderer);
+                }
+
+                if let Some((active_pos, ref unit)) = state.active_unit {
+                    if active_pos == pos {
+                        render_unit(unit, rect, true, state, renderer);
+                    }
                 }
 
                 if let Some(ref sro) = self.showing_range_of {
