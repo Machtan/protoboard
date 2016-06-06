@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use glorious::{Behavior, Color, Label, ResourceManager};
 use lru_time_cache::LruCache;
@@ -13,6 +13,7 @@ use grid::Grid;
 use unit::Unit;
 
 const COLOR_HEALTH_LABEL: Color = Color(0xff, 0xff, 0xff, 0xff);
+const SCROLL_TIMEOUT_MS: u64 = 100;
 
 pub trait DivFloor {
     fn div_floor(self, other: Self) -> Self;
@@ -26,6 +27,11 @@ impl DivFloor for i32 {
             (d, _) => d,
         }
     }
+}
+
+#[inline]
+pub fn as_millis(dur: Duration) -> u64 {
+    dur.as_secs() * 1_000 + (dur.subsec_nanos() / 1_000_000) as u64
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -83,6 +89,8 @@ pub struct State<'a> {
     pub active_unit: Option<((u32, u32), Unit)>,
     pub camera_offset: (i32, i32),
 
+    prev_scroll_time: Instant,
+
     pub will_pop_modals: usize,
     modal_stack: Vec<ModalMessage<'a>>,
 
@@ -120,6 +128,7 @@ impl<'a> State<'a> {
             tile_size: tile_size,
             active_unit: None,
             camera_offset: (dx, dy),
+            prev_scroll_time: Instant::now(),
             health_label_font: health_label_font,
             will_pop_modals: 0,
             health_labels: RefCell::new(LruCache::with_expiry_duration(expiry_duration)),
@@ -199,17 +208,28 @@ impl<'a> State<'a> {
         let x = pos.0 as i32 - self.camera_offset.0;
         let y = pos.1 as i32 - self.camera_offset.1;
 
-        if x < 1 {
+        let now = Instant::now();
+        let delta = if as_millis(now.duration_since(self.prev_scroll_time)) >= SCROLL_TIMEOUT_MS {
+            1
+        } else {
+            0
+        };
+
+        if x < delta {
             self.camera_offset.0 += x - 1;
+            self.prev_scroll_time = now;
         }
-        if x > (w - 2) {
+        if x > (w - 1 - delta) {
             self.camera_offset.0 += x - (w - 2);
+            self.prev_scroll_time = now;
         }
-        if y < 1 {
+        if y < delta {
             self.camera_offset.1 += y - 1;
+            self.prev_scroll_time = now;
         }
-        if y > (h - 2) {
+        if y > (h - 1 - delta) {
             self.camera_offset.1 += y - (h - 2);
+            self.prev_scroll_time = now;
         }
     }
 

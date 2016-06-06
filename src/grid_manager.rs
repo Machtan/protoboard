@@ -44,6 +44,7 @@ pub struct GridManager {
     showing_range_of: Option<ShowingRangeOf>,
     cursor: (u32, u32),
     cursor_hidden: bool,
+    mouse: Option<(i32, i32)>,
 }
 
 impl GridManager {
@@ -54,6 +55,7 @@ impl GridManager {
             showing_range_of: None,
             cursor: cursor,
             cursor_hidden: false,
+            mouse: None,
         }
     }
 
@@ -278,9 +280,17 @@ impl GridManager {
 impl<'a> Behavior<State<'a>> for GridManager {
     type Message = Message;
 
+    fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+        state.ensure_in_range(self.cursor);
+        if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
+            self.move_cursor_to(pos, state);
+        }
+    }
+
     /// Handles new messages since the last frame.
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
+
         match message {
             // Input
             Confirm => {
@@ -294,15 +304,19 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 self.cancel_release();
             }
             MoveCursorUp => {
+                self.mouse = None;
                 self.move_cursor_up(state);
             }
             MoveCursorDown => {
+                self.mouse = None;
                 self.move_cursor_down(state);
             }
             MoveCursorLeft => {
+                self.mouse = None;
                 self.move_cursor_left(state);
             }
             MoveCursorRight => {
+                self.mouse = None;
                 self.move_cursor_right(state);
             }
 
@@ -392,6 +406,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) |
             RightClickAt(x, y) => {
+                self.mouse = Some((x, y));
                 let pos = match state.window_to_grid(x, y) {
                     Some(pos) => pos,
                     None => return,

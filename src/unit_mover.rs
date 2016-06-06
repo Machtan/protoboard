@@ -1,9 +1,9 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use glorious::{Behavior, Renderer};
 use sdl2::rect::Rect;
 
-use common::{Message, State};
+use common::{as_millis, Message, State};
 use unit::Unit;
 use grid_manager::render_unit;
 
@@ -17,11 +17,6 @@ pub struct UnitMover {
     index: usize,
     delta: f32,
     start: Option<Instant>,
-}
-
-#[inline]
-fn as_millis(dur: Duration) -> u64 {
-    dur.as_secs() * 1_000 + (dur.subsec_nanos() / 1_000_000) as u64
 }
 
 impl UnitMover {
