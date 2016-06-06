@@ -154,9 +154,8 @@ impl Grid {
 
                 let (other, terrain) = self.tile(npos);
 
-                // TODO: Alliances? Neutrals?
                 if let Some(other) = other {
-                    if other.faction != unit.faction {
+                    if !unit.can_move_through(other) {
                         continue;
                     }
                 }
@@ -354,8 +353,7 @@ impl<'a> Iterator for FindAttackable<'a> {
     fn next(&mut self) -> Option<(u32, u32)> {
         for pos in &mut self.range {
             if let Some(ref other) = self.grid.unit(pos) {
-                // TODO: Alliances? Neutrals?
-                if other.faction != self.unit.faction {
+                if self.unit.can_attack(other) {
                     return Some(pos);
                 }
             }

@@ -51,6 +51,18 @@ impl Unit {
         // TODO: Alliances? Neutrals?
         self.faction == other.faction
     }
+
+    #[inline]
+    pub fn can_move_through(&self, other: &Unit) -> bool {
+        // TODO: Alliances? Neutrals?
+        self.faction == other.faction
+    }
+
+    #[inline]
+    pub fn can_attack(&self, other: &Unit) -> bool {
+        // TODO: Alliances? Neutrals?
+        self.faction != other.faction
+    }
 }
 
 #[derive(Clone)]
