@@ -54,9 +54,9 @@ fn main() {
     // Load settings
 
     const WINDOW_TITLE: &'static str = "Raccoon Squad";
-    const N_COLS: u32 = 20;
-    const N_ROWS: u32 = 20;
-    const TILE_SIZE: (u32, u32) = (32, 32);
+    const N_COLS: u32 = 16;
+    const N_ROWS: u32 = 11;
+    const TILE_SIZE: (u32, u32) = (64, 64);
     const MAX_FPS: u32 = 60;
     const NUMBER_OF_ACTIONS: u32 = 4;
 
@@ -87,7 +87,7 @@ fn main() {
     let font_context = sdl2_ttf::init().expect("Font init");
     // let mut limiter = FrameLimiter::new(60);
 
-    let window = video_subsystem.window(WINDOW_TITLE, 640, 640)
+    let window = video_subsystem.window(WINDOW_TITLE, 1024, 704)
         .allow_highdpi()
         .position_centered()
         .opengl()
@@ -148,7 +148,7 @@ fn main() {
     let mut grid = Grid::new((N_COLS, N_ROWS), |(x, y)| {
         let dist = cmp::min(y, N_ROWS - 1 - y);
         match dist {
-            5 if x % 3 < 2 => Terrain::Mountains,
+            3 if x % 3 < 2 => Terrain::Mountains,
             _ => {
                 if rng.next_f32() < 0.2 {
                     Terrain::Woods
@@ -167,14 +167,14 @@ fn main() {
             let index = i as usize % unit_types.len();
             unit_types[index].clone()
         };
-        grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 3));
+        grid.add_unit(unit_type.create(Faction::Blue, None), (i, N_ROWS - 2));
     }
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 4, 2));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 2));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 2));
-    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 2, 2));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 4, 1));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 - 2, 1));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2, 1));
+    grid.add_unit(raccoon.create(Faction::Red, None), (N_COLS / 2 + 2, 1));
 
-    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 16);
+    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
 
     let mut state = State::new(resources,
                                grid,

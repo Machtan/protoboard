@@ -22,8 +22,8 @@ impl Grid {
         let count = size.0 as usize * size.1 as usize;
         let terrain = (0..count)
             .map(|i| {
-                let x = (i % size.1 as usize) as u32;
-                let y = (i / size.1 as usize) as u32;
+                let x = (i % size.0 as usize) as u32;
+                let y = (i / size.0 as usize) as u32;
                 func((x, y))
             })
             .collect::<Vec<_>>();
