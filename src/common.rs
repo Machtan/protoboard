@@ -12,6 +12,8 @@ use faction::Faction;
 use grid::Grid;
 use unit::Unit;
 
+const COLOR_HEALTH_LABEL: Color = Color(0xff, 0xff, 0xff, 0xff);
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     MoveCursorUp,
@@ -161,7 +163,7 @@ impl<'a> State<'a> {
                 let string = format!("{}", health);
                 Rc::new(Label::new(self.health_label_font,
                                    &string,
-                                   Color(255, 255, 255, 255),
+                                   COLOR_HEALTH_LABEL,
                                    self.resources.device()))
             })
             .clone()
@@ -170,9 +172,9 @@ impl<'a> State<'a> {
 
 #[derive(Clone, Debug)]
 pub struct TurnInfo {
-    pub factions: Vec<Faction>,
-    pub current: usize,
-    pub actions_left: u32,
+    factions: Vec<Faction>,
+    current: usize,
+    actions_left: u32,
     pub max_actions_left: u32,
 }
 
@@ -209,6 +211,11 @@ impl TurnInfo {
     #[inline]
     pub fn can_act(&self, unit: &Unit) -> bool {
         unit.faction == self.current_faction() && self.actions_left > 0 && !unit.spent
+    }
+
+    #[inline]
+    pub fn factions(&self) -> &[Faction] {
+        &self.factions
     }
 }
 

@@ -14,6 +14,18 @@ use terrain::Terrain;
 use unit::Unit;
 use unit_mover::UnitMover;
 
+const COLOR_RED_UNIT: Color = Color(0xff, 0x66, 0x66, 0x99);
+const COLOR_RED_UNIT_SPENT: Color = Color(0x99, 0x44, 0x44, 0x99);
+const COLOR_BLUE_UNIT: Color = Color(0x66, 0xbb, 0xdd, 0x99);
+const COLOR_BLUE_UNIT_SPENT: Color = Color(65, 120, 140, 0x99);
+
+const COLOR_SELECTED: Color = Color(0xdd, 0xee, 0x77, 0xbb);
+const COLOR_MOVEMENT_RANGE: Color = Color(0x00, 0xff, 0xff, 0x77);
+const COLOR_ATTACK_RANGE: Color = Color(0xff, 0x66, 0x66, 0x77);
+
+const COLOR_GRASS_EVEN: Color = Color(0x66, 0xcc, 0x66, 0xff);
+const COLOR_GRASS_ODD: Color = Color(0x99, 0xff, 0x99, 0xff);
+
 #[derive(Debug)]
 struct Selected {
     pos: (u32, u32),
@@ -373,9 +385,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 info!("Faction defeated! {:?}", faction);
                 state.turn_info.remove_faction(faction);
 
-                let faction = state.turn_info.factions[0];
+                let faction = state.turn_info.factions()[0];
                 // TODO: Alliances? Neutrals?
-                if state.turn_info.factions[1..].iter().all(|&f| f == faction) {
+                if state.turn_info.factions()[1..].iter().all(|&f| f == faction) {
                     queue.push(FactionWins(faction));
                 }
             }
@@ -395,9 +407,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let (unit, terrain) = state.grid.tile(pos);
 
                 if (col + row) % 2 == 0 {
-                    renderer.set_draw_color(Color(110, 210, 110, 255));
+                    renderer.set_draw_color(COLOR_GRASS_EVEN);
                 } else {
-                    renderer.set_draw_color(Color(155, 255, 155, 255));
+                    renderer.set_draw_color(COLOR_GRASS_ODD);
                 }
                 renderer.fill_rect(rect).unwrap();
 
@@ -416,10 +428,10 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .as_ref()
                     .and_then(|s| {
                         if s.pos == pos {
-                            Some(Color(244, 237, 129, 191))
+                            Some(COLOR_SELECTED)
                         } else if s.path_finder.can_move_to(pos) {
                             if unit.is_none() {
-                                Some(Color(0, 255, 255, 127))
+                                Some(COLOR_MOVEMENT_RANGE)
                             } else {
                                 None
                             }
@@ -439,7 +451,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
 
                 if let Some(ref sro) = self.showing_range_of {
                     if sro.pos != pos && sro.attack_range.contains(&pos) {
-                        renderer.set_draw_color(Color(255, 100, 100, 127));
+                        renderer.set_draw_color(COLOR_ATTACK_RANGE);
                         renderer.fill_rect(rect).unwrap();
                     }
                 }
@@ -456,13 +468,13 @@ pub fn render_unit(unit: &Unit, rect: Rect, bg: bool, state: &State, renderer: &
     if bg {
         let color = if unit.spent {
             match unit.faction {
-                Faction::Red => Color(150, 65, 65, 127),
-                Faction::Blue => Color(65, 120, 140, 127),
+                Faction::Red => COLOR_RED_UNIT_SPENT,
+                Faction::Blue => COLOR_BLUE_UNIT_SPENT,
             }
         } else {
             match unit.faction {
-                Faction::Red => Color(255, 100, 100, 127),
-                Faction::Blue => Color(100, 180, 220, 127),
+                Faction::Red => COLOR_RED_UNIT,
+                Faction::Blue => COLOR_BLUE_UNIT,
             }
         };
         renderer.set_draw_color(color);

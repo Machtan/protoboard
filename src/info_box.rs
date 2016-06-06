@@ -8,9 +8,10 @@ use sdl2_ttf::Font;
 use common::{Message, State};
 use faction::Faction;
 
-const BG_COLOR: Color = Color(0, 0, 0, 0x77);
+const BG_COLOR: Color = Color(0x00, 0x00, 0x00, 0x77);
 const TEXT_COLOR: Color = Color(0xff, 0xff, 0xff, 0xff);
 const POS: (i32, i32) = (400, 50);
+const SIZE: (u32, u32) = (200, 50);
 
 #[derive(Debug)]
 pub struct InfoBox {
@@ -34,7 +35,7 @@ impl InfoBox {
         let actions_label =
             Label::new(&font, "Actions left:", TEXT_COLOR, state.resources.device());
         let mut faction_labels = HashMap::new();
-        for &faction in &state.turn_info.factions {
+        for &faction in state.turn_info.factions() {
             let label = Label::new(font,
                                    &format!("{:?}", faction),
                                    TEXT_COLOR,
@@ -66,7 +67,6 @@ impl InfoBox {
 impl<'a> Behavior<State<'a>> for InfoBox {
     type Message = Message;
 
-    /// Renders the object.
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
         // Render which faction's turn it is.
         // Render the amount of actions left somewhere.
@@ -74,7 +74,7 @@ impl<'a> Behavior<State<'a>> for InfoBox {
         let (w, _) = self.faction_label.size();
         let right = x + w as i32;
 
-        let rect = Rect::new(x - 5, y, 200, 50);
+        let rect = Rect::new(x - 5, y, SIZE.0, SIZE.1);
         renderer.set_draw_color(BG_COLOR);
         renderer.fill_rect(rect).unwrap();
 
@@ -86,7 +86,7 @@ impl<'a> Behavior<State<'a>> for InfoBox {
         let second = y + self.line_spacing as i32;
         self.actions_label.render(renderer, x, second);
         self.number_labels
-            .get_mut(state.turn_info.actions_left as usize)
+            .get_mut(state.turn_info.actions_left() as usize)
             .expect("Invalid number of actions left")
             .render(renderer, right, second);
     }

@@ -9,6 +9,10 @@ use sdl2_ttf::Font;
 use common::{Message, State};
 
 const PAD: u32 = 10;
+const COLOR_BG: Color = Color(0xcc, 0xcc, 0xff, 0x99);
+const COLOR_TEXT: Color = Color(0x00, 0x00, 0x00, 0x00);
+const COLOR_SELECTED: Color = Color(0xff, 0x99, 0xff, 0xff);
+
 // TODO: Tune this for different platforms/hardware.
 const SCROLL_TRESHOLD: i32 = 8;
 
@@ -46,7 +50,7 @@ impl<F> ModalMenu<F>
         let mut max_width = 0;
         let labels = options.into_iter()
             .map(|option| {
-                let label = Label::new(&font, &option, Color(0, 0, 0, 0), state.resources.device());
+                let label = Label::new(&font, &option, COLOR_TEXT, state.resources.device());
                 let (w, _) = label.size();
                 max_width = cmp::max(max_width, w);
                 (label, option)
@@ -92,13 +96,13 @@ impl<F> ModalMenu<F>
         let (sx, sy) = self.pos;
         let height = PAD * 2 + self.line_spacing * self.options.len() as u32;
 
-        renderer.set_draw_color(Color(200, 200, 255, 150));
+        renderer.set_draw_color(COLOR_BG);
         renderer.fill_rect(Rect::new(sx, sy, self.width, height)).unwrap();
         let mut y = sy + PAD as i32;
         let x = sx + PAD as i32;
         for (i, &(ref label, _)) in self.options.iter().enumerate() {
             if i == self.selected {
-                renderer.set_draw_color(Color(255, 150, 0, 255));
+                renderer.set_draw_color(COLOR_SELECTED);
                 let rect = Rect::new(x - PAD as i32 / 2, y, self.width - PAD, self.line_spacing);
                 renderer.fill_rect(rect).unwrap();
             }
