@@ -82,7 +82,7 @@ impl GridManager {
             self.selected = Some(selected);
             return;
         }
-        assert!(selected.path_finder.costs.contains_key(&target));
+        assert!(selected.path_finder.can_move_to(target));
 
         self.move_cursor_to(target, state.grid.size());
         self.cursor_hidden = true;
@@ -160,7 +160,7 @@ impl GridManager {
     fn move_cursor_to(&mut self, pos: (u32, u32), size: (u32, u32)) {
         assert!(pos.0 < size.0 && pos.1 < size.1);
         if let Some(ref selected) = self.selected {
-            if !selected.path_finder.costs.contains_key(&pos) {
+            if !selected.path_finder.can_move_to(pos) {
                 return;
             }
         }
@@ -242,7 +242,7 @@ impl GridManager {
                 Some("Wait") => {
                     debug!("Wait!");
                     state.pop_modal(queue);
-                    // TODO
+                    // TODO: Marking the unit now is one frame quicker.
                     queue.push(UnitSpent(target));
                     queue.push(WaitSelected);
                 }
@@ -382,7 +382,6 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 } else {
                     renderer.set_draw_color(Color(155, 255, 155, 255));
                 }
-                // TODO: When can `fill_rect` fail?
                 renderer.fill_rect(rect).unwrap();
 
                 let texture_path = match *terrain {
@@ -401,7 +400,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                     .and_then(|s| {
                         if s.pos == pos {
                             Some(Color(244, 237, 129, 191))
-                        } else if s.path_finder.costs.contains_key(&pos) {
+                        } else if s.path_finder.can_move_to(pos) {
                             if unit.is_none() {
                                 Some(Color(0, 255, 255, 127))
                             } else {

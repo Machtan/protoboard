@@ -47,9 +47,6 @@ mod turner;
 mod unit;
 mod unit_mover;
 
-// TODO: It might be, that the renderer argument for `Behavior::render`
-// should in fact be `&mut Renderer<'a>`, rather than `&mut Renderer`.
-
 fn main() {
     use sdl2::event::Event::*;
     use common::Message::*;
@@ -238,7 +235,6 @@ fn main() {
         MouseMotion { x, y, .. },
         MouseMovedTo((x * pw as i32) / w as i32, (y * ph as i32) / h as i32)
     ));
-    // TODO: Does this work in high-DPI mode?
     mapper.add(map_event!(
         MouseWheel { x, y, .. },
         MouseScroll(x, y)

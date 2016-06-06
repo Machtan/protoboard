@@ -91,8 +91,8 @@ impl<'a> Behavior<State<'a>> for UnitMover {
     }
 }
 
-fn lerp(a: (i32, i32), b: (i32, i32), v: f32) -> (i32, i32) {
-    let x = a.0 + ((b.0 - a.0) as f32 * v) as i32;
-    let y = a.1 + ((b.1 - a.1) as f32 * v) as i32;
+fn lerp(a: (i32, i32), b: (i32, i32), delta: f32) -> (i32, i32) {
+    let x = a.0 + ((b.0 - a.0) as f32 * delta) as i32;
+    let y = a.1 + ((b.1 - a.1) as f32 * delta) as i32;
     (x, y)
 }

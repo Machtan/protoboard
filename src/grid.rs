@@ -40,6 +40,14 @@ impl Grid {
     }
 
     #[inline]
+    fn index(&self, pos: (u32, u32)) -> usize {
+        let (x, y) = pos;
+        let (w, h) = self.size;
+        assert!(x < w && y < h);
+        y as usize * w as usize + x as usize
+    }
+
+    #[inline]
     pub fn tile(&self, pos: (u32, u32)) -> (Option<&Unit>, &Terrain) {
         let i = self.index(pos);
         (self.units[i].as_ref(), &self.terrain[i])
@@ -52,16 +60,6 @@ impl Grid {
     }
 
     #[inline]
-    pub fn units(&self) -> Units {
-        Units { units: &self.units[..] }
-    }
-
-    #[inline]
-    pub fn units_mut(&mut self) -> UnitsMut {
-        UnitsMut { units: &mut self.units[..] }
-    }
-
-    #[inline]
     pub fn unit(&self, pos: (u32, u32)) -> Option<&Unit> {
         self.tile(pos).0
     }
@@ -69,6 +67,16 @@ impl Grid {
     #[inline]
     pub fn unit_mut(&mut self, pos: (u32, u32)) -> Option<&mut Unit> {
         self.tile_mut(pos).0
+    }
+
+    #[inline]
+    pub fn units(&self) -> Units {
+        Units { units: &self.units[..] }
+    }
+
+    #[inline]
+    pub fn units_mut(&mut self) -> UnitsMut {
+        UnitsMut { units: &mut self.units[..] }
     }
 
     /// Adds a unit to the grid.
@@ -88,6 +96,28 @@ impl Grid {
         let dst = &mut self.units[self.index(to)];
         assert!(dst.is_none());
         *dst = unit;
+    }
+
+    pub fn attack_range_before_moving<'a>(&'a self,
+                                          unit: &'a Unit,
+                                          pos: (u32, u32))
+                                          -> AttackRange<'a> {
+        match unit.unit_type().attack {
+            AttackType::Melee => AttackRange::melee(self, pos),
+            AttackType::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
+            AttackType::Spear { range } => AttackRange::spear(self, unit, pos, range),
+        }
+    }
+
+    pub fn attack_range_after_moving<'a>(&'a self,
+                                         unit: &'a Unit,
+                                         pos: (u32, u32))
+                                         -> AttackRange<'a> {
+        match unit.unit_type().attack {
+            AttackType::Melee |
+            AttackType::Spear { .. } => AttackRange::melee(self, pos),
+            AttackType::Ranged { .. } => AttackRange::empty(),
+        }
     }
 
     pub fn find_attackable_before_moving<'a>(&'a self,
@@ -176,36 +206,6 @@ impl Grid {
             costs: costs,
         }
     }
-
-    #[inline]
-    fn index(&self, pos: (u32, u32)) -> usize {
-        let (x, y) = pos;
-        let (w, h) = self.size;
-        assert!(x < w && y < h);
-        y as usize * w as usize + x as usize
-    }
-
-    pub fn attack_range_before_moving<'a>(&'a self,
-                                          unit: &'a Unit,
-                                          pos: (u32, u32))
-                                          -> AttackRange<'a> {
-        match unit.unit_type().attack {
-            AttackType::Melee => AttackRange::melee(self, pos),
-            AttackType::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
-            AttackType::Spear { range } => AttackRange::spear(self, unit, pos, range),
-        }
-    }
-
-    pub fn attack_range_after_moving<'a>(&'a self,
-                                         unit: &'a Unit,
-                                         pos: (u32, u32))
-                                         -> AttackRange<'a> {
-        match unit.unit_type().attack {
-            AttackType::Melee |
-            AttackType::Spear { .. } => AttackRange::melee(self, pos),
-            AttackType::Ranged { .. } => AttackRange::empty(),
-        }
-    }
 }
 
 impl Debug for Grid {
@@ -267,11 +267,20 @@ impl<'a> Iterator for UnitsMut<'a> {
 #[derive(Clone, Debug)]
 pub struct PathFinder {
     origin: (u32, u32),
-    // TODO: Should probably be private.
-    pub costs: BTreeMap<(u32, u32), u32>,
+    costs: BTreeMap<(u32, u32), u32>,
 }
 
 impl PathFinder {
+    #[inline]
+    pub fn can_move_to(&self, pos: (u32, u32)) -> bool {
+        self.costs.contains_key(&pos)
+    }
+
+    #[inline]
+    pub fn cost(&self, pos: (u32, u32)) -> Option<u32> {
+        self.costs.get(&pos).cloned()
+    }
+
     pub fn total_attack_range(&self, grid: &Grid) -> BTreeSet<(u32, u32)> {
         let unit = grid.unit(self.origin).expect("no unit to find attackable targets for");
 
@@ -312,7 +321,7 @@ impl<'a> Iterator for RandomPathRev<'a> {
             return None;
         }
 
-        let cost = *self.path_finder.costs.get(&self.pos).expect("invalid position");
+        let cost = self.path_finder.cost(self.pos).expect("invalid position");
 
         let mut rng = thread_rng();
         let mut adjacent = [(0, 1), (1, 0), (0, -1), (-1, 0)];
@@ -328,7 +337,7 @@ impl<'a> Iterator for RandomPathRev<'a> {
                 continue;
             }
             let npos = (x as u32, y as u32);
-            if let Some(&ncost) = self.path_finder.costs.get(&npos) {
+            if let Some(ncost) = self.path_finder.cost(npos) {
                 if ncost < cost {
                     res = Some(npos);
                     cost = ncost;

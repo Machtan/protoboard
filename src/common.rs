@@ -48,10 +48,6 @@ pub enum Message {
     Exit,
 }
 
-// TODO: Possibly make popping a modal cause that modal to no longer
-// receive messages. It's probably important that the new top modal
-// should not get the rest of the old message queue.
-
 #[derive(Debug)]
 pub enum ModalMessage<'a> {
     Push(GameObject<'a>),
