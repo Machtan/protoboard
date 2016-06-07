@@ -256,7 +256,7 @@ impl<'a> State<'a> {
     }
 
     pub fn unit_texture(&self, unit: &Unit) -> Rc<Texture> {
-        self.resources.texture(unit.kind().texture)
+        self.resources.texture(&unit.kind().texture)
     }
 }
 

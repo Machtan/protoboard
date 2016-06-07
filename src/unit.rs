@@ -1,4 +1,5 @@
 use std::fmt::{self, Debug};
+use std::rc::Rc;
 
 use faction::Faction;
 use terrain::Terrain;
@@ -8,11 +9,11 @@ pub struct Unit {
     pub health: u32,
     pub faction: Faction,
     pub spent: bool,
-    kind: &'static UnitKind,
+    kind: Rc<UnitKind>,
 }
 
 impl Unit {
-    pub fn new(kind: &'static UnitKind, faction: Faction) -> Unit {
+    pub fn new(kind: Rc<UnitKind>, faction: Faction) -> Unit {
         Unit {
             health: kind.health,
             faction: faction,
@@ -52,7 +53,7 @@ impl Unit {
 
     #[inline]
     pub fn kind(&self) -> &UnitKind {
-        self.kind
+        &self.kind
     }
 
     #[inline]
@@ -107,10 +108,10 @@ pub enum AttackKind {
 
 #[derive(Clone, Debug)]
 pub struct UnitKind {
-    pub name: &'static str,
+    pub name: String,
     pub health: u32,
     pub attack: AttackKind,
     pub damage: u32,
     pub movement: u32,
-    pub texture: &'static str,
+    pub texture: String,
 }

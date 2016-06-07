@@ -1,0 +1,27 @@
+[units.warrior]
+  texture = "assets/sword.png"
+  health = 5
+  attack = { kind = "melee" }
+  damage = 2
+  movement = 6
+
+[units.archer]
+  texture = "assets/bow.png"
+  health = 3
+  attack = { kind = "ranged", min = 2, max = 3 }
+  damage = 4
+  movement = 4
+
+[units.defender]
+  texture = "assets/shield.png"
+  health = 8
+  attack = { kind = "melee" }
+  damage = 2
+  movement = 4
+
+[units.raccoon]
+  texture = "assets/raccoon.png"
+  health = 10
+  attack = { kind = "spear", range = 3 }
+  damage = 4
+  movement = 3

@@ -1,51 +1,86 @@
 use std::cmp;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
+use std::rc::Rc;
 
 use json;
+use toml;
 
 use faction::Faction;
 use grid::Grid;
-use resources::{ARCHER_PATH, PROTECTOR_PATH, RACCOON_PATH, WARRIOR_PATH};
 use terrain::Terrain;
 use unit::{AttackKind, Unit, UnitKind};
 
-pub static WARRIOR: UnitKind = UnitKind {
-    name: "warrior",
-    health: 5,
-    attack: AttackKind::Melee,
-    damage: 3,
-    movement: 6,
-    texture: WARRIOR_PATH,
-};
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct UnitSpec {
+    texture: String,
+    health: u32,
+    damage: u32,
+    movement: u32,
+    attack: AttackSpec,
+}
 
-pub static ARCHER: UnitKind = UnitKind {
-    name: "archer",
-    health: 4,
-    attack: AttackKind::Ranged { min: 2, max: 3 },
-    damage: 5,
-    movement: 4,
-    texture: ARCHER_PATH,
-};
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct AttackSpec {
+    kind: String,
+    min: Option<u32>,
+    max: Option<u32>,
+    range: Option<u32>,
+}
 
-pub static RACCOON: UnitKind = UnitKind {
-    name: "raccoon",
-    health: 8,
-    attack: AttackKind::Spear { range: 3 },
-    damage: 4,
-    movement: 4,
-    texture: RACCOON_PATH,
-};
+impl AttackSpec {
+    fn to_kind(&self) -> Result<AttackKind, String> {
+        Ok(match &self.kind[..] {
+            "melee" => AttackKind::Melee,
+            "ranged" => {
+                AttackKind::Ranged {
+                    min: self.min.ok_or_else(|| format!("ranged attack missing field: min"))?,
+                    max: self.max.ok_or_else(|| format!("ranged attack missing field: max"))?,
+                }
+            }
+            "spear" => {
+                AttackKind::Spear {
+                    range: self.range.ok_or_else(|| format!("spear attack missing field: range"))?,
+                }
+            }
+            k => return Err(format!("unrecognized attack kind {:?}", k)),
+        })
+    }
+}
 
-pub static DEFENDER: UnitKind = UnitKind {
-    name: "defender",
-    health: 10,
-    attack: AttackKind::Melee,
-    damage: 1,
-    movement: 5,
-    texture: PROTECTOR_PATH,
-};
+impl UnitSpec {
+    fn to_kind(&self, name: String) -> Result<UnitKind, String> {
+        Ok(UnitKind {
+            name: name,
+            health: self.health,
+            damage: self.damage,
+            movement: self.movement,
+            attack: self.attack.to_kind()?,
+            texture: self.texture.to_owned(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct InfoFile {
+    units: BTreeMap<String, UnitSpec>,
+}
+
+impl InfoFile {
+    pub fn load<P>(path: P) -> Option<InfoFile>
+        where P: AsRef<Path>
+    {
+        let mut contents = String::new();
+        let res = File::open(path).and_then(|mut file| file.read_to_string(&mut contents));
+        if let Err(err) = res {
+            error!("could not load info file: {}", err);
+            return None;
+        }
+        toml::decode_str(&contents)
+    }
+}
 
 pub type Layer = BTreeMap<String, BTreeSet<(i32, i32)>>;
 
@@ -71,7 +106,12 @@ impl Level {
         json::to_writer(&mut File::create(path)?, self)
     }
 
-    pub fn create_grid(&self) -> Grid {
+    pub fn create_grid(&self, info: &InfoFile) -> Grid {
+        let kinds = info.units
+            .iter()
+            .map(|(name, spec)| (name.to_owned(), Rc::new(spec.to_kind(name.to_owned()).unwrap())))
+            .collect::<BTreeMap<_, _>>();
+
         let mut min_x = i32::max_value();
         let mut max_x = i32::min_value();
         let mut min_y = i32::max_value();
@@ -114,16 +154,13 @@ impl Level {
         for &(layer_name, faction) in &[("units_red", Faction::Red),
                                         ("units_blue", Faction::Blue)] {
             for (tile, positions) in &self.layers[layer_name] {
-                let kind = match &tile[..] {
-                    "warrior" => &WARRIOR,
-                    "archer" => &ARCHER,
-                    "defender" => &DEFENDER,
-                    "raccoon" => &RACCOON,
-                    _ => panic!("unrecognized unit type {:?}", tile),
+                let kind = match kinds.get(tile) {
+                    Some(kind) => kind,
+                    None => panic!("unit kind not in info file: {:?}", tile),
                 };
                 for &(x, y) in positions {
                     let pos = ((x - min_x) as u32, (y - min_y) as u32);
-                    let unit = Unit::new(kind, faction);
+                    let unit = Unit::new(kind.clone(), faction);
                     grid.add_unit(unit, pos);
                 }
             }

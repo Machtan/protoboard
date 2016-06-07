@@ -11,6 +11,7 @@ rand = "0.3"
 serde = "0.7"
 serde_macros = "0.7"
 serde_json = "0.7"
+toml = { version = "0.1", features = ["serde"], default_features = false }
 
 glorious = { git = "https://github.com/Machtan/glorious" }
 sdl2 = "0.19"

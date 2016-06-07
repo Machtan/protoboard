@@ -17,6 +17,7 @@ extern crate glorious;
 extern crate sdl2;
 extern crate sdl2_image;
 extern crate sdl2_ttf;
+extern crate toml;
 
 use std::env;
 
@@ -30,7 +31,7 @@ use common::{Config, State};
 use faction::Faction;
 use grid_manager::GridManager;
 use info_box::InfoBox;
-use level::Level;
+use level::{InfoFile, Level};
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
 use scene::Scene;
 
@@ -80,8 +81,9 @@ fn main() {
 
     // Load level
 
+    let info = InfoFile::load("info.toml").expect("could not load info file");
     let level = Level::load("level.json").expect("could not load level");
-    let grid = level.create_grid();
+    let grid = level.create_grid(&info);
 
     // Set up SDL2.
 
