@@ -313,7 +313,7 @@ impl TurnInfo {
     pub fn remove_faction(&mut self, faction: Faction) {
         while let Some(i) = self.factions.iter().rposition(|&f| f == faction) {
             self.factions.remove(i);
-            if self.current <= i {
+            if self.current >= i {
                 self.current = (self.current + self.factions.len() - 1) % self.factions.len();
             }
         }
