@@ -239,6 +239,24 @@ impl<'a> State<'a> {
             self.camera_offset.1 += y - (h - 2);
             self.prev_scroll_time = now;
         }
+
+        let min_x = -1;
+        let min_y = -1;
+        let max_x = self.grid.size().0 as i32 - w;
+        let max_y = self.grid.size().1 as i32 - h;
+
+        let (ref mut cx, ref mut cy) = self.camera_offset;
+
+        match (*cx < min_x, *cx > max_x) {
+            (true, false) => *cx = min_x,
+            (false, true) => *cx = max_x,
+            _ => {}
+        }
+        match (*cy < min_y, *cy > max_y) {
+            (true, false) => *cy = min_y,
+            (false, true) => *cy = max_y,
+            _ => {}
+        }
     }
 
     pub fn health_label(&self, health: u32) -> Rc<Label> {
