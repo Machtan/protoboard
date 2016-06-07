@@ -26,11 +26,7 @@ impl Unit {
     // better idea of the units for the quantities.
 
     pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
-        match *terrain {
-            Terrain::Grass => 0.05,
-            Terrain::Woods => 0.1,
-            Terrain::Mountains => 0.3,
-        }
+        terrain.defense
     }
 
     pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
@@ -58,11 +54,7 @@ impl Unit {
 
     #[inline]
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
-        match *terrain {
-            Terrain::Grass => 1,
-            Terrain::Mountains => 4,
-            Terrain::Woods => 2,
-        }
+        terrain.cost
     }
 
     #[inline]

@@ -66,6 +66,7 @@ impl UnitSpec {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InfoFile {
     units: BTreeMap<String, UnitSpec>,
+    terrain: BTreeMap<String, Terrain>,
 }
 
 impl InfoFile {
@@ -109,7 +110,12 @@ impl Level {
     pub fn create_grid(&self, info: &InfoFile) -> Grid {
         let kinds = info.units
             .iter()
-            .map(|(name, spec)| (name.to_owned(), Rc::new(spec.to_kind(name.to_owned()).unwrap())))
+            .map(|(name, spec)| (&name[..], Rc::new(spec.to_kind(name.to_owned()).unwrap())))
+            .collect::<BTreeMap<_, _>>();
+
+        let terrain = info.terrain
+            .iter()
+            .map(|(name, spec)| (&name[..], Rc::new(spec.clone())))
             .collect::<BTreeMap<_, _>>();
 
         let mut min_x = i32::max_value();
@@ -132,29 +138,27 @@ impl Level {
         let h = (max_y - min_y + 1) as u32;
 
         let mut grid = match self.layers.get("terrain") {
-            Some(terrain) => {
+            Some(layer) => {
                 Grid::new((w, h), |(x, y)| {
                     let pos = (x as i32 + min_x, y as i32 + min_y);
-                    for (tile, positions) in terrain {
+                    for (tile, positions) in layer {
                         if positions.contains(&pos) {
-                            return match &tile[..] {
-                                "grass" => Terrain::Grass,
-                                "mountains" => Terrain::Mountains,
-                                "woods" => Terrain::Woods,
-                                _ => panic!("unrecognized terrain type {:?}", tile),
+                            return match terrain.get(&tile[..]) {
+                                Some(terrain) => terrain.clone(),
+                                None => panic!("terrain not in info file: {:?}", tile),
                             };
                         }
                     }
-                    Terrain::Grass
+                    terrain["default"].clone()
                 })
             }
-            None => Grid::new((w, h), |_| Terrain::Grass),
+            None => Grid::new((w, h), |_| terrain["default"].clone()),
         };
 
         for &(layer_name, faction) in &[("units_red", Faction::Red),
                                         ("units_blue", Faction::Blue)] {
             for (tile, positions) in &self.layers[layer_name] {
-                let kind = match kinds.get(tile) {
+                let kind = match kinds.get(&tile[..]) {
                     Some(kind) => kind,
                     None => panic!("unit kind not in info file: {:?}", tile),
                 };

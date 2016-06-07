@@ -1,3 +1,17 @@
+[terrain.default]
+  defense = 0.05
+  cost = 1
+
+[terrain.woods]
+  defense = 0.1
+  cost = 2
+  texture = "assets/woods.png"
+
+[terrain.mountains]
+  defense = 0.3
+  cost = 4
+  texture = "assets/mountains.png"
+
 [units.warrior]
   texture = "assets/sword.png"
   health = 5

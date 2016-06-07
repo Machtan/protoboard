@@ -1,6 +1,7 @@
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::{self, Debug};
 use std::mem;
+use std::rc::Rc;
 
 use rand::{thread_rng, Rng};
 
@@ -12,12 +13,12 @@ use unit::{AttackKind, Unit};
 pub struct Grid {
     size: (u32, u32),
     units: Box<[Option<Unit>]>,
-    terrain: Box<[Terrain]>,
+    terrain: Box<[Rc<Terrain>]>,
 }
 
 impl Grid {
     pub fn new<F>(size: (u32, u32), mut func: F) -> Grid
-        where F: FnMut((u32, u32)) -> Terrain
+        where F: FnMut((u32, u32)) -> Rc<Terrain>
     {
         let count = size.0 as usize * size.1 as usize;
         let terrain = (0..count)

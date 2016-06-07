@@ -10,7 +10,6 @@ use grid::PathFinder;
 use menus::ModalMenu;
 use resources::{FIRA_SANS_PATH, MARKER_PATH};
 use target_selector::TargetSelector;
-use terrain::Terrain;
 use unit::Unit;
 use unit_mover::UnitMover;
 
@@ -462,12 +461,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
                 renderer.fill_rect(rect).unwrap();
 
-                let texture_path = match *terrain {
-                    Terrain::Grass => None,
-                    Terrain::Mountains => Some("assets/mountains.png"),
-                    Terrain::Woods => Some("assets/woods.png"),
-                };
-                if let Some(path) = texture_path {
+                if let Some(ref path) = terrain.texture {
                     let texture = state.resources.texture(path);
                     let sprite = Sprite::new(texture, None);
                     sprite.render_rect(renderer, rect);
