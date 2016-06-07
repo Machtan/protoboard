@@ -183,7 +183,7 @@ fn main() {
 
     let event_pump = sdl_context.event_pump().unwrap();
     let mut game =
-        Game::with_clear_color(Color(0x00, 0x00, 0x00, 0xff), MAX_FPS, renderer, event_pump);
+        Game::with_clear_color(Color(0x66, 0x66, 0x66, 0xff), MAX_FPS, renderer, event_pump);
 
     game.run(&mut state, &mapper, &mut scene, |m| *m == Exit);
 }

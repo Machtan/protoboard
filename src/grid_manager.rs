@@ -22,8 +22,8 @@ const COLOR_SELECTED: Color = Color(0xdd, 0xee, 0x77, 0xbb);
 const COLOR_MOVEMENT_RANGE: Color = Color(0x00, 0xff, 0xff, 0x77);
 const COLOR_ATTACK_RANGE: Color = Color(0xff, 0x66, 0x66, 0x77);
 
-const COLOR_GRASS_EVEN: Color = Color(0x66, 0xcc, 0x66, 0xff);
-const COLOR_GRASS_ODD: Color = Color(0x99, 0xff, 0x99, 0xff);
+const COLOR_DEFAULT_EVEN: Color = Color(0xcc, 0xcc, 0xcc, 0xff);
+const COLOR_DEFAULT_ODD: Color = Color(0xdd, 0xdd, 0xdd, 0xff);
 
 #[derive(Debug)]
 struct Selected {
@@ -455,9 +455,9 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 let (unit, terrain) = state.grid.tile(pos);
 
                 if (col + row) % 2 == 0 {
-                    renderer.set_draw_color(COLOR_GRASS_EVEN);
+                    renderer.set_draw_color(COLOR_DEFAULT_EVEN);
                 } else {
-                    renderer.set_draw_color(COLOR_GRASS_ODD);
+                    renderer.set_draw_color(COLOR_DEFAULT_ODD);
                 }
                 renderer.fill_rect(rect).unwrap();
 
