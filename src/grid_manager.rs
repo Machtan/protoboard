@@ -539,16 +539,16 @@ pub fn render_unit(unit: &Unit, rect: Rect, _bg: bool, state: &State, renderer: 
     let hw = rect.width() / 2;
     let hh = rect.height() / 2;
     let box_rect = Rect::new(rect.x() + hw as i32 + 4,
-                             rect.y() + hh as i32 + 4,
+                             rect.y() + hh as i32 + 7,
                              hw - 8,
-                             hh - 8);
+                             hh - 11);
     renderer.set_draw_color(color);
     renderer.fill_rect(box_rect).unwrap();
 
     let (lw, lh) = label.size();
 
     let lx = box_rect.x() + (box_rect.width() as i32 - lw as i32) / 2;
-    let ly = rect.y() + hh as i32 + 8 - (lh / 4) as i32;
+    let ly = rect.y() + hh as i32 + 8 - (lh * 2 / 15) as i32;
 
     label.render(renderer, lx, ly);
 }
