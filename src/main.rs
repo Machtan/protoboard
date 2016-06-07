@@ -114,7 +114,7 @@ fn main() {
     let grid = level.create_grid(&resources);
     let (gw, gh) = grid.size();
 
-    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
+    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 22);
     let mut state = State::new(resources,
                                grid,
                                TILE_SIZE,

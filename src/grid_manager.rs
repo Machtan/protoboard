@@ -14,10 +14,10 @@ use terrain::Terrain;
 use unit::Unit;
 use unit_mover::UnitMover;
 
-const COLOR_RED_UNIT: Color = Color(0xff, 0x66, 0x66, 0x99);
-const COLOR_RED_UNIT_SPENT: Color = Color(0x99, 0x44, 0x44, 0x99);
-const COLOR_BLUE_UNIT: Color = Color(0x66, 0xbb, 0xdd, 0x99);
-const COLOR_BLUE_UNIT_SPENT: Color = Color(65, 120, 140, 0x99);
+const COLOR_RED_UNIT: Color = Color(0xff, 0x66, 0x66, 0xcc);
+const COLOR_RED_UNIT_SPENT: Color = Color(0x99, 0x44, 0x44, 0xcc);
+const COLOR_BLUE_UNIT: Color = Color(0x66, 0xbb, 0xdd, 0xcc);
+const COLOR_BLUE_UNIT_SPENT: Color = Color(65, 120, 140, 0xcc);
 
 const COLOR_SELECTED: Color = Color(0xdd, 0xee, 0x77, 0xbb);
 const COLOR_MOVEMENT_RANGE: Color = Color(0x00, 0xff, 0xff, 0x77);
@@ -519,36 +519,36 @@ impl<'a> Behavior<State<'a>> for GridManager {
     }
 }
 
-pub fn render_unit(unit: &Unit, rect: Rect, bg: bool, state: &State, renderer: &mut Renderer) {
-    if bg {
-        let color = if unit.spent {
-            match unit.faction {
-                Faction::Red => COLOR_RED_UNIT_SPENT,
-                Faction::Blue => COLOR_BLUE_UNIT_SPENT,
-            }
-        } else {
-            match unit.faction {
-                Faction::Red => COLOR_RED_UNIT,
-                Faction::Blue => COLOR_BLUE_UNIT,
-            }
-        };
-        renderer.set_draw_color(color);
-        renderer.fill_rect(rect).unwrap();
-    }
+pub fn render_unit(unit: &Unit, rect: Rect, _bg: bool, state: &State, renderer: &mut Renderer) {
+    let color = if unit.spent {
+        match unit.faction {
+            Faction::Red => COLOR_RED_UNIT_SPENT,
+            Faction::Blue => COLOR_BLUE_UNIT_SPENT,
+        }
+    } else {
+        match unit.faction {
+            Faction::Red => COLOR_RED_UNIT,
+            Faction::Blue => COLOR_BLUE_UNIT,
+        }
+    };
     let sprite = Sprite::new(unit.texture(), None);
     sprite.render_rect(renderer, rect);
 
-    let font = &state.health_label_font;
-    let (_, sy) = renderer.device().scale();
-    // TODO: Maybe we should wrap `Font` in glorious to automatically scale?
-    let descent = (font.descent() as f32 / sy).round() as i32;
-    let height = (font.height() as f32 / sy).round() as i32;
-
     let label = state.health_label(unit.health);
-    let (w, _) = label.size();
 
-    let lx = rect.x() + rect.width() as i32 - 3 - w as i32;
-    let ly = rect.y() + rect.height() as i32 - 3 - height - descent;
+    let hw = rect.width() / 2;
+    let hh = rect.height() / 2;
+    let box_rect = Rect::new(rect.x() + hw as i32 + 4,
+                             rect.y() + hh as i32 + 4,
+                             hw - 8,
+                             hh - 8);
+    renderer.set_draw_color(color);
+    renderer.fill_rect(box_rect).unwrap();
+
+    let (lw, lh) = label.size();
+
+    let lx = box_rect.x() + (box_rect.width() as i32 - lw as i32) / 2;
+    let ly = rect.y() + hh as i32 + 8 - (lh / 4) as i32;
 
     label.render(renderer, lx, ly);
 }
