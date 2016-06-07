@@ -531,7 +531,7 @@ pub fn render_unit(unit: &Unit, rect: Rect, _bg: bool, state: &State, renderer: 
             Faction::Blue => COLOR_BLUE_UNIT,
         }
     };
-    let sprite = Sprite::new(unit.texture(), None);
+    let sprite = Sprite::new(state.unit_texture(unit), None);
     sprite.render_rect(renderer, rect);
 
     let label = state.health_label(unit.health);

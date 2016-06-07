@@ -43,6 +43,10 @@ impl TargetSelector {
 impl<'a> Behavior<State<'a>> for TargetSelector {
     type Message = Message;
 
+    fn update(&mut self, state: &mut State<'a>, _queue: &mut Vec<Message>) {
+        state.ensure_in_range(self.targets[self.selected]);
+    }
+
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
 

@@ -81,6 +81,7 @@ fn main() {
     // Load level
 
     let level = Level::load("level.json").expect("could not load level");
+    let grid = level.create_grid();
 
     // Set up SDL2.
 
@@ -111,7 +112,6 @@ fn main() {
     // Set up game state.
 
     let config = Config {};
-    let grid = level.create_grid(&resources);
     let (gw, gh) = grid.size();
 
     let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);

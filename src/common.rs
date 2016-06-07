@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use glorious::{Behavior, Color, Label, ResourceManager};
 use lru_time_cache::LruCache;
 use sdl2::rect::Rect;
+use sdl2::render::Texture;
 use sdl2_ttf::Font;
 
 use faction::Faction;
@@ -185,9 +186,9 @@ impl<'a> State<'a> {
         let (tw, th) = self.tile_size;
         let h = self.window_size.1;
 
-        let x = x.div_floor(tw as i32) + self.camera_offset.0;
+        let x = (x + (tw / 2) as i32).div_floor(tw as i32) + self.camera_offset.0;
         let y = h as i32 - y;
-        let y = y.div_floor(th as i32) + self.camera_offset.1;
+        let y = (y + (th / 2) as i32).div_floor(th as i32) + self.camera_offset.1;
 
         let (w, h) = self.grid.size();
         if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
@@ -201,8 +202,8 @@ impl<'a> State<'a> {
         let (tw, th) = self.tile_size;
         let h = self.window_size.1;
 
-        let x = (pos.0 as i32 - self.camera_offset.0) * tw as i32;
-        let y = (pos.1 as i32 - self.camera_offset.1) * th as i32;
+        let x = (pos.0 as i32 - self.camera_offset.0) * tw as i32 - (tw / 2) as i32;
+        let y = (pos.1 as i32 - self.camera_offset.1) * th as i32 - (th / 2) as i32;
         let y = h as i32 - y;
 
         Rect::new(x, y - th as i32, tw, th)
@@ -222,19 +223,19 @@ impl<'a> State<'a> {
             0
         };
 
-        if x < delta {
-            self.camera_offset.0 += x - 1;
+        if x < delta + 1 {
+            self.camera_offset.0 += x - 2;
             self.prev_scroll_time = now;
         }
-        if x > (w - 1 - delta) {
+        if x > (w - delta - 1) {
             self.camera_offset.0 += x - (w - 2);
             self.prev_scroll_time = now;
         }
-        if y < delta {
-            self.camera_offset.1 += y - 1;
+        if y < delta + 1 {
+            self.camera_offset.1 += y - 2;
             self.prev_scroll_time = now;
         }
-        if y > (h - 1 - delta) {
+        if y > (h - delta - 1) {
             self.camera_offset.1 += y - (h - 2);
             self.prev_scroll_time = now;
         }
@@ -252,6 +253,10 @@ impl<'a> State<'a> {
                                    self.resources.device()))
             })
             .clone()
+    }
+
+    pub fn unit_texture(&self, unit: &Unit) -> Rc<Texture> {
+        self.resources.texture(unit.kind().texture)
     }
 }
 

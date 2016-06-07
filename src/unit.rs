@@ -1,20 +1,26 @@
 use std::fmt::{self, Debug};
-use std::rc::Rc;
-
-use sdl2::render::Texture;
 
 use faction::Faction;
 use terrain::Terrain;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Unit {
     pub health: u32,
     pub faction: Faction,
     pub spent: bool,
-    unit_type: UnitType,
+    kind: &'static UnitKind,
 }
 
 impl Unit {
+    pub fn new(kind: &'static UnitKind, faction: Faction) -> Unit {
+        Unit {
+            health: kind.health,
+            faction: faction,
+            spent: false,
+            kind: kind,
+        }
+    }
+
     // TODO: Optimally we should not use floats here, but rather get a
     // better idea of the units for the quantities.
 
@@ -28,9 +34,9 @@ impl Unit {
 
     pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
         let def = other.defense_bonus(terrain);
-        let atk = self.unit_type.damage as f64;
-        let atk_hp = self.health as f64 / self.unit_type.health as f64;
-        let def_hp = other.health as f64 / other.unit_type.health as f64;
+        let atk = self.kind.damage as f64;
+        let atk_hp = self.health as f64 / self.kind.health as f64;
+        let def_hp = other.health as f64 / other.kind.health as f64;
         atk * atk_hp * (1.0 - def * def_hp)
     }
 
@@ -45,13 +51,8 @@ impl Unit {
     }
 
     #[inline]
-    pub fn unit_type(&self) -> &UnitType {
-        &self.unit_type
-    }
-
-    #[inline]
-    pub fn texture(&self) -> Rc<Texture> {
-        self.unit_type.texture.clone()
+    pub fn kind(&self) -> &UnitKind {
+        self.kind
     }
 
     #[inline]
@@ -81,42 +82,19 @@ impl Unit {
     }
 }
 
-#[derive(Clone)]
-pub struct UnitType {
-    pub health: u32,
-    pub attack: AttackType,
-    pub damage: u32,
-    pub movement: u32,
-    pub texture: Rc<Texture>,
-}
-
-impl UnitType {
-    /// Creates a unit of this type in the given faction.
-    /// If not health is given, the unit starts with full health.
-    pub fn create(&self, faction: Faction, health: Option<u32>) -> Unit {
-        Unit {
-            unit_type: self.clone(),
-            health: health.unwrap_or(self.health),
-            faction: faction,
-            spent: false,
-        }
-    }
-}
-
-impl Debug for UnitType {
+impl Debug for Unit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("UnitType")
+        f.debug_struct("Unit")
             .field("health", &self.health)
-            .field("attack", &self.attack)
-            .field("damage", &self.damage)
-            .field("movement", &self.movement)
-            .field("texture", &(..))
+            .field("faction", &self.faction)
+            .field("spent", &self.spent)
+            .field("kind", &self.kind.name)
             .finish()
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum AttackType {
+pub enum AttackKind {
     Melee,
     Ranged {
         min: u32,
@@ -125,4 +103,14 @@ pub enum AttackType {
     Spear {
         range: u32,
     },
+}
+
+#[derive(Clone, Debug)]
+pub struct UnitKind {
+    pub name: &'static str,
+    pub health: u32,
+    pub attack: AttackKind,
+    pub damage: u32,
+    pub movement: u32,
+    pub texture: &'static str,
 }

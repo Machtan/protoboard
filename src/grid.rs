@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 
 use attack_range::AttackRange;
 use terrain::Terrain;
-use unit::{AttackType, Unit};
+use unit::{AttackKind, Unit};
 
 #[derive(Clone)]
 pub struct Grid {
@@ -108,10 +108,10 @@ impl Grid {
                                           unit: &'a Unit,
                                           pos: (u32, u32))
                                           -> AttackRange<'a> {
-        match unit.unit_type().attack {
-            AttackType::Melee => AttackRange::melee(self, pos),
-            AttackType::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
-            AttackType::Spear { range } => AttackRange::spear(self, unit, pos, range),
+        match unit.kind().attack {
+            AttackKind::Melee => AttackRange::melee(self, pos),
+            AttackKind::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
+            AttackKind::Spear { range } => AttackRange::spear(self, unit, pos, range),
         }
     }
 
@@ -119,10 +119,10 @@ impl Grid {
                                          unit: &'a Unit,
                                          pos: (u32, u32))
                                          -> AttackRange<'a> {
-        match unit.unit_type().attack {
-            AttackType::Melee |
-            AttackType::Spear { .. } => AttackRange::melee(self, pos),
-            AttackType::Ranged { .. } => AttackRange::empty(),
+        match unit.kind().attack {
+            AttackKind::Melee |
+            AttackKind::Spear { .. } => AttackRange::melee(self, pos),
+            AttackKind::Ranged { .. } => AttackRange::empty(),
         }
     }
 
@@ -209,7 +209,7 @@ impl Grid {
                 }
                 let ncost = cost.saturating_add(tcost);
 
-                if ncost <= unit.unit_type().movement {
+                if ncost <= unit.kind().movement {
                     to_be_searched.push((npos, ncost));
                 }
             }
