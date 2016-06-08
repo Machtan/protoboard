@@ -275,7 +275,7 @@ impl<'a> State<'a> {
     pub fn unit_sprite(&self, unit: &Unit) -> Sprite {
         let kind = unit.kind();
         let texture = &kind.texture;
-        let area = kind.texture_area.map(|(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
+        let area = kind.sprite_area.map(|(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
         Sprite::new(self.resources.texture(texture), area)
     }
 }

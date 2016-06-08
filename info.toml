@@ -27,7 +27,8 @@
   movement = 4
 
 [units.defender]
-  texture = ["assets/48x48 protobard.png", 0, 0, 48, 48]
+  texture = "assets/48x48 protoboard.png"
+  sprite_area = [0, 0, 48, 48]
   attack = { kind = "melee" }
   damage = 2.0
   defense = 0.5
