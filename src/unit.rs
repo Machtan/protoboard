@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
@@ -54,7 +55,10 @@ impl Unit {
 
     #[inline]
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
-        terrain.cost
+        *self.kind
+            .movement_class
+            .get(&terrain.name)
+            .expect("missing terrain type in movement class")
     }
 
     #[inline]
@@ -105,6 +109,9 @@ pub struct UnitKind {
     pub defense: f64,
     pub damage: f64,
     pub movement: u32,
+    pub movement_class: Rc<MovementClass>,
     pub texture: String,
     pub sprite_area: Option<(u32, u32, u32, u32)>,
 }
+
+pub type MovementClass = HashMap<String, u32>;

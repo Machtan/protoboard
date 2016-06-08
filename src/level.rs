@@ -13,7 +13,23 @@ use toml;
 use faction::Faction;
 use grid::Grid;
 use terrain::Terrain;
-use unit::{AttackKind, Unit, UnitKind};
+use unit::{AttackKind, MovementClass, Unit, UnitKind};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct TerrainSpec {
+    defense: f64,
+    texture: Option<String>,
+}
+
+impl TerrainSpec {
+    fn to_terrain(&self, name: String) -> Terrain {
+        Terrain {
+            name: name,
+            defense: self.defense,
+            texture: self.texture.clone(),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct SpriteSpec {
@@ -26,6 +42,7 @@ struct UnitSpec {
     damage: f64,
     defense: f64,
     movement: u32,
+    movement_class: String,
     attack: AttackSpec,
     sprite: SpriteSpec,
 }
@@ -59,12 +76,15 @@ impl AttackSpec {
 }
 
 impl UnitSpec {
-    fn to_kind(&self, name: String) -> Result<UnitKind, String> {
+    fn to_kind<F>(&self, name: String, mut get_movement_class: F) -> Result<UnitKind, String>
+        where F: FnMut(&str) -> Rc<MovementClass>
+    {
         Ok(UnitKind {
             name: name,
             damage: self.damage,
             defense: self.defense,
             movement: self.movement,
+            movement_class: get_movement_class(&self.movement_class),
             attack: self.attack.to_kind()?,
             texture: self.sprite.texture.clone(),
             sprite_area: self.sprite.area,
@@ -75,7 +95,8 @@ impl UnitSpec {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InfoFile {
     units: BTreeMap<String, UnitSpec>,
-    terrain: BTreeMap<String, Terrain>,
+    terrain: BTreeMap<String, TerrainSpec>,
+    movement_classes: BTreeMap<String, MovementClass>,
 }
 
 #[derive(Debug)]
@@ -195,15 +216,35 @@ impl Level {
     }
 
     pub fn create_grid(&self, info: &InfoFile) -> Grid {
+        let movement_classes = info.movement_classes
+            .iter()
+            .map(|(name, class)| (&name[..], Rc::new(class.clone())))
+            .collect::<BTreeMap<_, _>>();
+
         let kinds = info.units
             .iter()
-            .map(|(name, spec)| (&name[..], Rc::new(spec.to_kind(name.to_owned()).unwrap())))
+            .map(|(name, spec)| {
+                let kind = spec.to_kind(name.to_owned(), |mc| {
+                        movement_classes.get(mc).expect("movement class not in info file").clone()
+                    })
+                    .unwrap();
+                (&name[..], Rc::new(kind))
+            })
             .collect::<BTreeMap<_, _>>();
 
         let terrain = info.terrain
             .iter()
-            .map(|(name, spec)| (&name[..], Rc::new(spec.clone())))
+            .map(|(name, spec)| (&name[..], Rc::new(spec.to_terrain(name.to_owned()))))
             .collect::<BTreeMap<_, _>>();
+
+        for (name, class) in &movement_classes {
+            for terrain in terrain.keys() {
+                assert!(class.contains_key(&terrain[..]),
+                        "movement class {:?} is missing terrain type {:?}",
+                        name,
+                        terrain);
+            }
+        }
 
         let mut min_x = i32::max_value();
         let mut max_x = i32::min_value();
