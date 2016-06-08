@@ -1,4 +1,4 @@
-use std::cmp;
+use std::cmp::{self, Ord, Ordering, PartialOrd};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::{self, Display, Write as FmtWrite};
 use std::fs::File;
@@ -107,7 +107,33 @@ pub fn load_info<P, F>(path: P, mut warn: F) -> Result<GameInfo, LoadError>
     spec.to_info().map_err(LoadError::Validate)
 }
 
-pub type Layer = HashMap<String, BTreeSet<(i32, i32)>>;
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct Point(pub i32, pub i32, pub u32);
+
+impl PartialEq for Point {
+    #[inline]
+    fn eq(&self, other: &Point) -> bool {
+        (self.0, self.1) == (other.0, other.1)
+    }
+}
+
+impl Eq for Point {}
+
+impl PartialOrd for Point {
+    #[inline]
+    fn partial_cmp(&self, other: &Point) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Point {
+    #[inline]
+    fn cmp(&self, other: &Point) -> Ordering {
+        (self.0, self.1).cmp(&(other.0, other.1))
+    }
+}
+
+pub type Layer = HashMap<String, BTreeSet<Point>>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Level {
@@ -154,7 +180,7 @@ impl Level {
         let mut grid = match self.layers.get("terrain") {
             Some(layer) => {
                 Grid::new((w, h), |(x, y)| {
-                    let pos = (x as i32 + min_x, y as i32 + min_y);
+                    let pos = Point(x as i32 + min_x, y as i32 + min_y, 0);
                     for (tile, positions) in layer {
                         if positions.contains(&pos) {
                             return match info.terrain.get(&tile[..]) {
@@ -169,18 +195,20 @@ impl Level {
             None => Grid::new((w, h), |_| info.terrain["default"].clone()),
         };
 
-        for &(layer_name, faction) in &[("units_red", Faction::Red),
-                                        ("units_blue", Faction::Blue)] {
-            for (tile, positions) in &self.layers[layer_name] {
-                let kind = match info.roles.get(&tile[..]) {
-                    Some(kind) => kind,
-                    None => panic!("unit kind not in info file: {:?}", tile),
+        for (tile, positions) in &self.layers["units"] {
+            let kind = match info.roles.get(&tile[..]) {
+                Some(kind) => kind,
+                None => panic!("unit kind not in info file: {:?}", tile),
+            };
+            for &Point(x, y, color) in positions {
+                let faction = match color {
+                    1 => Faction::Red,
+                    2 => Faction::Blue,
+                    _ => panic!("invalid unit color index: {}", color),
                 };
-                for &(x, y) in positions {
-                    let pos = ((x - min_x) as u32, (y - min_y) as u32);
-                    let unit = Unit::new(kind.clone(), faction);
-                    grid.add_unit(unit, pos);
-                }
+                let pos = ((x - min_x) as u32, (y - min_y) as u32);
+                let unit = Unit::new(kind.clone(), faction);
+                grid.add_unit(unit, pos);
             }
         }
         grid

@@ -29,7 +29,6 @@ defense_classes = ["light", "medium", "heavy"]
   attack = { damage = 2.0, range = { kind = "melee" }, modifiers = { light = 3.0 } }
   defense = { class = "medium", defense = 0.2 }
   movement = { class = "normal", movement = 6 }
-  damage_modifiers = { light = 3.0 }
 
 [roles.archer]
   sprite = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }

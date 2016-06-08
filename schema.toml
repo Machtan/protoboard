@@ -1,6 +1,7 @@
 name = "protoboard"
-layers = ["terrain", "units_blue", "units_red"]
+layers = ["terrain", "units"]
 prefix = "../protoboard/assets"
+colors = ["ffffff", "ff0000", "0000ff"]
 
 [tiles]
 defender = "shield.png"
