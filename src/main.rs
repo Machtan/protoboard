@@ -57,7 +57,7 @@ fn main() {
     // Load settings
 
     const WINDOW_TITLE: &'static str = "Raccoon Squad";
-    const TILE_SIZE: (u32, u32) = (64, 64);
+    const TILE_SIZE: (u32, u32) = (48, 48);
     const MAX_FPS: u32 = 60;
     const NUMBER_OF_ACTIONS: u32 = 4;
 
@@ -116,7 +116,7 @@ fn main() {
     let config = Config {};
     let (gw, gh) = grid.size();
 
-    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 20);
+    let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 13);
     let mut state = State::new(resources,
                                grid,
                                TILE_SIZE,
