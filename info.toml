@@ -22,7 +22,7 @@
 
 
 [units.warrior]
-  sprite = { texture = "assets/sword.png" }
+  sprite = { texture = "assets/48x48 protoboard.png", area = [96, 0, 48, 48] }
   attack = { kind = "melee" }
   damage = 2.0
   defense = 0.2
@@ -30,7 +30,7 @@
   movement_class = "default"
 
 [units.archer]
-  sprite = { texture = "assets/bow.png" }
+  sprite = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }
   attack = { kind = "ranged", min = 2, max = 3 }
   damage = 4.0
   defense = 0.2
