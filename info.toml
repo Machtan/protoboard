@@ -9,33 +9,32 @@
 
 [terrain.mountains]
   defense = 0.3
-  cost = 4
+  cost = 100000
   texture = "assets/mountains.png"
 
 [units.warrior]
-  texture = "assets/sword.png"
+  sprite = { texture = "assets/sword.png" }
   attack = { kind = "melee" }
   damage = 2.0
   defense = 0.2
   movement = 6
 
 [units.archer]
-  texture = "assets/bow.png"
+  sprite = { texture = "assets/bow.png" }
   attack = { kind = "ranged", min = 2, max = 3 }
   damage = 4.0
   defense = 0.2
   movement = 4
 
 [units.defender]
-  texture = "assets/48x48 protoboard.png"
-  sprite_area = [0, 0, 48, 48]
+  sprite = { texture = "assets/48x48 protoboard.png", area = [0, 0, 48, 48] }
   attack = { kind = "melee" }
   damage = 2.0
   defense = 0.5
   movement = 4
 
 [units.raccoon]
-  texture = "assets/raccoon.png"
+  sprite = { texture = "assets/raccoon.png" }
   attack = { kind = "spear", range = 3 }
   damage = 4.0
   defense = 0.2

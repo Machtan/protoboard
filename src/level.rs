@@ -16,13 +16,18 @@ use terrain::Terrain;
 use unit::{AttackKind, Unit, UnitKind};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+struct SpriteSpec {
+    texture: String,
+    area: Option<(u32, u32, u32, u32)>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct UnitSpec {
     damage: f64,
     defense: f64,
     movement: u32,
     attack: AttackSpec,
-    texture: String,
-    sprite_area: Option<(u32, u32, u32, u32)>,
+    sprite: SpriteSpec,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -61,8 +66,8 @@ impl UnitSpec {
             defense: self.defense,
             movement: self.movement,
             attack: self.attack.to_kind()?,
-            texture: self.texture.to_owned(),
-            sprite_area: self.sprite_area,
+            texture: self.sprite.texture.clone(),
+            sprite_area: self.sprite.area,
         })
     }
 }
