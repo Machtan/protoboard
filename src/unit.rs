@@ -15,7 +15,7 @@ pub struct Unit {
 impl Unit {
     pub fn new(kind: Rc<UnitKind>, faction: Faction) -> Unit {
         Unit {
-            health: kind.health,
+            health: 10,
             faction: faction,
             spent: false,
             kind: kind,
@@ -26,14 +26,14 @@ impl Unit {
     // better idea of the units for the quantities.
 
     pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
-        terrain.defense
+        terrain.defense + self.kind.defense
     }
 
     pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
         let def = other.defense_bonus(terrain);
-        let atk = self.kind.damage as f64;
-        let atk_hp = self.health as f64 / self.kind.health as f64;
-        let def_hp = other.health as f64 / other.kind.health as f64;
+        let atk = self.kind.damage;
+        let atk_hp = self.health as f64 / 10.0;
+        let def_hp = other.health as f64 / 10.0;
         atk * atk_hp * (1.0 - def * def_hp)
     }
 
@@ -101,9 +101,9 @@ pub enum AttackKind {
 #[derive(Clone, Debug)]
 pub struct UnitKind {
     pub name: String,
-    pub health: u32,
     pub attack: AttackKind,
-    pub damage: u32,
+    pub defense: f64,
+    pub damage: f64,
     pub movement: u32,
     pub texture: String,
 }

@@ -81,7 +81,7 @@ fn main() {
 
     // Load level
 
-    let info = InfoFile::load("info.toml").expect("could not load info file");
+    let info = InfoFile::load("info.toml", |m| warn!("{}", m)).expect("could not load info file");
     let level = Level::load("level.json").expect("could not load level");
     let grid = level.create_grid(&info);
 

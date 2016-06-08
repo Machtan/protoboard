@@ -1,11 +1,12 @@
 use std::cmp;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::Path;
 use std::rc::Rc;
 
 use json;
+use serde::Deserialize;
 use toml;
 
 use faction::Faction;
@@ -16,8 +17,8 @@ use unit::{AttackKind, Unit, UnitKind};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct UnitSpec {
     texture: String,
-    health: u32,
-    damage: u32,
+    damage: f64,
+    defense: f64,
     movement: u32,
     attack: AttackSpec,
 }
@@ -54,8 +55,8 @@ impl UnitSpec {
     fn to_kind(&self, name: String) -> Result<UnitKind, String> {
         Ok(UnitKind {
             name: name,
-            health: self.health,
             damage: self.damage,
+            defense: self.defense,
             movement: self.movement,
             attack: self.attack.to_kind()?,
             texture: self.texture.to_owned(),
@@ -69,17 +70,62 @@ pub struct InfoFile {
     terrain: BTreeMap<String, Terrain>,
 }
 
+#[derive(Debug)]
+pub enum LoadError {
+    Io(io::Error),
+    Parse(toml::ParserError),
+    Decode(toml::DecodeError),
+}
+
+fn warn_about_unused_keys<F>(value: toml::Value, path: &mut String, warn: &mut F) -> bool
+    where F: FnMut(&str)
+{
+    let mut result = false;
+    if let toml::Value::Table(table) = value {
+        for (key, child) in table {
+            result = true;
+            let i = path.len();
+            if !path.is_empty() {
+                path.push('.');
+            }
+            path.push_str(&key);
+            if !warn_about_unused_keys(child, path, warn) {
+                warn(&format!("unused key in info file: {:?}", path));
+            }
+            path.truncate(i);
+        }
+    }
+    result
+}
+
 impl InfoFile {
-    pub fn load<P>(path: P) -> Option<InfoFile>
-        where P: AsRef<Path>
+    pub fn load<P, F>(path: P, mut warn: F) -> Result<InfoFile, LoadError>
+        where P: AsRef<Path>,
+              F: FnMut(&str)
     {
         let mut contents = String::new();
-        let res = File::open(path).and_then(|mut file| file.read_to_string(&mut contents));
-        if let Err(err) = res {
-            error!("could not load info file: {}", err);
-            return None;
+        File::open(path)
+            .and_then(|mut file| file.read_to_string(&mut contents))
+            .map_err(LoadError::Io)?;
+        let mut parser = toml::Parser::new(&contents);
+        let table = match parser.parse() {
+            Some(table) => Ok(table),
+            None => Err(parser.errors.pop().unwrap()),
+        };
+        for warning in &parser.errors {
+            warn(&format!("info file: {}", warning));
         }
-        toml::decode_str(&contents)
+        let table = table.map_err(LoadError::Parse)?;
+
+        let mut decoder = toml::Decoder::new(toml::Value::Table(table));
+        let info = InfoFile::deserialize(&mut decoder).map_err(LoadError::Decode)?;
+
+        if let Some(value) = decoder.toml {
+            let mut path = String::new();
+            warn_about_unused_keys(value, &mut path, &mut warn);
+        }
+
+        Ok(info)
     }
 }
 
