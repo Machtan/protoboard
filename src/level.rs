@@ -85,7 +85,7 @@ pub struct InfoFile {
 #[derive(Debug)]
 pub enum LoadError {
     Read(io::Error),
-    Parse(toml::ParserError, String),
+    Parse,
     Decode(toml::DecodeError),
 }
 
@@ -93,7 +93,7 @@ impl Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LoadError::Read(ref err) => write!(f, "error reading file: {}", err),
-            LoadError::Parse(ref err, ref ctx) => write!(f, "error parsing file: {}\n{}", err, ctx),
+            LoadError::Parse => write!(f, "error parsing file"),
             LoadError::Decode(ref err) => write!(f, "error decoding file: {}", err),
         }
     }
@@ -120,6 +120,29 @@ fn warn_about_unused_keys<F>(value: toml::Value, path: &mut String, warn: &mut F
     result
 }
 
+fn make_context(err: &toml::ParserError, contents: &str, ctx: &mut String) {
+    let i = contents[..err.lo + 1].rfind('\n').unwrap_or(!0).wrapping_add(1);
+    let j = err.lo + contents[err.lo..].find('\n').unwrap_or(contents.len() - err.lo);
+    let line_num = contents[..i].split('\n').count() + 1;
+    let line = &contents[i..j];
+
+    let trailing = if j < err.hi {
+        "..."
+    } else {
+        ""
+    };
+    let prev_len = ctx.len();
+    write!(ctx, "{} > ", line_num).unwrap();
+    let prefix_len = ctx.len() - prev_len;
+    write!(ctx, "{}{}\n", line, trailing).unwrap();
+    for _ in 0..(prefix_len + err.lo - i) {
+        ctx.push(' ');
+    }
+    for _ in 0..cmp::max(cmp::min(err.hi - err.lo, j - err.lo), 1) {
+        ctx.push('~');
+    }
+}
+
 impl InfoFile {
     pub fn load<P, F>(path: P, mut warn: F) -> Result<InfoFile, LoadError>
         where P: AsRef<Path>,
@@ -130,38 +153,14 @@ impl InfoFile {
             .and_then(|mut file| file.read_to_string(&mut contents))
             .map_err(LoadError::Read)?;
         let mut parser = toml::Parser::new(&contents);
-        let table = match parser.parse() {
-            Some(table) => Ok(table),
-            None => {
-                let err = parser.errors.pop().unwrap();
 
-                let i = contents[..err.lo + 1].rfind('\n').unwrap_or(!0).wrapping_add(1);
-                let j = err.lo + contents[err.lo..].find('\n').unwrap_or(contents.len() - err.lo);
-                let line_num = contents[..i].split('\n').count() + 1;
-                let line = &contents[i..j];
-
-                let trailing = if j < err.hi {
-                    "..."
-                } else {
-                    ""
-                };
-                let mut ctx = format!("{} > ", line_num);
-                let prefix_len = ctx.len();
-                write!(ctx, "{}{}\n", line, trailing);
-                for _ in 0..(prefix_len + err.lo - i) {
-                    ctx.push(' ');
-                }
-                for _ in 0..cmp::max(cmp::min(err.hi - err.lo, j - err.lo), 1) {
-                    ctx.push('~');
-                }
-
-                Err(LoadError::Parse(err, ctx))
-            }
-        };
+        let table = parser.parse();
         for warning in &parser.errors {
-            warn(&format!("info file: {}", warning));
+            let mut msg = format!("parsing file: {}\n", warning);
+            make_context(warning, &contents, &mut msg);
+            warn(&msg);
         }
-        let table = table?;
+        let table = table.ok_or(LoadError::Parse)?;
 
         let mut decoder = toml::Decoder::new(toml::Value::Table(table));
         let info = InfoFile::deserialize(&mut decoder).map_err(LoadError::Decode)?;
