@@ -43,7 +43,7 @@ impl Unit {
     }
 
     pub fn receive_damage(&mut self, damage: f64) -> bool {
-        damage = if damage < 0.0 { 0.0 } else { damage };
+        let damage = if damage < 0.0 { 0.0 } else { damage };
         self.health = self.health.saturating_sub(damage.round() as u32);
         self.health == 0
     }
