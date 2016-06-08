@@ -106,4 +106,5 @@ pub struct UnitKind {
     pub damage: f64,
     pub movement: u32,
     pub texture: String,
+    pub texture_area: Option<(u32, u32, u32, u32)>,
 }

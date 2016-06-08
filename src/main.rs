@@ -20,6 +20,7 @@ extern crate sdl2_ttf;
 extern crate toml;
 
 use std::env;
+use std::process;
 
 use glorious::{BoxedInputMapper, Color, Device, Game, ResourceManager};
 use sdl2::keyboard::{Keycode, Scancode};
@@ -81,7 +82,13 @@ fn main() {
 
     // Load level
 
-    let info = InfoFile::load("info.toml", |m| warn!("{}", m)).expect("could not load info file");
+    let info = match InfoFile::load("info.toml", |m| warn!("{}", m)) {
+        Ok(info) => info,
+        Err(err) => {
+            error!("could not load info file: {}", err);
+            process::exit(1);
+        }
+    };
     let level = Level::load("level.json").expect("could not load level");
     let grid = level.create_grid(&info);
 

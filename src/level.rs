@@ -1,5 +1,6 @@
 use std::cmp;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::{self, Display, Write as FmtWrite};
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
@@ -15,8 +16,14 @@ use terrain::Terrain;
 use unit::{AttackKind, Unit, UnitKind};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+enum TextureSpec {
+    Texture(String),
+    Sprite(String, u32, u32, u32, u32),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct UnitSpec {
-    texture: String,
+    texture: TextureSpec,
     damage: f64,
     defense: f64,
     movement: u32,
@@ -53,13 +60,18 @@ impl AttackSpec {
 
 impl UnitSpec {
     fn to_kind(&self, name: String) -> Result<UnitKind, String> {
+        let (texture, area) = match self.texture.clone() {
+            TextureSpec::Texture(path) => (path, None),
+            TextureSpec::Sprite(path, x, y, w, h) => (path, Some((x, y, w, h))),
+        };
         Ok(UnitKind {
             name: name,
             damage: self.damage,
             defense: self.defense,
             movement: self.movement,
             attack: self.attack.to_kind()?,
-            texture: self.texture.to_owned(),
+            texture: texture,
+            texture_area: area,
         })
     }
 }
@@ -72,9 +84,19 @@ pub struct InfoFile {
 
 #[derive(Debug)]
 pub enum LoadError {
-    Io(io::Error),
-    Parse(toml::ParserError),
+    Read(io::Error),
+    Parse(toml::ParserError, String),
     Decode(toml::DecodeError),
+}
+
+impl Display for LoadError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            LoadError::Read(ref err) => write!(f, "error reading file: {}", err),
+            LoadError::Parse(ref err, ref ctx) => write!(f, "error parsing file: {}\n{}", err, ctx),
+            LoadError::Decode(ref err) => write!(f, "error decoding file: {}", err),
+        }
+    }
 }
 
 fn warn_about_unused_keys<F>(value: toml::Value, path: &mut String, warn: &mut F) -> bool
@@ -106,16 +128,40 @@ impl InfoFile {
         let mut contents = String::new();
         File::open(path)
             .and_then(|mut file| file.read_to_string(&mut contents))
-            .map_err(LoadError::Io)?;
+            .map_err(LoadError::Read)?;
         let mut parser = toml::Parser::new(&contents);
         let table = match parser.parse() {
             Some(table) => Ok(table),
-            None => Err(parser.errors.pop().unwrap()),
+            None => {
+                let err = parser.errors.pop().unwrap();
+
+                let i = contents[..err.lo + 1].rfind('\n').unwrap_or(!0).wrapping_add(1);
+                let j = err.lo + contents[err.lo..].find('\n').unwrap_or(contents.len() - err.lo);
+                let line_num = contents[..i].split('\n').count() + 1;
+                let line = &contents[i..j];
+
+                let trailing = if j < err.hi {
+                    "..."
+                } else {
+                    ""
+                };
+                let mut ctx = format!("{} > ", line_num);
+                let prefix_len = ctx.len();
+                write!(ctx, "{}{}\n", line, trailing);
+                for _ in 0..(prefix_len + err.lo - i) {
+                    ctx.push(' ');
+                }
+                for _ in 0..cmp::max(cmp::min(err.hi - err.lo, j - err.lo), 1) {
+                    ctx.push('~');
+                }
+
+                Err(LoadError::Parse(err, ctx))
+            }
         };
         for warning in &parser.errors {
             warn(&format!("info file: {}", warning));
         }
-        let table = table.map_err(LoadError::Parse)?;
+        let table = table?;
 
         let mut decoder = toml::Decoder::new(toml::Value::Table(table));
         let info = InfoFile::deserialize(&mut decoder).map_err(LoadError::Decode)?;

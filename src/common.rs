@@ -3,10 +3,9 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use glorious::{Behavior, Color, Label, ResourceManager};
+use glorious::{Behavior, Color, Label, ResourceManager, Sprite};
 use lru_time_cache::LruCache;
 use sdl2::rect::Rect;
-use sdl2::render::Texture;
 use sdl2_ttf::Font;
 
 use faction::Faction;
@@ -273,8 +272,11 @@ impl<'a> State<'a> {
             .clone()
     }
 
-    pub fn unit_texture(&self, unit: &Unit) -> Rc<Texture> {
-        self.resources.texture(&unit.kind().texture)
+    pub fn unit_sprite(&self, unit: &Unit) -> Sprite {
+        let kind = unit.kind();
+        let texture = &kind.texture;
+        let area = kind.texture_area.map(|(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
+        Sprite::new(self.resources.texture(texture), area)
     }
 }
 
