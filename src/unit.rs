@@ -1,25 +1,24 @@
-use std::collections::HashMap;
 use std::fmt::{self, Debug};
-use std::rc::Rc;
 
 use faction::Faction;
-use terrain::Terrain;
+use info::Role;
+use info::Terrain;
 
 #[derive(Clone)]
 pub struct Unit {
     pub health: u32,
     pub faction: Faction,
     pub spent: bool,
-    kind: Rc<UnitKind>,
+    pub role: Role,
 }
 
 impl Unit {
-    pub fn new(kind: Rc<UnitKind>, faction: Faction) -> Unit {
+    pub fn new(role: Role, faction: Faction) -> Unit {
         Unit {
             health: 10,
             faction: faction,
             spent: false,
-            kind: kind,
+            role: role,
         }
     }
 
@@ -27,12 +26,13 @@ impl Unit {
     // better idea of the units for the quantities.
 
     pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
-        terrain.defense + self.kind.defense
+        terrain.defense + self.role.defense.defense
     }
 
     pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
         let def = other.defense_bonus(terrain);
-        let atk = self.kind.damage;
+        let atk = self.role.attack.damage *
+                  self.role.attack.modifiers.get(&other.role.defense.class).cloned().unwrap_or(1.0);
         let atk_hp = self.health as f64 / 10.0;
         let def_hp = other.health as f64 / 10.0;
         atk * atk_hp * (1.0 - def * def_hp)
@@ -43,20 +43,17 @@ impl Unit {
     }
 
     pub fn receive_damage(&mut self, damage: f64) -> bool {
-        assert!(damage >= 0.0, "damage calculation should never be negative");
+        damage = if damage < 0.0 { 0.0 } else { damage };
         self.health = self.health.saturating_sub(damage.round() as u32);
         self.health == 0
     }
 
     #[inline]
-    pub fn kind(&self) -> &UnitKind {
-        &self.kind
-    }
-
-    #[inline]
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
-        *self.kind
-            .movement_class
+        *self.role
+            .movement
+            .class
+            .costs
             .get(&terrain.name)
             .expect("missing terrain type in movement class")
     }
@@ -85,33 +82,7 @@ impl Debug for Unit {
             .field("health", &self.health)
             .field("faction", &self.faction)
             .field("spent", &self.spent)
-            .field("kind", &self.kind.name)
+            .field("role", &self.role.name)
             .finish()
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum AttackKind {
-    Melee,
-    Ranged {
-        min: u32,
-        max: u32,
-    },
-    Spear {
-        range: u32,
-    },
-}
-
-#[derive(Clone, Debug)]
-pub struct UnitKind {
-    pub name: String,
-    pub attack: AttackKind,
-    pub defense: f64,
-    pub damage: f64,
-    pub movement: u32,
-    pub movement_class: Rc<MovementClass>,
-    pub texture: String,
-    pub sprite_area: Option<(u32, u32, u32, u32)>,
-}
-
-pub type MovementClass = HashMap<String, u32>;

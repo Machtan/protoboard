@@ -10,6 +10,7 @@ use sdl2_ttf::Font;
 
 use faction::Faction;
 use grid::Grid;
+use info::SpriteInfo;
 use unit::Unit;
 
 const COLOR_HEALTH_LABEL: Color = Color(0xff, 0xff, 0xff, 0xff);
@@ -272,11 +273,14 @@ impl<'a> State<'a> {
             .clone()
     }
 
+    pub fn sprite(&self, sprite: &SpriteInfo) -> Sprite {
+        let texture = self.resources.texture(&sprite.texture[..]);
+        let rect = sprite.area.map(|(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
+        Sprite::new(texture, rect)
+    }
+
     pub fn unit_sprite(&self, unit: &Unit) -> Sprite {
-        let kind = unit.kind();
-        let texture = &kind.texture;
-        let area = kind.sprite_area.map(|(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
-        Sprite::new(self.resources.texture(texture), area)
+        self.sprite(&unit.role.sprite)
     }
 }
 

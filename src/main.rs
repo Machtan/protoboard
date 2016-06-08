@@ -32,22 +32,23 @@ use common::{Config, State};
 use faction::Faction;
 use grid_manager::GridManager;
 use info_box::InfoBox;
-use level::{InfoFile, Level};
+use level::{load_info, Level};
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
 use scene::Scene;
 
-mod attack_range;
+mod range;
 mod common;
 mod faction;
 mod grid;
 mod grid_manager;
+mod info;
 mod info_box;
 mod level;
 mod menus;
 mod resources;
 mod scene;
+mod spec;
 mod target_selector;
-mod terrain;
 mod unit;
 mod unit_mover;
 
@@ -82,7 +83,7 @@ fn main() {
 
     // Load level
 
-    let info = match InfoFile::load("info.toml", |m| warn!("{}", m)) {
+    let info = match load_info("info.toml", |m| warn!("{}", m)) {
         Ok(info) => info,
         Err(err) => {
             error!("could not load info file: {}", err);

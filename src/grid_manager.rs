@@ -461,9 +461,8 @@ impl<'a> Behavior<State<'a>> for GridManager {
                 }
                 renderer.fill_rect(rect).unwrap();
 
-                if let Some(ref path) = terrain.texture {
-                    let texture = state.resources.texture(path);
-                    let sprite = Sprite::new(texture, None);
+                if let Some(ref sprite) = terrain.sprite {
+                    let sprite = state.sprite(sprite);
                     sprite.render_rect(renderer, rect);
                 }
 
@@ -539,7 +538,7 @@ pub fn render_unit(unit: &Unit, rect: Rect, _bg: bool, state: &State, renderer: 
     renderer.set_draw_color(color);
     renderer.fill_rect(box_rect).unwrap();
 
-    let (lw, lh) = label.size();
+    let (lw, _) = label.size();
 
     let lx = box_rect.x() + (box_rect.width() as i32 - lw as i32) / 2;
     let ly = rect.y() + hh as i32 + 5;

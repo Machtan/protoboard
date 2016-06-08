@@ -1,10 +1,9 @@
 use std::cmp;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::{self, Display, Write as FmtWrite};
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
-use std::rc::Rc;
 
 use json;
 use serde::Deserialize;
@@ -12,98 +11,16 @@ use toml;
 
 use faction::Faction;
 use grid::Grid;
-use terrain::Terrain;
-use unit::{AttackKind, MovementClass, Unit, UnitKind};
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct TerrainSpec {
-    defense: f64,
-    texture: Option<String>,
-}
-
-impl TerrainSpec {
-    fn to_terrain(&self, name: String) -> Terrain {
-        Terrain {
-            name: name,
-            defense: self.defense,
-            texture: self.texture.clone(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct SpriteSpec {
-    texture: String,
-    area: Option<(u32, u32, u32, u32)>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct UnitSpec {
-    damage: f64,
-    defense: f64,
-    movement: u32,
-    movement_class: String,
-    attack: AttackSpec,
-    sprite: SpriteSpec,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct AttackSpec {
-    kind: String,
-    min: Option<u32>,
-    max: Option<u32>,
-    range: Option<u32>,
-}
-
-impl AttackSpec {
-    fn to_kind(&self) -> Result<AttackKind, String> {
-        Ok(match &self.kind[..] {
-            "melee" => AttackKind::Melee,
-            "ranged" => {
-                AttackKind::Ranged {
-                    min: self.min.ok_or_else(|| format!("ranged attack missing field: min"))?,
-                    max: self.max.ok_or_else(|| format!("ranged attack missing field: max"))?,
-                }
-            }
-            "spear" => {
-                AttackKind::Spear {
-                    range: self.range.ok_or_else(|| format!("spear attack missing field: range"))?,
-                }
-            }
-            k => return Err(format!("unrecognized attack kind {:?}", k)),
-        })
-    }
-}
-
-impl UnitSpec {
-    fn to_kind<F>(&self, name: String, mut get_movement_class: F) -> Result<UnitKind, String>
-        where F: FnMut(&str) -> Rc<MovementClass>
-    {
-        Ok(UnitKind {
-            name: name,
-            damage: self.damage,
-            defense: self.defense,
-            movement: self.movement,
-            movement_class: get_movement_class(&self.movement_class),
-            attack: self.attack.to_kind()?,
-            texture: self.sprite.texture.clone(),
-            sprite_area: self.sprite.area,
-        })
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct InfoFile {
-    units: BTreeMap<String, UnitSpec>,
-    terrain: BTreeMap<String, TerrainSpec>,
-    movement_classes: BTreeMap<String, MovementClass>,
-}
+use info::GameInfo;
+use spec::Spec;
+use unit::Unit;
 
 #[derive(Debug)]
 pub enum LoadError {
     Read(io::Error),
     Parse,
     Decode(toml::DecodeError),
+    Validate(String),
 }
 
 impl Display for LoadError {
@@ -112,6 +29,7 @@ impl Display for LoadError {
             LoadError::Read(ref err) => write!(f, "error reading file: {}", err),
             LoadError::Parse => write!(f, "error parsing file"),
             LoadError::Decode(ref err) => write!(f, "error decoding file: {}", err),
+            LoadError::Validate(ref err) => write!(f, "error validating file: {}", err),
         }
     }
 }
@@ -160,44 +78,42 @@ fn make_context(err: &toml::ParserError, contents: &str, ctx: &mut String) {
     }
 }
 
-impl InfoFile {
-    pub fn load<P, F>(path: P, mut warn: F) -> Result<InfoFile, LoadError>
-        where P: AsRef<Path>,
-              F: FnMut(&str)
-    {
-        let mut contents = String::new();
-        File::open(path)
-            .and_then(|mut file| file.read_to_string(&mut contents))
-            .map_err(LoadError::Read)?;
-        let mut parser = toml::Parser::new(&contents);
+pub fn load_info<P, F>(path: P, mut warn: F) -> Result<GameInfo, LoadError>
+    where P: AsRef<Path>,
+          F: FnMut(&str)
+{
+    let mut contents = String::new();
+    File::open(path)
+        .and_then(|mut file| file.read_to_string(&mut contents))
+        .map_err(LoadError::Read)?;
+    let mut parser = toml::Parser::new(&contents);
 
-        let table = parser.parse();
-        for warning in &parser.errors {
-            let mut msg = format!("parsing file: {}\n", warning);
-            make_context(warning, &contents, &mut msg);
-            warn(&msg);
-        }
-        let table = table.ok_or(LoadError::Parse)?;
-
-        let mut decoder = toml::Decoder::new(toml::Value::Table(table));
-        let info = InfoFile::deserialize(&mut decoder).map_err(LoadError::Decode)?;
-
-        if let Some(value) = decoder.toml {
-            let mut path = String::new();
-            warn_about_unused_keys(value, &mut path, &mut warn);
-        }
-
-        Ok(info)
+    let table = parser.parse();
+    for warning in &parser.errors {
+        let mut msg = format!("parsing file: {}\n", warning);
+        make_context(warning, &contents, &mut msg);
+        warn(&msg);
     }
+    let table = table.ok_or(LoadError::Parse)?;
+
+    let mut decoder = toml::Decoder::new(toml::Value::Table(table));
+    let spec = Spec::deserialize(&mut decoder).map_err(LoadError::Decode)?;
+
+    if let Some(value) = decoder.toml {
+        let mut path = String::new();
+        warn_about_unused_keys(value, &mut path, &mut warn);
+    }
+
+    spec.to_info().map_err(LoadError::Validate)
 }
 
-pub type Layer = BTreeMap<String, BTreeSet<(i32, i32)>>;
+pub type Layer = HashMap<String, BTreeSet<(i32, i32)>>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Level {
     pub name: String,
     pub schema: String,
-    pub layers: BTreeMap<String, Layer>,
+    pub layers: HashMap<String, Layer>,
 }
 
 impl Level {
@@ -215,37 +131,7 @@ impl Level {
         json::to_writer(&mut File::create(path)?, self)
     }
 
-    pub fn create_grid(&self, info: &InfoFile) -> Grid {
-        let movement_classes = info.movement_classes
-            .iter()
-            .map(|(name, class)| (&name[..], Rc::new(class.clone())))
-            .collect::<BTreeMap<_, _>>();
-
-        let kinds = info.units
-            .iter()
-            .map(|(name, spec)| {
-                let kind = spec.to_kind(name.to_owned(), |mc| {
-                        movement_classes.get(mc).expect("movement class not in info file").clone()
-                    })
-                    .unwrap();
-                (&name[..], Rc::new(kind))
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        let terrain = info.terrain
-            .iter()
-            .map(|(name, spec)| (&name[..], Rc::new(spec.to_terrain(name.to_owned()))))
-            .collect::<BTreeMap<_, _>>();
-
-        for (name, class) in &movement_classes {
-            for terrain in terrain.keys() {
-                assert!(class.contains_key(&terrain[..]),
-                        "movement class {:?} is missing terrain type {:?}",
-                        name,
-                        terrain);
-            }
-        }
-
+    pub fn create_grid(&self, info: &GameInfo) -> Grid {
         let mut min_x = i32::max_value();
         let mut max_x = i32::min_value();
         let mut min_y = i32::max_value();
@@ -271,22 +157,22 @@ impl Level {
                     let pos = (x as i32 + min_x, y as i32 + min_y);
                     for (tile, positions) in layer {
                         if positions.contains(&pos) {
-                            return match terrain.get(&tile[..]) {
+                            return match info.terrain.get(&tile[..]) {
                                 Some(terrain) => terrain.clone(),
                                 None => panic!("terrain not in info file: {:?}", tile),
                             };
                         }
                     }
-                    terrain["default"].clone()
+                    info.terrain["default"].clone()
                 })
             }
-            None => Grid::new((w, h), |_| terrain["default"].clone()),
+            None => Grid::new((w, h), |_| info.terrain["default"].clone()),
         };
 
         for &(layer_name, faction) in &[("units_red", Faction::Red),
                                         ("units_blue", Faction::Blue)] {
             for (tile, positions) in &self.layers[layer_name] {
-                let kind = match kinds.get(&tile[..]) {
+                let kind = match info.roles.get(&tile[..]) {
                     Some(kind) => kind,
                     None => panic!("unit kind not in info file: {:?}", tile),
                 };

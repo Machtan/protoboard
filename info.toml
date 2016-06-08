@@ -1,54 +1,50 @@
+defense_classes = ["light", "medium", "heavy"]
+
+
 [terrain.default]
   defense = 0.05
 
 [terrain.woods]
   defense = 0.1
-  texture = "assets/woods.png"
+  sprite = { texture = "assets/woods.png" }
 
 [terrain.mountains]
   defense = 0.3
-  texture = "assets/mountains.png"
+  sprite = { texture = "assets/mountains.png" }
 
 
-[movement_classes.default]
+[movement_classes.normal]
   default = 1
   woods = 2
   mountains = 100000
 
-[movement_classes.off-roader]
+[movement_classes.off-road]
   default = 1
   woods = 1
   mountains = 2
 
 
-[units.warrior]
+[roles.warrior]
   sprite = { texture = "assets/48x48 protoboard.png", area = [96, 0, 48, 48] }
-  attack = { kind = "melee" }
-  damage = 2.0
-  defense = 0.2
-  movement = 6
-  movement_class = "default"
+  attack = { damage = 2.0, range = { kind = "melee" }, modifiers = { light = 3.0 } }
+  defense = { class = "medium", defense = 0.2 }
+  movement = { class = "normal", movement = 6 }
+  damage_modifiers = { light = 3.0 }
 
-[units.archer]
+[roles.archer]
   sprite = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }
-  attack = { kind = "ranged", min = 2, max = 3 }
-  damage = 4.0
-  defense = 0.2
-  movement = 4
-  movement_class = "default"
+  attack = { damage = 4.0, range = { kind = "ranged", min = 2, max = 3 }, modifiers = { heavy = 1.2 } }
+  defense = { class = "light", defense = 0.2 }
+  movement = { class = "normal", movement = 4 }
 
-[units.defender]
+[roles.defender]
   sprite = { texture = "assets/48x48 protoboard.png", area = [0, 0, 48, 48] }
-  attack = { kind = "melee" }
-  damage = 2.0
-  defense = 0.5
-  movement = 4
-  movement_class = "default"
+  attack = { damage = 2.0, range = { kind = "melee" } }
+  defense = { class = "heavy", defense = 0.5 }
+  movement = { class = "normal", movement = 4 }
 
-[units.raccoon]
+[roles.raccoon]
   sprite = { texture = "assets/48x48 protoboard.png", area = [144, 0, 48, 48] }
-  attack = { kind = "spear", range = 3 }
-  damage = 4.0
-  defense = 0.2
-  movement = 3
-  movement_class = "off-roader"
+  attack = { damage = 4.0, range = { kind = "spear", range = 3 } }
+  defense = { class = "medium", defense = 0.2 }
+  movement = { class = "off-road", movement = 3 }

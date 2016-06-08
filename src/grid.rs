@@ -1,24 +1,24 @@
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::{self, Debug};
 use std::mem;
-use std::rc::Rc;
 
 use rand::{thread_rng, Rng};
 
-use attack_range::AttackRange;
-use terrain::Terrain;
-use unit::{AttackKind, Unit};
+use range::AttackRange;
+use info::RangeKind;
+use info::Terrain;
+use unit::Unit;
 
 #[derive(Clone)]
 pub struct Grid {
     size: (u32, u32),
     units: Box<[Option<Unit>]>,
-    terrain: Box<[Rc<Terrain>]>,
+    terrain: Box<[Terrain]>,
 }
 
 impl Grid {
     pub fn new<F>(size: (u32, u32), mut func: F) -> Grid
-        where F: FnMut((u32, u32)) -> Rc<Terrain>
+        where F: FnMut((u32, u32)) -> Terrain
     {
         let count = size.0 as usize * size.1 as usize;
         let terrain = (0..count)
@@ -109,10 +109,10 @@ impl Grid {
                                           unit: &'a Unit,
                                           pos: (u32, u32))
                                           -> AttackRange<'a> {
-        match unit.kind().attack {
-            AttackKind::Melee => AttackRange::melee(self, pos),
-            AttackKind::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
-            AttackKind::Spear { range } => AttackRange::spear(self, unit, pos, range),
+        match unit.role.attack.range {
+            RangeKind::Melee => AttackRange::melee(self, pos),
+            RangeKind::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
+            RangeKind::Spear { range } => AttackRange::spear(self, unit, pos, range),
         }
     }
 
@@ -120,10 +120,10 @@ impl Grid {
                                          unit: &'a Unit,
                                          pos: (u32, u32))
                                          -> AttackRange<'a> {
-        match unit.kind().attack {
-            AttackKind::Melee |
-            AttackKind::Spear { .. } => AttackRange::melee(self, pos),
-            AttackKind::Ranged { .. } => AttackRange::empty(),
+        match unit.role.attack.range {
+            RangeKind::Melee |
+            RangeKind::Spear { .. } => AttackRange::melee(self, pos),
+            RangeKind::Ranged { .. } => AttackRange::empty(),
         }
     }
 
@@ -210,7 +210,7 @@ impl Grid {
                 }
                 let ncost = cost.saturating_add(tcost);
 
-                if ncost <= unit.kind().movement {
+                if ncost <= unit.role.movement.movement {
                     to_be_searched.push((npos, ncost));
                 }
             }
