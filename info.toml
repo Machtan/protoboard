@@ -1,30 +1,41 @@
 [terrain.default]
   defense = 0.05
-  cost = 1
 
 [terrain.woods]
   defense = 0.1
-  cost = 2
   texture = "assets/woods.png"
 
 [terrain.mountains]
   defense = 0.3
-  cost = 100000
   texture = "assets/mountains.png"
 
+
+[movement_classes.default]
+  default = 1
+  woods = 2
+  mountains = 100000
+
+[movement_classes.off-roader]
+  default = 1
+  woods = 1
+  mountains = 2
+
+
 [units.warrior]
-  sprite = { texture = "assets/sword.png" }
+  sprite = { texture = "assets/48x48 protoboard.png", area = [96, 0, 48, 48] }
   attack = { kind = "melee" }
   damage = 2.0
   defense = 0.2
   movement = 6
+  movement_class = "default"
 
 [units.archer]
-  sprite = { texture = "assets/bow.png" }
+  sprite = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }
   attack = { kind = "ranged", min = 2, max = 3 }
   damage = 4.0
   defense = 0.2
   movement = 4
+  movement_class = "default"
 
 [units.defender]
   sprite = { texture = "assets/48x48 protoboard.png", area = [0, 0, 48, 48] }
@@ -32,6 +43,7 @@
   damage = 2.0
   defense = 0.5
   movement = 4
+  movement_class = "default"
 
 [units.raccoon]
   sprite = { texture = "assets/raccoon.png" }
@@ -39,3 +51,4 @@
   damage = 4.0
   defense = 0.2
   movement = 3
+  movement_class = "off-roader"
