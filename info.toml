@@ -46,7 +46,7 @@
   movement_class = "default"
 
 [units.raccoon]
-  sprite = { texture = "assets/raccoon.png" }
+  sprite = { texture = "assets/48x48 protoboard.png", area = [144, 0, 48, 48] }
   attack = { kind = "spear", range = 3 }
   damage = 4.0
   defense = 0.2
