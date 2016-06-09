@@ -181,39 +181,15 @@ impl GridManager {
         state.ensure_in_range(pos);
     }
 
-    #[inline]
-    pub fn move_cursor_up(&mut self, state: &mut State) {
+    pub fn move_cursor_relative(&mut self, delta: (i32, i32), state: &mut State) {
         self.mouse = None;
-        let (x, y) = self.cursor;
-        if y < state.grid.size().1 - 1 {
-            self.move_cursor_to((x, y + 1), state);
-        }
-    }
 
-    #[inline]
-    pub fn move_cursor_down(&mut self, state: &mut State) {
-        self.mouse = None;
-        let (x, y) = self.cursor;
-        if y > 0 {
-            self.move_cursor_to((x, y - 1), state);
-        }
-    }
+        let (w, h) = state.grid.size();
+        let x = self.cursor.0 as i32 + delta.0;
+        let y = self.cursor.1 as i32 + delta.1;
 
-    #[inline]
-    pub fn move_cursor_left(&mut self, state: &mut State) {
-        self.mouse = None;
-        let (x, y) = self.cursor;
-        if x > 0 {
-            self.move_cursor_to((x - 1, y), state);
-        }
-    }
-
-    #[inline]
-    pub fn move_cursor_right(&mut self, state: &mut State) {
-        self.mouse = None;
-        let (x, y) = self.cursor;
-        if x < state.grid.size().0 - 1 {
-            self.move_cursor_to((x + 1, y), state);
+        if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
+            self.move_cursor_to((x as u32, y as u32), state);
         }
     }
 
@@ -276,6 +252,13 @@ impl GridManager {
         state.push_modal(Box::new(menu), queue);
     }
 
+    pub fn unit_spent(&mut self, pos: (u32, u32), state: &mut State) {
+        if let Some(unit) = state.grid.unit_mut(pos) {
+            unit.spent = true;
+        }
+        state.turn_info.spend_action();
+    }
+
     pub fn update(&mut self, state: &mut State, _queue: &mut Vec<Message>) {
         state.ensure_in_range(self.cursor);
         if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
@@ -300,16 +283,16 @@ impl GridManager {
                 self.cancel_release();
             }
             MoveCursorUp => {
-                self.move_cursor_up(state);
+                self.move_cursor_relative((0, 1), state);
             }
             MoveCursorDown => {
-                self.move_cursor_down(state);
+                self.move_cursor_relative((0, -1), state);
             }
             MoveCursorLeft => {
-                self.move_cursor_left(state);
+                self.move_cursor_relative((-1, 0), state);
             }
             MoveCursorRight => {
-                self.move_cursor_right(state);
+                self.move_cursor_relative((1, 0), state);
             }
 
             // Modal messages
@@ -333,10 +316,7 @@ impl GridManager {
 
             // State changes
             UnitSpent(pos) => {
-                if let Some(unit) = state.grid.unit_mut(pos) {
-                    unit.spent = true;
-                }
-                state.turn_info.spend_action();
+                self.unit_spent(pos, state);
             }
             UnitMoved(from, to) => {
                 let (_, unit) = state.active_unit.take().expect("no active unit after move");
