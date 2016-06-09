@@ -50,7 +50,7 @@ impl<'a> Behavior<State<'a>> for Scene {
             }
         }
 
-        self.grid_manager.update(state, queue);
+        self.grid_manager.update(state);
         if let Some(modal) = self.modal_stack.last_mut() {
             modal.update(state, queue);
         };
@@ -107,7 +107,9 @@ impl<'a> Behavior<State<'a>> for Scene {
                 manager.select_unit(pos, state);
             }
             TargetSelectorCanceled(origin, pos) => {
-                manager.handle_unit_moved(origin, pos, state, queue);
+                let modal = manager.handle_unit_moved(origin, pos, state);
+                // TODO
+                state.push_modal(modal, queue);
             }
 
             // State changes
@@ -115,7 +117,9 @@ impl<'a> Behavior<State<'a>> for Scene {
             UnitMoved(from, to) => {
                 let (_, unit) = state.active_unit.take().expect("no active unit after move");
                 state.grid.add_unit(unit, to);
-                manager.handle_unit_moved(from, to, state, queue);
+                let modal = manager.handle_unit_moved(from, to, state);
+                // TODO
+                state.push_modal(modal, queue);
             }
             TargetConfirmed(pos, target) => manager.target_confirmed(pos, target, state),
             FinishTurn => {

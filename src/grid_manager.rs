@@ -245,9 +245,8 @@ impl GridManager {
     pub fn handle_unit_moved(&mut self,
                              origin: (u32, u32),
                              target: (u32, u32),
-                             state: &mut State,
-                             queue: &mut Vec<Message>) {
-        use common::Message::*;
+                             state: &mut State)
+                             -> ModalBox {
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
         let options = {
@@ -280,25 +279,25 @@ impl GridManager {
                 Some("Attack") => {
                     debug!("Attack!");
                     state.pop_modal(queue);
-                    queue.push(AttackSelected(origin, target));
+                    queue.push(Message::AttackSelected(origin, target));
                 }
                 Some("Wait") => {
                     debug!("Wait!");
                     state.pop_modal(queue);
                     // TODO: Marking the unit now is one frame quicker.
-                    queue.push(UnitSpent(target));
-                    queue.push(WaitSelected);
+                    queue.push(Message::UnitSpent(target));
+                    queue.push(Message::WaitSelected);
                 }
                 None => {
                     debug!("Cancel!");
                     state.pop_modal(queue);
-                    queue.push(CancelSelected(origin, target));
+                    queue.push(Message::CancelSelected(origin, target));
                 }
                 _ => unreachable!(),
             }
         })
             .expect("could not create menu");
-        state.push_modal(Box::new(menu), queue);
+        Box::new(menu)
     }
 
     pub fn unit_spent(&mut self, pos: (u32, u32), state: &mut State) {
@@ -308,7 +307,7 @@ impl GridManager {
         state.turn_info.spend_action();
     }
 
-    pub fn update(&mut self, state: &mut State, _queue: &mut Vec<Message>) {
+    pub fn update(&mut self, state: &mut State) {
         state.ensure_in_range(self.cursor);
         if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
             self.move_cursor_to(pos, state);
