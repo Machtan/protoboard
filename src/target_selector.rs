@@ -28,7 +28,7 @@ impl TargetSelector {
         let selected = self.targets[self.selected];
         debug!("Attacking target at {:?}", selected);
         state.break_modal(queue);
-        queue.push(AttackWithUnit(self.pos, selected));
+        queue.push(TargetConfirmed(self.pos, selected));
         queue.push(UnitSpent(self.pos));
     }
 

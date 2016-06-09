@@ -169,7 +169,7 @@ impl GridManager {
         }
     }
 
-    fn move_cursor_to(&mut self, pos: (u32, u32), state: &mut State) {
+    pub fn move_cursor_to(&mut self, pos: (u32, u32), state: &mut State) {
         assert!(pos.0 < state.grid.size().0 && pos.1 < state.grid.size().1);
         if let Some(ref selected) = self.selected {
             // TODO: You can move cursor to friendly unit (no crash, though).
@@ -182,7 +182,8 @@ impl GridManager {
     }
 
     #[inline]
-    fn move_cursor_up(&mut self, state: &mut State) {
+    pub fn move_cursor_up(&mut self, state: &mut State) {
+        self.mouse = None;
         let (x, y) = self.cursor;
         if y < state.grid.size().1 - 1 {
             self.move_cursor_to((x, y + 1), state);
@@ -190,7 +191,8 @@ impl GridManager {
     }
 
     #[inline]
-    fn move_cursor_down(&mut self, state: &mut State) {
+    pub fn move_cursor_down(&mut self, state: &mut State) {
+        self.mouse = None;
         let (x, y) = self.cursor;
         if y > 0 {
             self.move_cursor_to((x, y - 1), state);
@@ -198,7 +200,8 @@ impl GridManager {
     }
 
     #[inline]
-    fn move_cursor_left(&mut self, state: &mut State) {
+    pub fn move_cursor_left(&mut self, state: &mut State) {
+        self.mouse = None;
         let (x, y) = self.cursor;
         if x > 0 {
             self.move_cursor_to((x - 1, y), state);
@@ -206,7 +209,8 @@ impl GridManager {
     }
 
     #[inline]
-    fn move_cursor_right(&mut self, state: &mut State) {
+    pub fn move_cursor_right(&mut self, state: &mut State) {
+        self.mouse = None;
         let (x, y) = self.cursor;
         if x < state.grid.size().0 - 1 {
             self.move_cursor_to((x + 1, y), state);
@@ -296,19 +300,15 @@ impl GridManager {
                 self.cancel_release();
             }
             MoveCursorUp => {
-                self.mouse = None;
                 self.move_cursor_up(state);
             }
             MoveCursorDown => {
-                self.mouse = None;
                 self.move_cursor_down(state);
             }
             MoveCursorLeft => {
-                self.mouse = None;
                 self.move_cursor_left(state);
             }
             MoveCursorRight => {
-                self.mouse = None;
                 self.move_cursor_right(state);
             }
 
@@ -343,7 +343,7 @@ impl GridManager {
                 state.grid.add_unit(unit, to);
                 self.handle_unit_moved(from, to, state, queue);
             }
-            AttackWithUnit(pos, target) => {
+            TargetConfirmed(pos, target) => {
                 self.cursor_hidden = false;
 
                 let mut attacker = state.grid.remove_unit(pos);
