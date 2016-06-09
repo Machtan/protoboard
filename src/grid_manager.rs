@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::fmt::{self, Debug};
 
 use glorious::{Color, Renderer, Sprite};
 use sdl2::rect::Rect;
@@ -38,6 +37,7 @@ struct ShowingRangeOf {
     attack_range: BTreeSet<(u32, u32)>,
 }
 
+#[derive(Debug)]
 pub struct GridManager {
     selected: Option<Selected>,
     showing_range_of: Option<ShowingRangeOf>,
@@ -414,15 +414,4 @@ pub fn render_unit(unit: &Unit, rect: Rect, _bg: bool, state: &State, renderer: 
     let ly = rect.y() + hh as i32 + 5;
 
     label.render(renderer, lx, ly);
-}
-
-impl Debug for GridManager {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("GridManager")
-            .field("selected", &self.selected)
-            .field("showing_range_of", &self.showing_range_of)
-            .field("cursor", &self.cursor)
-            .field("cursor_hidden", &self.cursor)
-            .finish()
-    }
 }
