@@ -1,13 +1,13 @@
 name = "protoboard"
 layers = ["terrain", "units"]
-prefix = "../protoboard/assets"
+prefix = "../protoboard"
 colors = ["ffffff", "ff0000", "0000ff"]
 
 [tiles]
-defender = { texture = "shield.png" }
-archer = { texture = "bow.png" }
-warrior = { texture = "sword.png" }
-raccoon = { texture = "raccoon.png" }
+defender = { texture = "assets/48x48 protoboard.png", area = [0, 0, 48, 48] }
+archer = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }
+warrior = { texture = "assets/48x48 protoboard.png", area = [96, 0, 48, 48] }
+raccoon = { texture = "assets/48x48 protoboard.png", area = [144, 0, 48, 48] }
 
-mountains = { texture = "mountains.png" }
-woods = { texture = "woods.png" }
+mountains = { texture = "assets/mountains.png" }
+woods = { texture = "assets/woods.png" }
