@@ -19,6 +19,8 @@ extern crate sdl2_image;
 extern crate sdl2_ttf;
 extern crate toml;
 
+extern crate spec;
+
 use std::env;
 use std::process;
 
@@ -31,12 +33,12 @@ use sdl2_image::{INIT_JPG, INIT_PNG};
 use common::{Config, State};
 use faction::Faction;
 use grid_manager::GridManager;
+use info::GameInfo;
 use info_box::InfoBox;
 use level::Level;
 use load::load_toml;
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
 use scene::Scene;
-use spec::Spec;
 
 mod range;
 mod common;
@@ -50,7 +52,6 @@ mod load;
 mod menus;
 mod resources;
 mod scene;
-mod spec;
 mod target_selector;
 mod unit;
 mod unit_mover;
@@ -86,8 +87,8 @@ fn main() {
 
     // Load level
 
-    let info = match load_toml::<Spec, _, _>("info.toml", |m| warn!("{}", m)) {
-        Ok(spec) => spec.to_info().expect("could not validate info file"),
+    let info = match load_toml("info.toml", |m| warn!("{}", m)) {
+        Ok(spec) => GameInfo::from_spec(spec).expect("could not validate info file"),
         Err(err) => {
             error!("could not load info file: {}", err);
             process::exit(1);

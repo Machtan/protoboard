@@ -17,3 +17,5 @@ glorious = { git = "https://github.com/Machtan/glorious" }
 sdl2 = "0.19"
 sdl2_image = "0.19"
 sdl2_ttf = "0.19"
+
+spec = { path = "spec" }
