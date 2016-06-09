@@ -53,8 +53,6 @@ pub enum Message {
     CancelReleased,
 
     FinishTurn,
-    FactionDefeated(Faction),
-    FactionWins(Faction),
 
     LeftClickAt(i32, i32),
     LeftReleasedAt(i32, i32),

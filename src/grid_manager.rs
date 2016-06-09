@@ -4,7 +4,7 @@ use std::fmt::{self, Debug};
 use glorious::{Color, Renderer, Sprite};
 use sdl2::rect::Rect;
 
-use common::{State, Message};
+use common::{State, Message, ModalBox};
 use faction::Faction;
 use grid::PathFinder;
 use menus::ModalMenu;
@@ -73,8 +73,8 @@ impl GridManager {
     pub fn select_target(&mut self,
                          origin: (u32, u32),
                          pos: (u32, u32),
-                         state: &mut State,
-                         queue: &mut Vec<Message>) {
+                         state: &mut State)
+                         -> ModalBox {
         debug!("Selecting target...");
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
@@ -88,23 +88,22 @@ impl GridManager {
                     .collect()
             }
         };
-        let selector = TargetSelector::new(pos, origin, targets);
         self.cursor_hidden = true;
-        state.push_modal(Box::new(selector), queue);
+        Box::new(TargetSelector::new(pos, origin, targets))
     }
 
     /// Moves the selected unit from origin to target and opens up the action menu.
     /// If the menu is cancelled, the unit moves back.
     fn move_selected_unit_and_act(&mut self,
                                   target: (u32, u32),
-                                  state: &mut State,
-                                  queue: &mut Vec<Message>) {
+                                  state: &mut State)
+                                  -> Option<ModalBox> {
         let selected = self.selected.take().expect("no unit was selected");
         let origin = selected.pos;
         if target != origin && state.grid.unit(target).is_some() {
             // TODO: Beep!
             self.selected = Some(selected);
-            return;
+            return None;
         }
         assert!(selected.path_finder.can_move_to(target));
 
@@ -114,13 +113,11 @@ impl GridManager {
         let unit = state.grid.remove_unit(origin);
         let mut path = selected.path_finder.random_path_rev(target).collect::<Vec<_>>();
         path.reverse();
-
-        let mover = UnitMover::new(unit, origin, path);
-        state.push_modal(Box::new(mover), queue);
+        Some(Box::new(UnitMover::new(unit, origin, path)))
     }
 
     /// Handles the selection of a unit.
-    pub fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
+    pub fn select_unit(&mut self, pos: (u32, u32), state: &mut State) {
         let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.turn_info.can_act(unit) {
             debug!("Unit at {:?} selected!", pos);
@@ -133,17 +130,20 @@ impl GridManager {
     }
 
     /// Handles a confirm press at the given target tile when a unit is selected.
-    pub fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+    pub fn confirm(&mut self, state: &mut State) -> Option<ModalBox> {
         let target = self.cursor;
         if self.selected.is_some() {
-            self.move_selected_unit_and_act(target, state, queue);
-        } else if state.grid.unit(target).is_some() {
-            self.select_unit(target, state, queue);
+            self.move_selected_unit_and_act(target, state)
+        } else {
+            if state.grid.unit(target).is_some() {
+                self.select_unit(target, state);
+            }
+            None
         }
     }
 
     /// Handles a cancel press at the given position.
-    pub fn cancel(&mut self, state: &State, _queue: &mut Vec<Message>) {
+    pub fn cancel(&mut self, state: &State) {
         if self.selected.is_some() {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
@@ -163,27 +163,11 @@ impl GridManager {
     }
 
     /// Destroys the unit on the given tile.
-    fn destroy_unit(&mut self, pos: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
-        let unit = state.grid.remove_unit(pos);
-        self.unit_destroyed(pos, &unit, state, queue);
+    fn destroy_unit(&mut self, pos: (u32, u32), state: &mut State) {
+        state.grid.remove_unit(pos);
     }
 
-    fn unit_destroyed(&mut self,
-                      pos: (u32, u32),
-                      unit: &Unit,
-                      state: &State,
-                      queue: &mut Vec<Message>) {
-        debug!("Unit at {:?} destroyed! ({:?})", pos, unit);
-        if state.grid.units().all(|u| u.faction != unit.faction) {
-            queue.push(Message::FactionDefeated(unit.faction));
-        }
-    }
-
-    pub fn target_confirmed(&mut self,
-                            pos: (u32, u32),
-                            target: (u32, u32),
-                            state: &mut State,
-                            queue: &mut Vec<Message>) {
+    pub fn target_confirmed(&mut self, pos: (u32, u32), target: (u32, u32), state: &mut State) {
         self.cursor_hidden = false;
 
         let mut attacker = state.grid.remove_unit(pos);
@@ -204,7 +188,7 @@ impl GridManager {
         let target_destroyed =
             state.grid.unit_mut(target).expect("no unit to attack").receive_damage(damage);
         let attacker_destroyed = if target_destroyed {
-            self.destroy_unit(target, state, queue);
+            self.destroy_unit(target, state);
             false
         } else {
             let defender = state.grid.unit(target).expect("no unit for counter-attack");
@@ -220,9 +204,7 @@ impl GridManager {
             }
         };
 
-        if attacker_destroyed {
-            self.unit_destroyed(pos, &attacker, state, queue);
-        } else {
+        if !attacker_destroyed {
             state.grid.add_unit(attacker, pos);
         }
     }

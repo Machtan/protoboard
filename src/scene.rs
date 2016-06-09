@@ -18,7 +18,7 @@ impl Scene {
         let (w, h) = state.grid.size();
         Scene {
             grid_manager: GridManager::new((w / 2, h / 2)),
-            info_box: InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state),
+            info_box: InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), state),
             modal_stack: Vec::new(),
         }
     }
@@ -29,6 +29,27 @@ impl<'a> Behavior<State<'a>> for Scene {
 
     /// Updates the object each frame.
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
+        let mut defeated = Vec::new();
+        for &faction in state.turn_info.factions() {
+            if state.grid.units().all(|u| u.faction != faction) {
+                defeated.push(faction);
+            }
+        }
+        if !defeated.is_empty() {
+            for faction in defeated {
+                info!("Faction defeated: {:?}", faction);
+                state.turn_info.remove_faction(faction);
+            }
+            match state.turn_info.factions().split_last() {
+                None => info!("No contest; everybody loses."),
+                Some((&faction, rest)) => {
+                    if rest.iter().all(|&f| f == faction) {
+                        info!("We have a winner! {:?}!", faction);
+                    }
+                }
+            }
+        }
+
         self.grid_manager.update(state, queue);
         if let Some(modal) = self.modal_stack.last_mut() {
             modal.update(state, queue);
@@ -54,8 +75,13 @@ impl<'a> Behavior<State<'a>> for Scene {
         let manager = &mut self.grid_manager;
         match message {
             // Input
-            Confirm => manager.confirm(state, queue),
-            Cancel => manager.cancel(state, queue),
+            Confirm => {
+                if let Some(modal) = manager.confirm(state) {
+                    // TODO
+                    state.push_modal(modal, queue);
+                }
+            }
+            Cancel => manager.cancel(state),
             RightReleasedAt(_, _) |
             CancelReleased => manager.cancel_release(),
             MoveCursorUp => manager.move_cursor_relative((0, 1), state),
@@ -66,7 +92,9 @@ impl<'a> Behavior<State<'a>> for Scene {
             // Modal messages
             AttackSelected(pos, target) => {
                 // manager.cursor.pos = target;
-                manager.select_target(pos, target, state, queue);
+                let modal = manager.select_target(pos, target, state);
+                // TODO
+                state.push_modal(modal, queue);
             }
             WaitSelected => {
                 // manager.cursor.pos = target;
@@ -76,7 +104,7 @@ impl<'a> Behavior<State<'a>> for Scene {
                 state.grid.move_unit(target, pos);
                 manager.move_cursor_to(pos, state);
                 manager.hide_cursor();
-                manager.select_unit(pos, state, queue);
+                manager.select_unit(pos, state);
             }
             TargetSelectorCanceled(origin, pos) => {
                 manager.handle_unit_moved(origin, pos, state, queue);
@@ -89,7 +117,7 @@ impl<'a> Behavior<State<'a>> for Scene {
                 state.grid.add_unit(unit, to);
                 manager.handle_unit_moved(from, to, state, queue);
             }
-            TargetConfirmed(pos, target) => manager.target_confirmed(pos, target, state, queue),
+            TargetConfirmed(pos, target) => manager.target_confirmed(pos, target, state),
             FinishTurn => {
                 manager.deselect();
                 for unit in state.grid.units_mut() {
@@ -99,37 +127,17 @@ impl<'a> Behavior<State<'a>> for Scene {
                 // TODO: Display a turn change animation here
             }
 
-            MouseMovedTo(x, y) |
-            LeftClickAt(x, y) |
+            MouseMovedTo(x, y) => manager.mouse_moved_to(x, y, state),
+            LeftClickAt(x, y) => {
+                manager.mouse_moved_to(x, y, state);
+                if let Some(modal) = manager.confirm(state) {
+                    // TODO
+                    state.push_modal(modal, queue);
+                }
+            }
             RightClickAt(x, y) => {
                 manager.mouse_moved_to(x, y, state);
-                match message {
-                    MouseMovedTo(..) => {}
-                    LeftClickAt(..) => {
-                        manager.confirm(state, queue);
-                    }
-                    RightClickAt(..) => {
-                        manager.cancel(state, queue);
-                    }
-                    _ => unreachable!(),
-                }
-            }
-
-            FactionDefeated(faction) => {
-                info!("Faction defeated! {:?}", faction);
-                state.turn_info.remove_faction(faction);
-
-                let (&faction, rest) = state.turn_info
-                    .factions()
-                    .split_first()
-                    .expect("there must be at least one faction left");
-                // TODO: Alliances? Neutrals?
-                if rest.iter().all(|&f| f == faction) {
-                    queue.push(FactionWins(faction));
-                }
-            }
-            FactionWins(faction) => {
-                info!("Faction won! ({:?})", faction);
+                manager.cancel(state);
             }
 
             _ => {}
