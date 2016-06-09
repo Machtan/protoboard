@@ -169,6 +169,54 @@ impl GridManager {
         }
     }
 
+    pub fn target_confirmed(&mut self,
+                            pos: (u32, u32),
+                            target: (u32, u32),
+                            state: &mut State,
+                            queue: &mut Vec<Message>) {
+        self.cursor_hidden = false;
+
+        let mut attacker = state.grid.remove_unit(pos);
+
+        let damage = {
+            let (target_unit, terrain) = state.grid.tile(target);
+            let target_unit = target_unit.expect("no unit to attack");
+
+            debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
+                   pos,
+                   attacker,
+                   target,
+                   target_unit);
+
+            attacker.attack_damage(target_unit, terrain)
+        };
+
+        let target_destroyed =
+            state.grid.unit_mut(target).expect("no unit to attack").receive_damage(damage);
+        let attacker_destroyed = if target_destroyed {
+            self.destroy_unit(target, state, queue);
+            false
+        } else {
+            let defender = state.grid.unit(target).expect("no unit for counter-attack");
+            let in_range = state.grid
+                .attack_range_when_retaliating(defender, target)
+                .any(|p| p == pos);
+            if in_range {
+                let terrain = state.grid.terrain(pos);
+                let damage = defender.retaliation_damage(damage, &attacker, terrain);
+                attacker.receive_damage(damage)
+            } else {
+                false
+            }
+        };
+
+        if attacker_destroyed {
+            self.unit_destroyed(pos, &attacker, state, queue);
+        } else {
+            state.grid.add_unit(attacker, pos);
+        }
+    }
+
     pub fn move_cursor_to(&mut self, pos: (u32, u32), state: &mut State) {
         assert!(pos.0 < state.grid.size().0 && pos.1 < state.grid.size().1);
         if let Some(ref selected) = self.selected {
@@ -191,6 +239,15 @@ impl GridManager {
         if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
             self.move_cursor_to((x as u32, y as u32), state);
         }
+    }
+
+    pub fn mouse_moved_to(&mut self, x: i32, y: i32, state: &mut State) {
+        self.mouse = Some((x, y));
+        let pos = match state.window_to_grid(x, y) {
+            Some(pos) => pos,
+            None => return,
+        };
+        self.move_cursor_to(pos, state);
     }
 
     fn handle_unit_moved(&mut self,
@@ -272,28 +329,13 @@ impl GridManager {
 
         match message {
             // Input
-            Confirm => {
-                self.confirm(state, queue);
-            }
-            Cancel => {
-                self.cancel(state, queue);
-            }
-            RightReleasedAt(_, _) |
-            CancelReleased => {
-                self.cancel_release();
-            }
-            MoveCursorUp => {
-                self.move_cursor_relative((0, 1), state);
-            }
-            MoveCursorDown => {
-                self.move_cursor_relative((0, -1), state);
-            }
-            MoveCursorLeft => {
-                self.move_cursor_relative((-1, 0), state);
-            }
-            MoveCursorRight => {
-                self.move_cursor_relative((1, 0), state);
-            }
+            Confirm => self.confirm(state, queue),
+            Cancel => self.cancel(state, queue),
+            RightReleasedAt(_, _) | CancelReleased => self.cancel_release(),
+            MoveCursorUp => self.move_cursor_relative((0, 1), state),
+            MoveCursorDown => self.move_cursor_relative((0, -1), state),
+            MoveCursorLeft => self.move_cursor_relative((-1, 0), state),
+            MoveCursorRight => self.move_cursor_relative((1, 0), state),
 
             // Modal messages
             AttackSelected(pos, target) => {
@@ -315,57 +357,13 @@ impl GridManager {
             }
 
             // State changes
-            UnitSpent(pos) => {
-                self.unit_spent(pos, state);
-            }
+            UnitSpent(pos) => self.unit_spent(pos, state),
             UnitMoved(from, to) => {
                 let (_, unit) = state.active_unit.take().expect("no active unit after move");
                 state.grid.add_unit(unit, to);
                 self.handle_unit_moved(from, to, state, queue);
             }
-            TargetConfirmed(pos, target) => {
-                self.cursor_hidden = false;
-
-                let mut attacker = state.grid.remove_unit(pos);
-
-                let damage = {
-                    let (target_unit, terrain) = state.grid.tile(target);
-                    let target_unit = target_unit.expect("no unit to attack");
-
-                    debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
-                           pos,
-                           attacker,
-                           target,
-                           target_unit);
-
-                    attacker.attack_damage(target_unit, terrain)
-                };
-
-                let target_destroyed =
-                    state.grid.unit_mut(target).expect("no unit to attack").receive_damage(damage);
-                let attacker_destroyed = if target_destroyed {
-                    self.destroy_unit(target, state, queue);
-                    false
-                } else {
-                    let defender = state.grid.unit(target).expect("no unit for counter-attack");
-                    let in_range = state.grid
-                        .attack_range_when_retaliating(defender, target)
-                        .any(|p| p == pos);
-                    if in_range {
-                        let terrain = state.grid.terrain(pos);
-                        let damage = defender.retaliation_damage(damage, &attacker, terrain);
-                        attacker.receive_damage(damage)
-                    } else {
-                        false
-                    }
-                };
-
-                if attacker_destroyed {
-                    self.unit_destroyed(pos, &attacker, state, queue);
-                } else {
-                    state.grid.add_unit(attacker, pos);
-                }
-            }
+            TargetConfirmed(pos, target) => self.target_confirmed(pos, target, state, queue),
             FinishTurn => {
                 self.selected = None;
                 for unit in state.grid.units_mut() {
@@ -378,12 +376,7 @@ impl GridManager {
             MouseMovedTo(x, y) |
             LeftClickAt(x, y) |
             RightClickAt(x, y) => {
-                self.mouse = Some((x, y));
-                let pos = match state.window_to_grid(x, y) {
-                    Some(pos) => pos,
-                    None => return,
-                };
-                self.move_cursor_to(pos, state);
+                self.mouse_moved_to(x, y, state);
                 match message {
                     MouseMovedTo(..) => {}
                     LeftClickAt(..) => {
