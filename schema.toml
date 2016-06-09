@@ -4,10 +4,10 @@ prefix = "../protoboard/assets"
 colors = ["ffffff", "ff0000", "0000ff"]
 
 [tiles]
-defender = "shield.png"
-archer = "bow.png"
-warrior = "sword.png"
-raccoon = "raccoon.png"
+defender = { texture = "shield.png" }
+archer = { texture = "bow.png" }
+warrior = { texture = "sword.png" }
+raccoon = { texture = "raccoon.png" }
 
-mountains = "mountains.png"
-woods = "woods.png"
+mountains = { texture = "mountains.png" }
+woods = { texture = "woods.png" }
