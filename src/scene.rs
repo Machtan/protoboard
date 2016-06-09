@@ -1,43 +1,35 @@
 use glorious::{Behavior, Renderer};
 
 use common::{GameObject, Message, State};
+use grid_manager::GridManager;
+use info_box::InfoBox;
+use resources::FIRA_SANS_PATH;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Scene<'a> {
-    objects: Vec<GameObject<'a>>,
+    grid_manager: GridManager,
+    info_box: InfoBox,
     modal_stack: Vec<GameObject<'a>>,
 }
 
 impl<'a> Scene<'a> {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(state: &State) -> Self {
+        let (w, h) = state.grid.size();
         Scene {
-            objects: Vec::new(),
+            grid_manager: GridManager::new((w / 2, h / 2)),
+            info_box: InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state),
             modal_stack: Vec::new(),
         }
-    }
-
-    #[inline]
-    pub fn add(&mut self, object: GameObject<'a>) {
-        self.objects.push(object);
     }
 }
 
 impl<'a> Behavior<State<'a>> for Scene<'a> {
     type Message = Message;
 
-    /// Initializes the object when it is added to the game.
-    fn initialize(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
-        for object in &mut self.objects {
-            object.initialize(state, queue);
-        }
-    }
-
     /// Updates the object each frame.
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
-        for object in &mut self.objects {
-            object.update(state, queue);
-        }
+        self.grid_manager.update(state, queue);
         if let Some(modal) = self.modal_stack.last_mut() {
             modal.update(state, queue);
         };
@@ -54,9 +46,7 @@ impl<'a> Behavior<State<'a>> for Scene<'a> {
         }
         match self.modal_stack.last_mut() {
             None => {
-                for object in &mut self.objects {
-                    object.handle(state, message.clone(), queue);
-                }
+                self.grid_manager.handle(state, message, queue);
             }
             Some(modal) => {
                 modal.handle(state, message, queue);
@@ -65,9 +55,8 @@ impl<'a> Behavior<State<'a>> for Scene<'a> {
     }
 
     fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
-        for object in &mut self.objects {
-            object.render(state, renderer);
-        }
+        self.grid_manager.render(state, renderer);
+        self.info_box.render(state, renderer);
         if let Some(modal) = self.modal_stack.last_mut() {
             modal.render(state, renderer);
         };

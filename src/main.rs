@@ -28,12 +28,10 @@ use sdl2_image::{INIT_JPG, INIT_PNG};
 
 use common::{Config, State};
 use faction::Faction;
-use grid_manager::GridManager;
 use info::GameInfo;
-use info_box::InfoBox;
 use level::Level;
 use load::load_toml;
-use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
+use resources::FIRA_SANS_BOLD_PATH;
 use scene::Scene;
 
 mod range;
@@ -128,7 +126,6 @@ fn main() {
     // Set up game state.
 
     let config = Config {};
-    let (gw, gh) = grid.size();
 
     let health_label_font = resources.font(FIRA_SANS_BOLD_PATH, 13);
     let mut state = State::new(resources,
@@ -141,12 +138,7 @@ fn main() {
 
     // Prepare the scene
 
-    let mut scene = Scene::new();
-
-    scene.add(Box::new(GridManager::new((gw / 2, gh / 2))));
-
-    let turner = InfoBox::new(&state.resources.font(FIRA_SANS_PATH, 16), &state);
-    scene.add(Box::new(turner));
+    let mut scene = Scene::new(&state);
 
     // Set up input handling.
 

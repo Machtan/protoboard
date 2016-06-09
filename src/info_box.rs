@@ -1,11 +1,11 @@
 use std::cmp;
 use std::collections::HashMap;
 
-use glorious::{Behavior, Color, Label, Renderer};
+use glorious::{Color, Label, Renderer};
 use sdl2::rect::Rect;
 use sdl2_ttf::Font;
 
-use common::{Message, State};
+use common::State;
 use faction::Faction;
 
 const BG_COLOR: Color = Color(0x00, 0x00, 0x00, 0x77);
@@ -61,12 +61,8 @@ impl InfoBox {
             max_num_width: max_width,
         }
     }
-}
 
-impl<'a> Behavior<State<'a>> for InfoBox {
-    type Message = Message;
-
-    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
+    pub fn render(&mut self, state: &State, renderer: &mut Renderer) {
         // Render which faction's turn it is.
         // Render the amount of actions left somewhere.
         let (x, y) = POS;

@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use glorious::{Behavior, Color, Renderer, Sprite};
+use glorious::{Color, Renderer, Sprite};
 use sdl2::rect::Rect;
 
 use common::{State, Message};
@@ -60,11 +60,11 @@ impl GridManager {
 
     /// Opens the target selection modal for the unit at Cell.
     /// The origin is used to return to the menu when cancelling.
-    fn select_target<'a>(&mut self,
-                         origin: (u32, u32),
-                         pos: (u32, u32),
-                         state: &mut State<'a>,
-                         queue: &mut Vec<Message>) {
+    fn select_target(&mut self,
+                     origin: (u32, u32),
+                     pos: (u32, u32),
+                     state: &mut State,
+                     queue: &mut Vec<Message>) {
         debug!("Selecting target...");
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
@@ -85,10 +85,10 @@ impl GridManager {
 
     /// Moves the selected unit from origin to target and opens up the action menu.
     /// If the menu is cancelled, the unit moves back.
-    fn move_selected_unit_and_act<'a>(&mut self,
-                                      target: (u32, u32),
-                                      state: &mut State<'a>,
-                                      queue: &mut Vec<Message>) {
+    fn move_selected_unit_and_act(&mut self,
+                                  target: (u32, u32),
+                                  state: &mut State,
+                                  queue: &mut Vec<Message>) {
         let selected = self.selected.take().expect("no unit was selected");
         let origin = selected.pos;
         if target != origin && state.grid.unit(target).is_some() {
@@ -133,7 +133,7 @@ impl GridManager {
     }
 
     /// Handles a cancel press at the given position.
-    fn cancel<'a>(&mut self, state: &State<'a>, _queue: &mut Vec<Message>) {
+    fn cancel(&mut self, state: &State, _queue: &mut Vec<Message>) {
         if self.selected.is_some() {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
@@ -153,10 +153,7 @@ impl GridManager {
     }
 
     /// Destroys the unit on the given tile.
-    fn destroy_unit<'a>(&mut self,
-                        pos: (u32, u32),
-                        state: &mut State<'a>,
-                        queue: &mut Vec<Message>) {
+    fn destroy_unit(&mut self, pos: (u32, u32), state: &mut State, queue: &mut Vec<Message>) {
         let unit = state.grid.remove_unit(pos);
         self.unit_destroyed(pos, &unit, state, queue);
     }
@@ -274,12 +271,8 @@ impl GridManager {
             .expect("could not create menu");
         state.push_modal(Box::new(menu), queue);
     }
-}
 
-impl<'a> Behavior<State<'a>> for GridManager {
-    type Message = Message;
-
-    fn update(&mut self, state: &mut State<'a>, _queue: &mut Vec<Message>) {
+    pub fn update(&mut self, state: &mut State, _queue: &mut Vec<Message>) {
         state.ensure_in_range(self.cursor);
         if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
             self.move_cursor_to(pos, state);
@@ -287,7 +280,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
     }
 
     /// Handles new messages since the last frame.
-    fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
+    pub fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
         use common::Message::*;
 
         match message {
@@ -445,7 +438,7 @@ impl<'a> Behavior<State<'a>> for GridManager {
     }
 
     /// Renders the object.
-    fn render(&mut self, state: &State<'a>, renderer: &mut Renderer) {
+    pub fn render(&mut self, state: &State, renderer: &mut Renderer) {
         let (cols, rows) = state.grid.size();
         for col in 0..cols {
             for row in 0..rows {
