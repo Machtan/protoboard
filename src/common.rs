@@ -79,8 +79,8 @@ pub enum Message {
 }
 
 #[derive(Debug)]
-pub enum ModalMessage<'a> {
-    Push(GameObject<'a>),
+pub enum ModalMessage {
+    Push(GameObject),
     Pop,
     Break,
 }
@@ -99,7 +99,7 @@ pub struct State<'a> {
     prev_scroll_time: Instant,
 
     pub will_pop_modals: usize,
-    modal_stack: Vec<ModalMessage<'a>>,
+    modal_stack: Vec<ModalMessage>,
 
     pub health_label_font: &'a Font,
     health_labels: RefCell<LruCache<u32, Rc<Label>>>,
@@ -143,7 +143,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn push_modal(&mut self, behavior: GameObject<'a>, queue: &mut Vec<Message>) {
+    pub fn push_modal(&mut self, behavior: GameObject, queue: &mut Vec<Message>) {
         self.modal_stack.push(ModalMessage::Push(behavior));
         queue.push(Message::ApplyOneModal);
     }
@@ -160,7 +160,7 @@ impl<'a> State<'a> {
         self.will_pop_modals += 1;
     }
 
-    pub fn apply_one_modal(&mut self, dst: &mut Vec<GameObject<'a>>) {
+    pub fn apply_one_modal(&mut self, dst: &mut Vec<GameObject>) {
         use self::ModalMessage::*;
         let modal = self.modal_stack
             .pop()
@@ -342,4 +342,4 @@ pub trait BehaviorDebug<S>: Behavior<S> + Debug {}
 
 impl<T, S> BehaviorDebug<S> for T where T: Behavior<S> + Debug {}
 
-pub type GameObject<'a> = Box<BehaviorDebug<State<'a>, Message = Message>>;
+pub type GameObject = Box<for<'b> BehaviorDebug<State<'b>, Message = Message>>;

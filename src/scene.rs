@@ -6,13 +6,13 @@ use info_box::InfoBox;
 use resources::FIRA_SANS_PATH;
 
 #[derive(Debug)]
-pub struct Scene<'a> {
+pub struct Scene {
     grid_manager: GridManager,
     info_box: InfoBox,
-    modal_stack: Vec<GameObject<'a>>,
+    modal_stack: Vec<GameObject>,
 }
 
-impl<'a> Scene<'a> {
+impl Scene {
     #[inline]
     pub fn new(state: &State) -> Self {
         let (w, h) = state.grid.size();
@@ -24,7 +24,7 @@ impl<'a> Scene<'a> {
     }
 }
 
-impl<'a> Behavior<State<'a>> for Scene<'a> {
+impl<'a> Behavior<State<'a>> for Scene {
     type Message = Message;
 
     /// Updates the object each frame.
