@@ -331,7 +331,8 @@ impl GridManager {
             // Input
             Confirm => self.confirm(state, queue),
             Cancel => self.cancel(state, queue),
-            RightReleasedAt(_, _) | CancelReleased => self.cancel_release(),
+            RightReleasedAt(_, _) |
+            CancelReleased => self.cancel_release(),
             MoveCursorUp => self.move_cursor_relative((0, 1), state),
             MoveCursorDown => self.move_cursor_relative((0, -1), state),
             MoveCursorLeft => self.move_cursor_relative((-1, 0), state),

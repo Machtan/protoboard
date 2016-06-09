@@ -49,14 +49,13 @@ impl<'a> Behavior<State<'a>> for UnitMover {
 
     fn update(&mut self, state: &mut State<'a>, queue: &mut Vec<Message>) {
         let now = Instant::now();
-        let start = match self.start {
+        let ms = match self.start {
             None => {
                 self.start = Some(now);
-                now
+                0
             }
-            Some(start) => start,
+            Some(start) => now.duration_since(start).as_millis(),
         };
-        let ms = now.duration_since(start).as_millis();
         let i = ms / MOVE_TILE_MS;
 
         if i >= self.path.len() as u64 {

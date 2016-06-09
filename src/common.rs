@@ -80,7 +80,7 @@ pub enum Message {
 
 #[derive(Debug)]
 pub enum ModalMessage {
-    Push(Modal),
+    Push(ModalBox),
     Pop,
     Break,
 }
@@ -143,7 +143,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn push_modal(&mut self, behavior: Modal, queue: &mut Vec<Message>) {
+    pub fn push_modal(&mut self, behavior: ModalBox, queue: &mut Vec<Message>) {
         self.modal_stack.push(ModalMessage::Push(behavior));
         queue.push(Message::ApplyOneModal);
     }
@@ -160,7 +160,7 @@ impl<'a> State<'a> {
         self.will_pop_modals += 1;
     }
 
-    pub fn apply_one_modal(&mut self, dst: &mut Vec<Modal>) {
+    pub fn apply_one_modal(&mut self, dst: &mut Vec<ModalBox>) {
         use self::ModalMessage::*;
         let modal = self.modal_stack
             .pop()
@@ -342,4 +342,4 @@ pub trait BehaviorDebug<S>: Behavior<S> + Debug {}
 
 impl<T, S> BehaviorDebug<S> for T where T: Behavior<S> + Debug {}
 
-pub type Modal = Box<for<'a> BehaviorDebug<State<'a>, Message = Message>>;
+pub type ModalBox = Box<for<'a> BehaviorDebug<State<'a>, Message = Message>>;

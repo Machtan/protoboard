@@ -1,6 +1,6 @@
 use glorious::{Behavior, Renderer};
 
-use common::{Modal, Message, State};
+use common::{ModalBox, Message, State};
 use grid_manager::GridManager;
 use info_box::InfoBox;
 use resources::FIRA_SANS_PATH;
@@ -9,7 +9,7 @@ use resources::FIRA_SANS_PATH;
 pub struct Scene {
     grid_manager: GridManager,
     info_box: InfoBox,
-    modal_stack: Vec<Modal>,
+    modal_stack: Vec<ModalBox>,
 }
 
 impl Scene {
