@@ -16,14 +16,14 @@ impl RangeSpec {
             "melee" => RangeKind::Melee,
             "ranged" => {
                 RangeKind::Ranged {
-                    min: self.min.ok_or_else(|| format!("missing field 'min' for ranged range"))?,
-                    max: self.max.ok_or_else(|| format!("missing field 'max' for ranged range"))?,
+                    min: self.min.ok_or_else(|| "missing field 'min' for ranged range".to_owned())?,
+                    max: self.max.ok_or_else(|| "missing field 'max' for ranged range".to_owned())?,
                 }
             }
             "spear" => {
                 RangeKind::Spear {
                     range: self.range
-                        .ok_or_else(|| format!("missing field 'range' for spear range"))?,
+                        .ok_or_else(|| "missing field 'range' for spear range".to_owned())?,
                 }
             }
             kind => return Err(format!("unrecognized range kind {:?}", kind)),

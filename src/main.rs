@@ -32,9 +32,11 @@ use common::{Config, State};
 use faction::Faction;
 use grid_manager::GridManager;
 use info_box::InfoBox;
-use level::{load_info, Level};
+use level::Level;
+use load::load_toml;
 use resources::{FIRA_SANS_PATH, FIRA_SANS_BOLD_PATH};
 use scene::Scene;
+use spec::Spec;
 
 mod range;
 mod common;
@@ -44,6 +46,7 @@ mod grid_manager;
 mod info;
 mod info_box;
 mod level;
+mod load;
 mod menus;
 mod resources;
 mod scene;
@@ -83,8 +86,8 @@ fn main() {
 
     // Load level
 
-    let info = match load_info("info.toml", |m| warn!("{}", m)) {
-        Ok(info) => info,
+    let info = match load_toml::<Spec, _, _>("info.toml", |m| warn!("{}", m)) {
+        Ok(spec) => spec.to_info().expect("could not validate info file"),
         Err(err) => {
             error!("could not load info file: {}", err);
             process::exit(1);
