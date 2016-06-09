@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
+use json;
 use serde::Deserialize;
 use toml;
 
@@ -95,4 +96,11 @@ pub fn load_toml<T, P, F>(path: P, mut warn: F) -> Result<T, Error>
         warn_about_unused_keys(value, &mut path, &mut warn);
     }
     Ok(spec)
+}
+
+pub fn load_json<T, P>(path: P) -> Result<T, json::Error>
+    where T: Deserialize,
+          P: AsRef<Path>
+{
+    json::from_reader(File::open(path)?)
 }

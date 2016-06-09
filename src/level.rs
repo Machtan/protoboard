@@ -1,16 +1,14 @@
 use std::cmp::{self, Ord, Ordering, PartialOrd};
 use std::collections::{BTreeSet, HashMap};
-use std::fs::File;
-use std::path::Path;
 
-use json;
+use spec::LevelSpec;
 
 use faction::Faction;
 use grid::Grid;
 use info::GameInfo;
 use unit::Unit;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug)]
 pub struct Point(pub i32, pub i32, pub u32);
 
 impl PartialEq for Point {
@@ -38,7 +36,7 @@ impl Ord for Point {
 
 pub type Layer = HashMap<String, BTreeSet<Point>>;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Level {
     pub name: String,
     pub schema: String,
@@ -46,18 +44,21 @@ pub struct Level {
 }
 
 impl Level {
-    #[inline]
-    pub fn load<P>(path: P) -> json::Result<Level>
-        where P: AsRef<Path>
-    {
-        json::from_reader(File::open(path)?)
-    }
-
-    #[inline]
-    pub fn save<P>(&self, path: P) -> json::Result<()>
-        where P: AsRef<Path>
-    {
-        json::to_writer(&mut File::create(path)?, self)
+    pub fn from_spec(spec: LevelSpec) -> Result<Level, String> {
+        let layers = spec.layers
+            .into_iter()
+            .map(|(k, v)| {
+                let v = v.into_iter()
+                    .map(|(k, v)| (k, v.into_iter().map(|v| Point(v.0, v.1, v.2)).collect()))
+                    .collect();
+                (k, v)
+            })
+            .collect();
+        Ok(Level {
+            name: spec.name,
+            schema: spec.schema,
+            layers: layers,
+        })
     }
 
     pub fn create_grid(&self, info: &GameInfo) -> Grid {

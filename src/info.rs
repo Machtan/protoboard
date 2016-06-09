@@ -137,11 +137,12 @@ pub struct MovementInfo {
 impl MovementInfo {
     #[inline]
     fn from_spec<F>(spec: MovementSpec, mut to_movement_class: F) -> Result<MovementInfo, String>
-        where F: FnMut(&str) -> Option<MovementClass>,
+        where F: FnMut(&str) -> Option<MovementClass>
     {
         Ok(MovementInfo {
             movement: spec.movement,
-            class: to_movement_class(&spec.class).ok_or_else(|| format!("unrecognized movement class {:?}", spec.class))?,
+            class: to_movement_class(&spec.class)
+                .ok_or_else(|| format!("unrecognized movement class {:?}", spec.class))?,
         })
     }
 }
@@ -218,7 +219,8 @@ impl GameInfo {
         let roles = spec.roles
             .into_iter()
             .map(|(name, spec)| {
-                let info = RoleInfo::from_spec(spec, name.clone(), |m| movement_classes.get(m).cloned())?;
+                let info =
+                    RoleInfo::from_spec(spec, name.clone(), |m| movement_classes.get(m).cloned())?;
                 Ok((name, Role::new(info)))
             })
             .collect::<Result<HashMap<_, _>, String>>()?;

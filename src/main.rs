@@ -1,8 +1,4 @@
-#![feature(custom_derive)]
-#![feature(plugin)]
 #![feature(question_mark)]
-
-#![plugin(serde_macros)]
 
 extern crate env_logger;
 #[macro_use]
@@ -94,7 +90,13 @@ fn main() {
             process::exit(1);
         }
     };
-    let level = Level::load("level.json").expect("could not load level");
+    let level = match load::load_json("level.json") {
+        Ok(spec) => Level::from_spec(spec).expect("could not validate level"),
+        Err(err) => {
+            error!("could not load level: {}", err);
+            process::exit(1);
+        }
+    };
     let grid = level.create_grid(&info);
 
     // Set up SDL2.

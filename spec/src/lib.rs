@@ -3,7 +3,7 @@
 
 #![plugin(serde_macros)]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 #[derive(Deserialize)]
 pub struct RangeSpec {
@@ -60,4 +60,13 @@ pub struct Spec {
     pub roles: HashMap<String, RoleSpec>,
     pub terrain: HashMap<String, TerrainSpec>,
     pub defense_classes: HashSet<String>,
+}
+
+pub type LayerSpec = HashMap<String, BTreeSet<(i32, i32, u32)>>;
+
+#[derive(Deserialize)]
+pub struct LevelSpec {
+    pub name: String,
+    pub schema: String,
+    pub layers: HashMap<String, LayerSpec>,
 }
