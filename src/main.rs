@@ -34,7 +34,6 @@ use load::load_toml;
 use resources::FIRA_SANS_BOLD_PATH;
 use scene::Scene;
 
-mod range;
 mod common;
 mod faction;
 mod grid;
@@ -44,6 +43,7 @@ mod info_box;
 mod level;
 mod load;
 mod menus;
+mod range;
 mod resources;
 mod scene;
 mod target_selector;

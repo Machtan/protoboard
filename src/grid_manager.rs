@@ -58,13 +58,23 @@ impl GridManager {
         }
     }
 
+    #[inline]
+    pub fn hide_cursor(&mut self) {
+        self.cursor_hidden = false;
+    }
+
+    #[inline]
+    pub fn deselect(&mut self) {
+        self.selected = None;
+    }
+
     /// Opens the target selection modal for the unit at Cell.
     /// The origin is used to return to the menu when cancelling.
-    fn select_target(&mut self,
-                     origin: (u32, u32),
-                     pos: (u32, u32),
-                     state: &mut State,
-                     queue: &mut Vec<Message>) {
+    pub fn select_target(&mut self,
+                         origin: (u32, u32),
+                         pos: (u32, u32),
+                         state: &mut State,
+                         queue: &mut Vec<Message>) {
         debug!("Selecting target...");
         let targets = {
             let unit = state.grid.unit(pos).expect("no unit to select");
@@ -110,7 +120,7 @@ impl GridManager {
     }
 
     /// Handles the selection of a unit.
-    fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
+    pub fn select_unit(&mut self, pos: (u32, u32), state: &mut State, _queue: &mut Vec<Message>) {
         let unit = state.grid.unit(pos).expect("cannot select unit on empty tile");
         if state.turn_info.can_act(unit) {
             debug!("Unit at {:?} selected!", pos);
@@ -123,7 +133,7 @@ impl GridManager {
     }
 
     /// Handles a confirm press at the given target tile when a unit is selected.
-    fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
+    pub fn confirm(&mut self, state: &mut State, queue: &mut Vec<Message>) {
         let target = self.cursor;
         if self.selected.is_some() {
             self.move_selected_unit_and_act(target, state, queue);
@@ -133,7 +143,7 @@ impl GridManager {
     }
 
     /// Handles a cancel press at the given position.
-    fn cancel(&mut self, state: &State, _queue: &mut Vec<Message>) {
+    pub fn cancel(&mut self, state: &State, _queue: &mut Vec<Message>) {
         if self.selected.is_some() {
             self.selected = None;
         } else if state.grid.unit(self.cursor).is_some() {
@@ -148,7 +158,7 @@ impl GridManager {
     }
 
     /// Handles the release of the cancel button.
-    fn cancel_release(&mut self) {
+    pub fn cancel_release(&mut self) {
         self.showing_range_of = None;
     }
 
@@ -250,11 +260,11 @@ impl GridManager {
         self.move_cursor_to(pos, state);
     }
 
-    fn handle_unit_moved(&mut self,
-                         origin: (u32, u32),
-                         target: (u32, u32),
-                         state: &mut State,
-                         queue: &mut Vec<Message>) {
+    pub fn handle_unit_moved(&mut self,
+                             origin: (u32, u32),
+                             target: (u32, u32),
+                             state: &mut State,
+                             queue: &mut Vec<Message>) {
         use common::Message::*;
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
@@ -320,94 +330,6 @@ impl GridManager {
         state.ensure_in_range(self.cursor);
         if let Some(pos) = self.mouse.and_then(|(x, y)| state.window_to_grid(x, y)) {
             self.move_cursor_to(pos, state);
-        }
-    }
-
-    /// Handles new messages since the last frame.
-    pub fn handle(&mut self, state: &mut State, message: Message, queue: &mut Vec<Message>) {
-        use common::Message::*;
-
-        match message {
-            // Input
-            Confirm => self.confirm(state, queue),
-            Cancel => self.cancel(state, queue),
-            RightReleasedAt(_, _) |
-            CancelReleased => self.cancel_release(),
-            MoveCursorUp => self.move_cursor_relative((0, 1), state),
-            MoveCursorDown => self.move_cursor_relative((0, -1), state),
-            MoveCursorLeft => self.move_cursor_relative((-1, 0), state),
-            MoveCursorRight => self.move_cursor_relative((1, 0), state),
-
-            // Modal messages
-            AttackSelected(pos, target) => {
-                // self.cursor.pos = target;
-                self.select_target(pos, target, state, queue);
-            }
-            WaitSelected => {
-                // self.cursor.pos = target;
-                self.cursor_hidden = false;
-            }
-            CancelSelected(pos, target) => {
-                state.grid.move_unit(target, pos);
-                self.move_cursor_to(pos, state);
-                self.cursor_hidden = false;
-                self.select_unit(pos, state, queue);
-            }
-            TargetSelectorCanceled(origin, pos) => {
-                self.handle_unit_moved(origin, pos, state, queue);
-            }
-
-            // State changes
-            UnitSpent(pos) => self.unit_spent(pos, state),
-            UnitMoved(from, to) => {
-                let (_, unit) = state.active_unit.take().expect("no active unit after move");
-                state.grid.add_unit(unit, to);
-                self.handle_unit_moved(from, to, state, queue);
-            }
-            TargetConfirmed(pos, target) => self.target_confirmed(pos, target, state, queue),
-            FinishTurn => {
-                self.selected = None;
-                for unit in state.grid.units_mut() {
-                    unit.spent = false;
-                }
-                state.turn_info.end_turn();
-                // TODO: Display a turn change animation here
-            }
-
-            MouseMovedTo(x, y) |
-            LeftClickAt(x, y) |
-            RightClickAt(x, y) => {
-                self.mouse_moved_to(x, y, state);
-                match message {
-                    MouseMovedTo(..) => {}
-                    LeftClickAt(..) => {
-                        self.confirm(state, queue);
-                    }
-                    RightClickAt(..) => {
-                        self.cancel(state, queue);
-                    }
-                    _ => unreachable!(),
-                }
-            }
-
-            FactionDefeated(faction) => {
-                info!("Faction defeated! {:?}", faction);
-                state.turn_info.remove_faction(faction);
-
-                let (&faction, rest) = state.turn_info
-                    .factions()
-                    .split_first()
-                    .expect("there must be at least one faction left");
-                // TODO: Alliances? Neutrals?
-                if rest.iter().all(|&f| f == faction) {
-                    queue.push(FactionWins(faction));
-                }
-            }
-            FactionWins(faction) => {
-                info!("Faction won! ({:?})", faction);
-            }
-
-            _ => {}
         }
     }
 

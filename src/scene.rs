@@ -36,21 +36,103 @@ impl<'a> Behavior<State<'a>> for Scene {
     }
 
     fn handle(&mut self, state: &mut State<'a>, message: Message, queue: &mut Vec<Message>) {
+        use common::Message::*;
+
         trace!("Message: {:?}", message);
-        if let Message::ApplyOneModal = message {
+        if let ApplyOneModal = message {
             state.apply_one_modal(&mut self.modal_stack);
             return;
         }
         if state.will_pop_modals > 0 {
             return;
         }
-        match self.modal_stack.last_mut() {
-            None => {
-                self.grid_manager.handle(state, message, queue);
+        if let Some(modal) = self.modal_stack.last_mut() {
+            modal.handle(state, message, queue);
+            return;
+        }
+
+        let manager = &mut self.grid_manager;
+        match message {
+            // Input
+            Confirm => manager.confirm(state, queue),
+            Cancel => manager.cancel(state, queue),
+            RightReleasedAt(_, _) |
+            CancelReleased => manager.cancel_release(),
+            MoveCursorUp => manager.move_cursor_relative((0, 1), state),
+            MoveCursorDown => manager.move_cursor_relative((0, -1), state),
+            MoveCursorLeft => manager.move_cursor_relative((-1, 0), state),
+            MoveCursorRight => manager.move_cursor_relative((1, 0), state),
+
+            // Modal messages
+            AttackSelected(pos, target) => {
+                // manager.cursor.pos = target;
+                manager.select_target(pos, target, state, queue);
             }
-            Some(modal) => {
-                modal.handle(state, message, queue);
+            WaitSelected => {
+                // manager.cursor.pos = target;
+                manager.hide_cursor();
             }
+            CancelSelected(pos, target) => {
+                state.grid.move_unit(target, pos);
+                manager.move_cursor_to(pos, state);
+                manager.hide_cursor();
+                manager.select_unit(pos, state, queue);
+            }
+            TargetSelectorCanceled(origin, pos) => {
+                manager.handle_unit_moved(origin, pos, state, queue);
+            }
+
+            // State changes
+            UnitSpent(pos) => manager.unit_spent(pos, state),
+            UnitMoved(from, to) => {
+                let (_, unit) = state.active_unit.take().expect("no active unit after move");
+                state.grid.add_unit(unit, to);
+                manager.handle_unit_moved(from, to, state, queue);
+            }
+            TargetConfirmed(pos, target) => manager.target_confirmed(pos, target, state, queue),
+            FinishTurn => {
+                manager.deselect();
+                for unit in state.grid.units_mut() {
+                    unit.spent = false;
+                }
+                state.turn_info.end_turn();
+                // TODO: Display a turn change animation here
+            }
+
+            MouseMovedTo(x, y) |
+            LeftClickAt(x, y) |
+            RightClickAt(x, y) => {
+                manager.mouse_moved_to(x, y, state);
+                match message {
+                    MouseMovedTo(..) => {}
+                    LeftClickAt(..) => {
+                        manager.confirm(state, queue);
+                    }
+                    RightClickAt(..) => {
+                        manager.cancel(state, queue);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+
+            FactionDefeated(faction) => {
+                info!("Faction defeated! {:?}", faction);
+                state.turn_info.remove_faction(faction);
+
+                let (&faction, rest) = state.turn_info
+                    .factions()
+                    .split_first()
+                    .expect("there must be at least one faction left");
+                // TODO: Alliances? Neutrals?
+                if rest.iter().all(|&f| f == faction) {
+                    queue.push(FactionWins(faction));
+                }
+            }
+            FactionWins(faction) => {
+                info!("Faction won! ({:?})", faction);
+            }
+
+            _ => {}
         }
     }
 

@@ -91,10 +91,11 @@ pub struct State<'a> {
 
     pub turn_info: TurnInfo,
     pub grid: Grid,
-    pub window_size: (u32, u32),
+
+    window_size: (u32, u32),
     pub tile_size: (u32, u32),
     pub active_unit: Option<((u32, u32), Unit)>,
-    pub camera_offset: (i32, i32),
+    camera_offset: (i32, i32),
 
     prev_scroll_time: Instant,
 
