@@ -215,6 +215,9 @@ impl GridManager {
         assert!(pos.0 < state.grid.size().0 && pos.1 < state.grid.size().1);
         if let Some(ref selected) = self.selected {
             // TODO: You can move cursor to friendly unit (no crash, though).
+            // Note, that it is important to be able to move the cursor
+            // *through* friendly units, since certain valid paths
+            // would be impossible to selecte, otherwise.
             if !selected.path_finder.can_move_to(pos) {
                 return;
             }
@@ -313,6 +316,7 @@ impl GridManager {
     }
 
     pub fn capture_at(&mut self, pos: (u32, u32), state: &mut State) {
+        self.cursor_hidden = false;
         {
             let (unit, tile) = state.grid.unit_and_tile_mut(pos);
             let unit = unit.expect("no unit to capture with");
