@@ -100,7 +100,7 @@ impl Level {
         };
 
         for (tile, positions) in &self.layers["units"] {
-            let kind = match info.roles.get(&tile[..]) {
+            let kind = match info.unit_kinds.get(&tile[..]) {
                 Some(kind) => kind,
                 None => panic!("unit kind not in info file: {:?}", tile),
             };

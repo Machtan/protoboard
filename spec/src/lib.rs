@@ -47,7 +47,7 @@ pub struct MovementSpec {
 }
 
 #[derive(Deserialize)]
-pub struct RoleSpec {
+pub struct UnitKindSpec {
     pub attack: AttackSpec,
     pub defense: DefenseSpec,
     pub movement: MovementSpec,
@@ -57,7 +57,7 @@ pub struct RoleSpec {
 #[derive(Deserialize)]
 pub struct Spec {
     pub movement_classes: HashMap<String, MovementClassSpec>,
-    pub roles: HashMap<String, RoleSpec>,
+    pub unit_kinds: HashMap<String, UnitKindSpec>,
     pub terrain: HashMap<String, TerrainSpec>,
     pub defense_classes: HashSet<String>,
 }

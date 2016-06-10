@@ -148,7 +148,7 @@ impl MovementInfo {
 }
 
 #[derive(Clone, Debug)]
-pub struct RoleInfo {
+pub struct UnitKindInfo {
     pub name: String,
     pub attack: AttackInfo,
     pub defense: DefenseInfo,
@@ -156,12 +156,12 @@ pub struct RoleInfo {
     pub sprite: SpriteInfo,
 }
 
-impl RoleInfo {
+impl UnitKindInfo {
     #[inline]
-    fn from_spec<F>(spec: RoleSpec, name: String, to_movement_class: F) -> Result<RoleInfo, String>
+    fn from_spec<F>(spec: UnitKindSpec, name: String, to_movement_class: F) -> Result<UnitKindInfo, String>
         where F: FnMut(&str) -> Option<MovementClass>
     {
-        Ok(RoleInfo {
+        Ok(UnitKindInfo {
             name: name,
             attack: AttackInfo::from_spec(spec.attack)?,
             defense: DefenseInfo::from_spec(spec.defense)?,
@@ -171,12 +171,12 @@ impl RoleInfo {
     }
 }
 
-pub type Role = Rc<RoleInfo>;
+pub type UnitKind = Rc<UnitKindInfo>;
 
 #[derive(Clone, Debug)]
 pub struct GameInfo {
     pub movement_classes: HashMap<String, MovementClass>,
-    pub roles: HashMap<String, Role>,
+    pub unit_kinds: HashMap<String, UnitKind>,
     pub terrain: HashMap<String, Terrain>,
     pub defense_classes: HashSet<String>,
 }
@@ -216,18 +216,18 @@ impl GameInfo {
             })
             .collect::<Result<HashMap<_, _>, String>>()?;
 
-        let roles = spec.roles
+        let unit_kinds = spec.unit_kinds
             .into_iter()
             .map(|(name, spec)| {
                 let info =
-                    RoleInfo::from_spec(spec, name.clone(), |m| movement_classes.get(m).cloned())?;
-                Ok((name, Role::new(info)))
+                    UnitKindInfo::from_spec(spec, name.clone(), |m| movement_classes.get(m).cloned())?;
+                Ok((name, UnitKind::new(info)))
             })
             .collect::<Result<HashMap<_, _>, String>>()?;
 
         Ok(GameInfo {
             movement_classes: movement_classes,
-            roles: roles,
+            unit_kinds: unit_kinds,
             terrain: terrain,
             defense_classes: spec.defense_classes,
         })

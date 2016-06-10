@@ -279,7 +279,7 @@ impl<'a> State<'a> {
     }
 
     pub fn unit_sprite(&self, unit: &Unit) -> Sprite {
-        self.sprite(&unit.role.sprite)
+        self.sprite(&unit.kind.sprite)
     }
 }
 

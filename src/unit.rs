@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 
 use faction::Faction;
-use info::Role;
+use info::UnitKind;
 use info::Terrain;
 
 #[derive(Clone)]
@@ -9,16 +9,16 @@ pub struct Unit {
     pub health: u32,
     pub faction: Faction,
     pub spent: bool,
-    pub role: Role,
+    pub kind: UnitKind,
 }
 
 impl Unit {
-    pub fn new(role: Role, faction: Faction) -> Unit {
+    pub fn new(kind: UnitKind, faction: Faction) -> Unit {
         Unit {
             health: 10,
             faction: faction,
             spent: false,
-            role: role,
+            kind: kind,
         }
     }
 
@@ -26,13 +26,13 @@ impl Unit {
     // better idea of the units for the quantities.
 
     pub fn defense_bonus(&self, terrain: &Terrain) -> f64 {
-        terrain.defense + self.role.defense.defense
+        terrain.defense + self.kind.defense.defense
     }
 
     pub fn attack_damage(&self, other: &Unit, terrain: &Terrain) -> f64 {
         let def = other.defense_bonus(terrain);
-        let atk = self.role.attack.damage *
-                  self.role.attack.modifiers.get(&other.role.defense.class).cloned().unwrap_or(1.0);
+        let atk = self.kind.attack.damage *
+                  self.kind.attack.modifiers.get(&other.kind.defense.class).cloned().unwrap_or(1.0);
         let atk_hp = self.health as f64 / 10.0;
         let def_hp = other.health as f64 / 10.0;
         atk * atk_hp * (1.0 - def * def_hp)
@@ -54,7 +54,7 @@ impl Unit {
 
     #[inline]
     pub fn terrain_cost(&self, terrain: &Terrain) -> u32 {
-        *self.role
+        *self.kind
             .movement
             .class
             .costs
@@ -86,7 +86,7 @@ impl Debug for Unit {
             .field("health", &self.health)
             .field("faction", &self.faction)
             .field("spent", &self.spent)
-            .field("role", &self.role.name)
+            .field("kind", &self.kind.name)
             .finish()
     }
 }

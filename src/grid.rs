@@ -109,7 +109,7 @@ impl Grid {
                                           unit: &'a Unit,
                                           pos: (u32, u32))
                                           -> AttackRange<'a> {
-        match unit.role.attack.range {
+        match unit.kind.attack.range {
             RangeKind::Melee => AttackRange::melee(self, pos),
             RangeKind::Ranged { min, max } => AttackRange::ranged(self, pos, min, max),
             RangeKind::Spear { range } => AttackRange::spear(self, unit, pos, range),
@@ -120,7 +120,7 @@ impl Grid {
                                          unit: &'a Unit,
                                          pos: (u32, u32))
                                          -> AttackRange<'a> {
-        match unit.role.attack.range {
+        match unit.kind.attack.range {
             RangeKind::Melee |
             RangeKind::Spear { .. } => AttackRange::melee(self, pos),
             RangeKind::Ranged { .. } => AttackRange::empty(),
@@ -210,7 +210,7 @@ impl Grid {
                 }
                 let ncost = cost.saturating_add(tcost);
 
-                if ncost <= unit.role.movement.movement {
+                if ncost <= unit.kind.movement.movement {
                     to_be_searched.push((npos, ncost));
                 }
             }
