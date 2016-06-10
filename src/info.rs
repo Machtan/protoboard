@@ -158,7 +158,10 @@ pub struct UnitKindInfo {
 
 impl UnitKindInfo {
     #[inline]
-    fn from_spec<F>(spec: UnitKindSpec, name: String, to_movement_class: F) -> Result<UnitKindInfo, String>
+    fn from_spec<F>(spec: UnitKindSpec,
+                    name: String,
+                    to_movement_class: F)
+                    -> Result<UnitKindInfo, String>
         where F: FnMut(&str) -> Option<MovementClass>
     {
         Ok(UnitKindInfo {
@@ -219,8 +222,10 @@ impl GameInfo {
         let unit_kinds = spec.unit_kinds
             .into_iter()
             .map(|(name, spec)| {
-                let info =
-                    UnitKindInfo::from_spec(spec, name.clone(), |m| movement_classes.get(m).cloned())?;
+                let info = UnitKindInfo::from_spec(spec,
+                                                   name.clone(),
+                                                   |m| movement_classes.get(m).cloned())
+                    ?;
                 Ok((name, UnitKind::new(info)))
             })
             .collect::<Result<HashMap<_, _>, String>>()?;

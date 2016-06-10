@@ -47,6 +47,7 @@ mod range;
 mod resources;
 mod scene;
 mod target_selector;
+mod tile;
 mod unit;
 mod unit_mover;
 

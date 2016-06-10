@@ -173,7 +173,7 @@ impl GridManager {
         let mut attacker = state.grid.remove_unit(pos);
 
         let damage = {
-            let (target_unit, terrain) = state.grid.tile(target);
+            let (target_unit, tile) = state.grid.unit_and_tile(target);
             let target_unit = target_unit.expect("no unit to attack");
 
             debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
@@ -182,7 +182,7 @@ impl GridManager {
                    target,
                    target_unit);
 
-            attacker.attack_damage(target_unit, terrain)
+            attacker.attack_damage(target_unit, &tile.terrain)
         };
 
         let target_destroyed =
@@ -196,7 +196,7 @@ impl GridManager {
                 .attack_range_when_retaliating(defender, target)
                 .any(|p| p == pos);
             if in_range {
-                let terrain = state.grid.terrain(pos);
+                let terrain = &state.grid.tile(pos).terrain;
                 let damage = defender.retaliation_damage(damage, &attacker, terrain);
                 attacker.receive_damage(damage)
             } else {
@@ -322,7 +322,7 @@ impl GridManager {
                 let pos = (col, row);
 
                 let rect = state.tile_rect(pos);
-                let (unit, terrain) = state.grid.tile(pos);
+                let (unit, tile) = state.grid.unit_and_tile(pos);
 
                 if (col + row) % 2 == 0 {
                     renderer.set_draw_color(COLOR_DEFAULT_EVEN);
@@ -331,7 +331,7 @@ impl GridManager {
                 }
                 renderer.fill_rect(rect).unwrap();
 
-                if let Some(ref sprite) = terrain.sprite {
+                if let Some(ref sprite) = tile.terrain.sprite {
                     let sprite = state.sprite(sprite);
                     sprite.render_rect(renderer, rect);
                 }

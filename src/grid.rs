@@ -6,19 +6,19 @@ use rand::{thread_rng, Rng};
 
 use range::AttackRange;
 use info::RangeKind;
-use info::Terrain;
 use unit::Unit;
+use tile::Tile;
 
 #[derive(Clone)]
 pub struct Grid {
     size: (u32, u32),
     units: Box<[Option<Unit>]>,
-    terrain: Box<[Terrain]>,
+    tiles: Box<[Tile]>,
 }
 
 impl Grid {
     pub fn new<F>(size: (u32, u32), mut func: F) -> Grid
-        where F: FnMut((u32, u32)) -> Terrain
+        where F: FnMut((u32, u32)) -> Tile
     {
         let count = size.0 as usize * size.1 as usize;
         let terrain = (0..count)
@@ -31,7 +31,7 @@ impl Grid {
         Grid {
             size: size,
             units: vec![None; count].into_boxed_slice(),
-            terrain: terrain.into_boxed_slice(),
+            tiles: terrain.into_boxed_slice(),
         }
     }
 
@@ -49,31 +49,39 @@ impl Grid {
     }
 
     #[inline]
-    pub fn tile(&self, pos: (u32, u32)) -> (Option<&Unit>, &Terrain) {
+    pub fn unit_and_tile(&self, pos: (u32, u32)) -> (Option<&Unit>, &Tile) {
         let i = self.index(pos);
-        (self.units[i].as_ref(), &self.terrain[i])
+        (self.units[i].as_ref(), &self.tiles[i])
     }
 
     #[inline]
-    pub fn tile_mut(&mut self, pos: (u32, u32)) -> (Option<&mut Unit>, &Terrain) {
+    pub fn unit_and_tile_mut(&mut self, pos: (u32, u32)) -> (Option<&mut Unit>, &mut Tile) {
         let i = self.index(pos);
-        (self.units[i].as_mut(), &mut self.terrain[i])
+        (self.units[i].as_mut(), &mut self.tiles[i])
     }
 
     #[inline]
-    pub fn terrain(&self, pos: (u32, u32)) -> &Terrain {
+    pub fn tile(&self, pos: (u32, u32)) -> &Tile {
         let i = self.index(pos);
-        &self.terrain[i]
+        &self.tiles[i]
+    }
+
+    #[inline]
+    pub fn tile_mut(&mut self, pos: (u32, u32)) -> &mut Tile {
+        let i = self.index(pos);
+        &mut self.tiles[i]
     }
 
     #[inline]
     pub fn unit(&self, pos: (u32, u32)) -> Option<&Unit> {
-        self.tile(pos).0
+        let i = self.index(pos);
+        self.units[i].as_ref()
     }
 
     #[inline]
     pub fn unit_mut(&mut self, pos: (u32, u32)) -> Option<&mut Unit> {
-        self.tile_mut(pos).0
+        let i = self.index(pos);
+        self.units[i].as_mut()
     }
 
     #[inline]
@@ -196,7 +204,7 @@ impl Grid {
 
                 let npos = (nx as u32, ny as u32);
 
-                let (other, terrain) = self.tile(npos);
+                let (other, tile) = self.unit_and_tile(npos);
 
                 if let Some(other) = other {
                     if !unit.can_move_through(other) {
@@ -204,7 +212,7 @@ impl Grid {
                     }
                 }
 
-                let tcost = unit.terrain_cost(terrain);
+                let tcost = unit.terrain_cost(&tile.terrain);
                 if tcost == 0 {
                     unimplemented!();
                 }

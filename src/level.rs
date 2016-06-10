@@ -6,6 +6,7 @@ use spec::LevelSpec;
 use faction::Faction;
 use grid::Grid;
 use info::GameInfo;
+use tile::Tile;
 use unit::Unit;
 
 #[derive(Clone, Copy, Debug)]
@@ -88,15 +89,36 @@ impl Level {
                     for (tile, positions) in layer {
                         if positions.contains(&pos) {
                             return match info.terrain.get(&tile[..]) {
-                                Some(terrain) => terrain.clone(),
+                                Some(terrain) => {
+                                    Tile {
+                                        terrain: terrain.clone(),
+                                        faction: None,
+                                        capture: None,
+                                        capture_health: 0,
+                                    }
+                                }
                                 None => panic!("terrain not in info file: {:?}", tile),
                             };
                         }
                     }
-                    info.terrain["default"].clone()
+                    Tile {
+                        terrain: info.terrain["default"].clone(),
+                        faction: None,
+                        capture: None,
+                        capture_health: 0,
+                    }
                 })
             }
-            None => Grid::new((w, h), |_| info.terrain["default"].clone()),
+            None => {
+                Grid::new((w, h), |_| {
+                    Tile {
+                        terrain: info.terrain["default"].clone(),
+                        faction: None,
+                        capture: None,
+                        capture_health: 0,
+                    }
+                })
+            }
         };
 
         for (tile, positions) in &self.layers["units"] {
