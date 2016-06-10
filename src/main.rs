@@ -107,7 +107,7 @@ fn main() {
     let font_context = sdl2_ttf::init().expect("Font init");
     // let mut limiter = FrameLimiter::new(60);
 
-    let window = video_subsystem.window(WINDOW_TITLE, 1024, 704)
+    let window = video_subsystem.window(WINDOW_TITLE, 1008, 720)
         .allow_highdpi()
         .position_centered()
         .opengl()
@@ -152,10 +152,10 @@ fn main() {
     mapper.add(map_key_pressed!(Keycode::Left, MoveCursorLeft));
     mapper.add(map_key_pressed!(Keycode::Right, MoveCursorRight));
 
-    mapper.add(map_scan_pressed!(Scancode::W, MoveCursorUp));
-    mapper.add(map_scan_pressed!(Scancode::S, MoveCursorDown));
-    mapper.add(map_scan_pressed!(Scancode::A, MoveCursorLeft));
-    mapper.add(map_scan_pressed!(Scancode::D, MoveCursorRight));
+    mapper.add(map_scan_pressed!(Scancode::W, MoveCameraUp));
+    mapper.add(map_scan_pressed!(Scancode::S, MoveCameraDown));
+    mapper.add(map_scan_pressed!(Scancode::A, MoveCameraLeft));
+    mapper.add(map_scan_pressed!(Scancode::D, MoveCameraRight));
 
     mapper.add(map_scan_pressed!(Scancode::Space, FinishTurn));
     mapper.add(map_scan_pressed!(Scancode::Z, Confirm));

@@ -48,6 +48,11 @@ pub enum Message {
     MoveCursorLeft,
     MoveCursorRight,
 
+    MoveCameraUp,
+    MoveCameraDown,
+    MoveCameraLeft,
+    MoveCameraRight,
+
     Confirm,
     Cancel,
     CancelReleased,
@@ -84,6 +89,35 @@ pub enum ModalMessage {
     Break,
 }
 
+#[derive(Clone, Debug)]
+struct Viewport {
+    scale: (u32, u32),
+    grid_offset: (i32, i32),
+    view_offset: (i32, i32),
+}
+
+impl Viewport {
+    #[inline]
+    fn from_view(&self, point: (i32, i32)) -> (i32, i32) {
+        let (dx, dy) = self.view_offset;
+        let (sx, sy) = self.scale;
+        let (gx, gy) = self.grid_offset;
+        let (x, y) = point;
+
+        ((x - dx).div_floor(sx as i32) + gx, (y - dy).div_floor(sy as i32) + gy)
+    }
+
+    #[inline]
+    fn to_view(&self, point: (i32, i32)) -> (i32, i32) {
+        let (dx, dy) = self.view_offset;
+        let (sx, sy) = self.scale;
+        let (gx, gy) = self.grid_offset;
+        let (x, y) = point;
+
+        ((x - gx) * sx as i32 + dx, (y - gy) * sy as i32 + dy)
+    }
+}
+
 pub struct State<'a> {
     pub config: Config,
     pub resources: ResourceManager<'a, 'static>,
@@ -94,7 +128,8 @@ pub struct State<'a> {
     window_size: (u32, u32),
     pub tile_size: (u32, u32),
     pub active_unit: Option<((u32, u32), Unit)>,
-    camera_offset: (i32, i32),
+
+    viewport: Viewport,
 
     prev_scroll_time: Instant,
 
@@ -117,10 +152,11 @@ impl<'a> State<'a> {
                -> State<'a> {
         let expiry_duration = Duration::from_millis(100);
         let window_size = resources.device().logical_size();
+        info!("Window size: {:?}", window_size);
         let w = (window_size.0 / tile_size.0) as i32;
         let h = (window_size.1 / tile_size.1) as i32;
-        let dx = (grid.size().0 as i32 - w).div_floor(2);
-        let dy = (grid.size().1 as i32 - h).div_floor(2);
+        let dx = -(w - grid.size().0 as i32).div_floor(2);
+        let dy = -(h - grid.size().1 as i32).div_floor(2);
         State {
             config: config,
             resources: resources,
@@ -134,7 +170,11 @@ impl<'a> State<'a> {
             window_size: window_size,
             tile_size: tile_size,
             active_unit: None,
-            camera_offset: (dx, dy),
+            viewport: Viewport {
+                scale: tile_size,
+                grid_offset: (dx, dy),
+                view_offset: (tile_size.0 as i32 / 2, tile_size.1 as i32 / 2),
+            },
             prev_scroll_time: Instant::now(),
             health_label_font: health_label_font,
             will_pop_modals: 0,
@@ -183,12 +223,8 @@ impl<'a> State<'a> {
     }
 
     pub fn window_to_grid(&self, x: i32, y: i32) -> Option<(u32, u32)> {
-        let (tw, th) = self.tile_size;
-        let h = self.window_size.1;
-
-        let x = (x + (tw / 2) as i32).div_floor(tw as i32) + self.camera_offset.0;
-        let y = h as i32 - y;
-        let y = (y + (th / 2) as i32).div_floor(th as i32) + self.camera_offset.1;
+        let y = (self.window_size.1 - 1) as i32 - y;
+        let (x, y) = self.viewport.from_view((x, y));
 
         let (w, h) = self.grid.size();
         if 0 <= x && x < w as i32 && 0 <= y && y < h as i32 {
@@ -198,65 +234,91 @@ impl<'a> State<'a> {
         }
     }
 
+    pub fn translate_camera(&mut self, offset: (i32, i32)) {
+        self.viewport.grid_offset.0 += offset.0;
+        self.viewport.grid_offset.1 += offset.1;
+    }
+
     pub fn tile_rect(&self, pos: (u32, u32)) -> Rect {
+        let (x, y) = self.viewport.to_view((pos.0 as i32, pos.1 as i32));
+        let y = (self.window_size.1 - 1) as i32 - y;
+
         let (tw, th) = self.tile_size;
-        let h = self.window_size.1;
-
-        let x = (pos.0 as i32 - self.camera_offset.0) * tw as i32 - (tw / 2) as i32;
-        let y = (pos.1 as i32 - self.camera_offset.1) * th as i32 - (th / 2) as i32;
-        let y = h as i32 - y;
-
         Rect::new(x, y - th as i32, tw, th)
     }
 
     pub fn ensure_in_range(&mut self, pos: (u32, u32)) {
-        let w = (self.window_size.0 / self.tile_size.0) as i32;
-        let h = (self.window_size.1 / self.tile_size.1) as i32;
-        let x = pos.0 as i32 - self.camera_offset.0;
-        let y = pos.1 as i32 - self.camera_offset.1;
+        // Minus one is the combined padding.
+        let window_w = self.window_size.0 / self.tile_size.0 - 1;
+        let window_h = self.window_size.1 / self.tile_size.1 - 1;
 
-        let now = Instant::now();
-        let elapsed = now.duration_since(self.prev_scroll_time).as_millis();
-        let delta = if elapsed >= SCROLL_TIMEOUT_MS {
-            1
-        } else {
-            0
-        };
+        let min_x = self.viewport.grid_offset.0;
+        let max_x = min_x + window_w as i32 - 1;
+        let min_y = self.viewport.grid_offset.1;
+        let max_y = min_y + window_h as i32 - 1;
 
-        if x < delta + 1 {
-            self.camera_offset.0 += x - 2;
-            self.prev_scroll_time = now;
+        let (x, y) = (pos.0 as i32, pos.1 as i32);
+
+        if x < min_x {
+            self.viewport.grid_offset.0 += x - min_x;
         }
-        if x > (w - delta - 1) {
-            self.camera_offset.0 += x - (w - 2);
-            self.prev_scroll_time = now;
+        if y < min_y {
+            self.viewport.grid_offset.1 += y - min_y;
         }
-        if y < delta + 1 {
-            self.camera_offset.1 += y - 2;
-            self.prev_scroll_time = now;
+        if x > max_x {
+            self.viewport.grid_offset.0 += x - max_x;
         }
-        if y > (h - delta - 1) {
-            self.camera_offset.1 += y - (h - 2);
-            self.prev_scroll_time = now;
+        if y > max_y {
+            self.viewport.grid_offset.1 += y - max_y;
         }
 
-        let min_x = -1;
-        let min_y = -1;
-        let max_x = self.grid.size().0 as i32 - w;
-        let max_y = self.grid.size().1 as i32 - h;
-
-        let (ref mut cx, ref mut cy) = self.camera_offset;
-
-        match (*cx < min_x, *cx > max_x) {
-            (true, false) => *cx = min_x,
-            (false, true) => *cx = max_x,
-            _ => {}
-        }
-        match (*cy < min_y, *cy > max_y) {
-            (true, false) => *cy = min_y,
-            (false, true) => *cy = max_y,
-            _ => {}
-        }
+        // let w = (self.window_size.0 / self.tile_size.0) as i32;
+        // let h = (self.window_size.1 / self.tile_size.1) as i32;
+        // let x = pos.0 as i32 - self.camera_offset.0;
+        // let y = pos.1 as i32 - self.camera_offset.1;
+        //
+        // let now = Instant::now();
+        // let elapsed = now.duration_since(self.prev_scroll_time).as_millis();
+        // let delta = if elapsed >= SCROLL_TIMEOUT_MS {
+        //     1
+        // } else {
+        //     0
+        // };
+        //
+        // if x < delta + 1 {
+        //     self.camera_offset.0 += x - 2;
+        //     self.prev_scroll_time = now;
+        // }
+        // if x > (w - delta - 1) {
+        //     self.camera_offset.0 += x - (w - 2);
+        //     self.prev_scroll_time = now;
+        // }
+        // if y < delta + 1 {
+        //     self.camera_offset.1 += y - 2;
+        //     self.prev_scroll_time = now;
+        // }
+        // if y > (h - delta - 1) {
+        //     self.camera_offset.1 += y - (h - 2);
+        //     self.prev_scroll_time = now;
+        // }
+        //
+        // let min_x = -1;
+        // let min_y = -1;
+        // let max_x = self.grid.size().0 as i32 - w;
+        // let max_y = self.grid.size().1 as i32 - h;
+        //
+        // let (ref mut cx, ref mut cy) = self.camera_offset;
+        //
+        // match (*cx < min_x, *cx > max_x) {
+        //     (true, false) => *cx = min_x,
+        //     (false, true) => *cx = max_x,
+        //     _ => {}
+        // }
+        // match (*cy < min_y, *cy > max_y) {
+        //     (true, false) => *cy = min_y,
+        //     (false, true) => *cy = max_y,
+        //     _ => {}
+        // }
     }
 
     pub fn health_label(&self, health: u32) -> Rc<Label> {

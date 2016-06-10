@@ -84,10 +84,16 @@ impl<'a> Behavior<State<'a>> for Scene {
             Cancel => manager.cancel(state),
             RightReleasedAt(_, _) |
             CancelReleased => manager.cancel_release(),
+
             MoveCursorUp => manager.move_cursor_relative((0, 1), state),
             MoveCursorDown => manager.move_cursor_relative((0, -1), state),
             MoveCursorLeft => manager.move_cursor_relative((-1, 0), state),
             MoveCursorRight => manager.move_cursor_relative((1, 0), state),
+
+            MoveCameraUp => state.translate_camera((0, 1)),
+            MoveCameraDown => state.translate_camera((0, -1)),
+            MoveCameraLeft => state.translate_camera((-1, 0)),
+            MoveCameraRight => state.translate_camera((1, 0)),
 
             // Modal messages
             AttackSelected(pos, target) => {
