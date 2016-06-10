@@ -9,7 +9,7 @@ use info::RangeKind;
 use unit::Unit;
 use tile::Tile;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Grid {
     size: (u32, u32),
     units: Box<[Option<Unit>]>,
@@ -227,16 +227,6 @@ impl Grid {
             origin: pos,
             costs: costs,
         }
-    }
-}
-
-impl Debug for Grid {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Grid")
-            .field("size", &self.size)
-            .field("units", &(..))
-            .field("tiles", &(..))
-            .finish()
     }
 }
 

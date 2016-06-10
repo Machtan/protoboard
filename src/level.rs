@@ -35,6 +35,16 @@ impl Ord for Point {
     }
 }
 
+#[inline]
+fn to_faction(code: u32) -> Option<Faction> {
+    match code {
+        0 => None,
+        1 => Some(Faction::Red),
+        2 => Some(Faction::Blue),
+        _ => panic!("unrecognized faction with code {}", code),
+    }
+}
+
 pub type Layer = HashMap<String, BTreeSet<Point>>;
 
 #[derive(Clone, Debug)]
@@ -87,14 +97,15 @@ impl Level {
                 Grid::new((w, h), |(x, y)| {
                     let pos = Point(x as i32 + min_x, y as i32 + min_y, 0);
                     for (tile, positions) in layer {
-                        if positions.contains(&pos) {
+                        if let Some(&Point(_, _, color)) = positions.get(&pos) {
                             return match info.terrain.get(&tile[..]) {
                                 Some(terrain) => {
+                                    let faction = to_faction(color);
                                     Tile {
                                         terrain: terrain.clone(),
-                                        faction: None,
+                                        faction: faction,
                                         capture: None,
-                                        capture_health: 0,
+                                        capture_health: faction.map_or(0, |_| 20),
                                     }
                                 }
                                 None => panic!("terrain not in info file: {:?}", tile),
@@ -127,16 +138,13 @@ impl Level {
                 None => panic!("unit kind not in info file: {:?}", tile),
             };
             for &Point(x, y, color) in positions {
-                let faction = match color {
-                    1 => Faction::Red,
-                    2 => Faction::Blue,
-                    _ => panic!("invalid unit color index: {}", color),
-                };
+                let faction = to_faction(color).expect("all units must belong to a faction");
                 let pos = ((x - min_x) as u32, (y - min_y) as u32);
                 let unit = Unit::new(kind.clone(), faction);
                 grid.add_unit(unit, pos);
             }
         }
+        debug!("{:#?}", grid);
         grid
     }
 }

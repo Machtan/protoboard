@@ -335,6 +335,15 @@ impl GridManager {
                     let sprite = state.sprite(sprite);
                     sprite.render_rect(renderer, rect);
                 }
+                if let Some(owner) = tile.faction {
+                    // TODO: Show this in a different way.
+                    let color = match owner {
+                        Faction::Red => Color(0xff, 0x00, 0x00, 0x33),
+                        Faction::Blue => Color(0x00, 0x00, 0xff, 0x33),
+                    };
+                    renderer.set_draw_color(color);
+                    renderer.fill_rect(rect).unwrap();
+                }
 
                 let color = self.selected
                     .as_ref()
