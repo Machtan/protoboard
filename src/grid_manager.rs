@@ -163,49 +163,51 @@ impl GridManager {
     }
 
     /// Destroys the unit on the given tile.
-    fn destroy_unit(&mut self, pos: (u32, u32), state: &mut State) {
+    fn destroy_unit(&self, pos: (u32, u32), state: &mut State) {
         state.grid.remove_unit(pos);
+    }
+
+    fn apply_damage(&self, pos: (u32, u32), damage: f64, state: &mut State) -> bool {
+        if state.grid.unit_mut(pos).expect("no unit to apply damage to").receive_damage(damage) {
+            self.destroy_unit(pos, state);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn calculate_damage(&self,
+                        pos: (u32, u32),
+                        target: (u32, u32),
+                        retaliating_to: Option<f64>,
+                        state: &State)
+                        -> f64 {
+        let attacker = state.grid.unit(pos).expect("no attacking unit");
+        let (defender, tile) = state.grid.unit_and_tile(target);
+        let defender = defender.expect("no unit to attack");
+        match retaliating_to {
+            Some(damage) => attacker.retaliation_damage(damage, defender, &tile.terrain),
+            None => attacker.attack_damage(defender, &tile.terrain),
+        }
     }
 
     pub fn target_confirmed(&mut self, pos: (u32, u32), target: (u32, u32), state: &mut State) {
         self.cursor_hidden = false;
 
-        let mut attacker = state.grid.remove_unit(pos);
-
-        let damage = {
-            let (target_unit, tile) = state.grid.unit_and_tile(target);
-            let target_unit = target_unit.expect("no unit to attack");
-
-            debug!("Unit at {:?} ({:?}) attacked unit at {:?} ({:?})",
-                   pos,
-                   attacker,
-                   target,
-                   target_unit);
-
-            attacker.attack_damage(target_unit, &tile.terrain)
+        let damage = self.calculate_damage(pos, target, None, state);
+        if self.apply_damage(target, damage, state) {
+            // Destroyed defender cannot retaliate.
+            return;
+        }
+        let in_range = {
+            let attacker = state.grid.unit(target).expect("no retaliating unit");
+            state.grid
+                .attack_range_when_retaliating(attacker, target)
+                .any(|p| p == pos)
         };
-
-        let target_destroyed =
-            state.grid.unit_mut(target).expect("no unit to attack").receive_damage(damage);
-        let attacker_destroyed = if target_destroyed {
-            self.destroy_unit(target, state);
-            false
-        } else {
-            let defender = state.grid.unit(target).expect("no unit for counter-attack");
-            let in_range = state.grid
-                .attack_range_when_retaliating(defender, target)
-                .any(|p| p == pos);
-            if in_range {
-                let terrain = &state.grid.tile(pos).terrain;
-                let damage = defender.retaliation_damage(damage, &attacker, terrain);
-                attacker.receive_damage(damage)
-            } else {
-                false
-            }
-        };
-
-        if !attacker_destroyed {
-            state.grid.add_unit(attacker, pos);
+        if in_range {
+            let damage = self.calculate_damage(pos, target, Some(damage), state);
+            self.apply_damage(pos, damage, state);
         }
     }
 
