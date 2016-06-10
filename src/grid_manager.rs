@@ -322,7 +322,9 @@ impl GridManager {
             let unit = unit.expect("no unit to capture with");
             assert!(tile.can_be_captured() && tile.faction != Some(unit.faction));
 
-            if tile.capture(unit.faction, unit.kind.capture) {
+            let capture = unit.kind.capture * unit.health / 10;
+            info!("Trying to capture {:?} with strength {:?}", tile.terrain.name, capture);
+            if tile.capture(unit.faction, capture) {
                 info!("Tile at {:?} captured by {:?}!", pos, unit.faction);
             }
         }
