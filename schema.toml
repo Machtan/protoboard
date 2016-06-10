@@ -9,7 +9,8 @@ archer = { texture = "assets/48x48 protoboard.png", area = [48, 0, 48, 48] }
 warrior = { texture = "assets/48x48 protoboard.png", area = [96, 0, 48, 48] }
 raccoon = { texture = "assets/48x48 protoboard.png", area = [144, 0, 48, 48] }
 
-grass = { texture = "assets/48x48 protoboard.png", area = [192, 192, 48, 48] }
-mountains = { texture = "assets/48x48 protoboard.png", area = [192, 240, 48, 48] }
-woods = { texture = "assets/48x48 protoboard.png", area = [192, 96, 48, 48] }
-city = { texture = "assets/48x48 protoboard.png", area = [144, 192, 48, 48] }
+grass = { texture = "assets/48x48 protoboard.png", area = [0, 336, 48, 48] }
+mountains = { texture = "assets/48x48 protoboard.png", area = [288, 336, 48, 48] }
+woods = { texture = "assets/48x48 protoboard.png", area = [144, 336, 48, 48] }
+city = { texture = "assets/48x48 protoboard.png", area = [432, 336, 48, 48] }
+hq = { texture = "assets/48x48 protoboard.png", area = [576, 336, 48, 48] }
