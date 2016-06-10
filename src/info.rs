@@ -153,6 +153,7 @@ pub struct UnitKindInfo {
     pub attack: AttackInfo,
     pub defense: DefenseInfo,
     pub movement: MovementInfo,
+    pub capture: u32,
     pub sprite: SpriteInfo,
 }
 
@@ -169,6 +170,7 @@ impl UnitKindInfo {
             attack: AttackInfo::from_spec(spec.attack)?,
             defense: DefenseInfo::from_spec(spec.defense)?,
             movement: MovementInfo::from_spec(spec.movement, to_movement_class)?,
+            capture: spec.capture.unwrap_or(0),
             sprite: SpriteInfo::from_spec(spec.sprite)?,
         })
     }

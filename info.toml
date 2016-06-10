@@ -53,3 +53,4 @@ defense_classes = ["light", "medium", "heavy"]
   attack = { damage = 4.0, range = { kind = "spear", range = 3 } }
   defense = { class = "medium", defense = 0.2 }
   movement = { class = "off-road", movement = 3 }
+  capture = 10

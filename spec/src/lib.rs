@@ -51,6 +51,7 @@ pub struct UnitKindSpec {
     pub attack: AttackSpec,
     pub defense: DefenseSpec,
     pub movement: MovementSpec,
+    pub capture: Option<u32>,
     pub sprite: SpriteSpec,
 }
 

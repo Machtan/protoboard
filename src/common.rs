@@ -68,6 +68,7 @@ pub enum Message {
     ApplyOneModal,
 
     AttackSelected((u32, u32), (u32, u32)),
+    CaptureSelected((u32, u32)),
     WaitSelected,
     CancelSelected((u32, u32), (u32, u32)),
 

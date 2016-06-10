@@ -96,6 +96,7 @@ impl<'a> Behavior<State<'a>> for Scene {
                 // TODO
                 state.push_modal(modal, queue);
             }
+            CaptureSelected(pos) => manager.capture_at(pos, state),
             WaitSelected => {
                 // manager.cursor.pos = target;
                 manager.hide_cursor();

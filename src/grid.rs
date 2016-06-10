@@ -1,5 +1,4 @@
 use std::collections::{btree_map, BTreeMap, BTreeSet};
-use std::fmt::{self, Debug};
 use std::mem;
 
 use rand::{thread_rng, Rng};

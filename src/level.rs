@@ -144,7 +144,6 @@ impl Level {
                 grid.add_unit(unit, pos);
             }
         }
-        debug!("{:#?}", grid);
         grid
     }
 }

@@ -250,7 +250,8 @@ impl GridManager {
         debug!("Moved unit from {:?} to {:?}", origin, target);
 
         let options = {
-            let unit = state.grid.unit(target).expect("unreachable; failed to move unit");
+            let (unit, tile) = state.grid.unit_and_tile(target);
+            let unit = unit.expect("unreachable; failed to move unit");
 
             let mut options = Vec::with_capacity(2);
             let mut find_attackable = if origin == target {
@@ -260,6 +261,10 @@ impl GridManager {
             };
             if find_attackable.next().is_some() {
                 options.push("Attack");
+            }
+            if unit.kind.capture > 0 && tile.can_be_captured() &&
+               tile.faction != Some(unit.faction) {
+                options.push("Capture");
             }
             options.push("Wait");
             options
@@ -281,6 +286,11 @@ impl GridManager {
                     state.pop_modal(queue);
                     queue.push(Message::AttackSelected(origin, target));
                 }
+                Some("Capture") => {
+                    debug!("Capture!");
+                    state.pop_modal(queue);
+                    queue.push(Message::CaptureSelected(target));
+                }
                 Some("Wait") => {
                     debug!("Wait!");
                     state.pop_modal(queue);
@@ -298,6 +308,29 @@ impl GridManager {
         })
             .expect("could not create menu");
         Box::new(menu)
+    }
+
+    pub fn capture_at(&mut self, pos: (u32, u32), state: &mut State) {
+        {
+            let (unit, tile) = state.grid.unit_and_tile_mut(pos);
+            let unit = unit.expect("no unit to capture with");
+            assert!(tile.can_be_captured() && tile.faction != Some(unit.faction));
+
+            let capture = match tile.capture {
+                None => unit.kind.capture,
+                Some((faction, capture)) => {
+                    assert_eq!(unit.faction, faction);
+                    capture.saturating_add(unit.kind.capture)
+                }
+            };
+            tile.capture = Some((unit.faction, capture));
+            if capture >= tile.capture_health {
+                info!("Tile at {:?} has been captured by {:?}!", pos, unit.faction);
+                tile.faction = Some(unit.faction);
+                tile.capture = None;
+            }
+        }
+        self.unit_spent(pos, state);
     }
 
     pub fn unit_spent(&mut self, pos: (u32, u32), state: &mut State) {
