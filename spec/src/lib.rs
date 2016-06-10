@@ -23,6 +23,7 @@ pub struct SpriteSpec {
 pub struct TerrainSpec {
     pub defense: f64,
     pub sprite: Option<SpriteSpec>,
+    pub capture: Option<u32>,
 }
 
 #[derive(Deserialize)]

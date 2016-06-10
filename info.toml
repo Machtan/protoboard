@@ -16,15 +16,22 @@ defense_classes = ["light", "medium", "heavy"]
   defense = 0.3
   sprite = { texture = "assets/48x48 protoboard.png", area = [192, 240, 48, 48] }
 
+[terrain.city]
+  defense = 0.4
+  sprite = { texture = "assets/48x48 protoboard.png", area = [144, 192, 48, 48] }
+  capture = 20
+
 
 [movement_classes.normal]
   default = 1
+  city = 1
   grass = 1
   woods = 2
   mountains = 100000
 
 [movement_classes.off-road]
   default = 1
+  city = 1
   grass = 1
   woods = 1
   mountains = 2

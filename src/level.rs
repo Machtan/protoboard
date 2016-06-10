@@ -92,44 +92,43 @@ impl Level {
         let w = (max_x - min_x + 1) as u32;
         let h = (max_y - min_y + 1) as u32;
 
-        let mut grid = match self.layers.get("terrain") {
-            Some(layer) => {
-                Grid::new((w, h), |(x, y)| {
-                    let pos = Point(x as i32 + min_x, y as i32 + min_y, 0);
-                    for (tile, positions) in layer {
-                        if let Some(&Point(_, _, color)) = positions.get(&pos) {
-                            return match info.terrain.get(&tile[..]) {
-                                Some(terrain) => {
-                                    let faction = to_faction(color);
-                                    Tile {
-                                        terrain: terrain.clone(),
-                                        faction: faction,
-                                        capture: None,
-                                        capture_health: faction.map_or(0, |_| 20),
-                                    }
-                                }
-                                None => panic!("terrain not in info file: {:?}", tile),
+        let mut grid = if let Some(layer) = self.layers.get("terrain") {
+            Grid::new((w, h), |(x, y)| {
+                let pos = Point(x as i32 + min_x, y as i32 + min_y, 0);
+                for (tile, positions) in layer {
+                    if let Some(&Point(_, _, color)) = positions.get(&pos) {
+                        if let Some(terrain) = info.terrain.get(&tile[..]) {
+                            let faction = to_faction(color);
+                            if faction.is_some() && terrain.capture == 0 {
+                                warn!("Faction {:?} owns tile with terrain {:?}, which cannot be \
+                                       captured.",
+                                      faction.unwrap(),
+                                      tile);
+                            }
+                            return Tile {
+                                terrain: terrain.clone(),
+                                faction: faction,
+                                capture: None,
                             };
+                        } else {
+                            panic!("terrain not in info file: {:?}", tile);
                         }
                     }
-                    Tile {
-                        terrain: info.terrain["default"].clone(),
-                        faction: None,
-                        capture: None,
-                        capture_health: 0,
-                    }
-                })
-            }
-            None => {
-                Grid::new((w, h), |_| {
-                    Tile {
-                        terrain: info.terrain["default"].clone(),
-                        faction: None,
-                        capture: None,
-                        capture_health: 0,
-                    }
-                })
-            }
+                }
+                Tile {
+                    terrain: info.terrain["default"].clone(),
+                    faction: None,
+                    capture: None,
+                }
+            })
+        } else {
+            Grid::new((w, h), |_| {
+                Tile {
+                    terrain: info.terrain["default"].clone(),
+                    faction: None,
+                    capture: None,
+                }
+            })
         };
 
         for (tile, positions) in &self.layers["units"] {

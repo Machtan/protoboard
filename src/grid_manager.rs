@@ -318,18 +318,8 @@ impl GridManager {
             let unit = unit.expect("no unit to capture with");
             assert!(tile.can_be_captured() && tile.faction != Some(unit.faction));
 
-            let capture = match tile.capture {
-                None => unit.kind.capture,
-                Some((faction, capture)) => {
-                    assert_eq!(unit.faction, faction);
-                    capture.saturating_add(unit.kind.capture)
-                }
-            };
-            tile.capture = Some((unit.faction, capture));
-            if capture >= tile.capture_health {
-                info!("Tile at {:?} has been captured by {:?}!", pos, unit.faction);
-                tile.faction = Some(unit.faction);
-                tile.capture = None;
+            if tile.capture(unit.faction, unit.kind.capture) {
+                info!("Tile at {:?} captured by {:?}!", pos, unit.faction);
             }
         }
         self.unit_spent(pos, state);

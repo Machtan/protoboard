@@ -57,6 +57,7 @@ pub struct TerrainInfo {
     pub name: String,
     pub defense: f64,
     pub sprite: Option<SpriteInfo>,
+    pub capture: u32,
 }
 
 impl TerrainInfo {
@@ -70,6 +71,7 @@ impl TerrainInfo {
             name: name,
             defense: spec.defense,
             sprite: sprite,
+            capture: spec.capture.unwrap_or(0),
         })
     }
 }
